@@ -1,0 +1,5 @@
+0.1.2
+* Previous version was using FORTRAN's WRITE statement. This one does not.
+
+0.1.1
+* First submission. Please beware of bugs.

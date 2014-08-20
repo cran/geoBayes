@@ -1,0 +1,9 @@
+# -*- Makefile -*-
+
+PKG_LIBS += $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+
+
+CSRC = auxfcns.c msg.c
+FSRC = interfaces.f90 msgmc.f90 flogsumexp.f90 lbfgsbmod.f90 bmargin.f90 \
+  covfun.f90 linkfcn.f90 mcsp2.f90 bfsp.f90 calcb2.f90
+OBJECTS = $(CSRC:.c=.o) $(FSRC:.f90=.o)
