@@ -3,13 +3,13 @@
 \alias{bf2optim}
 \title{Empirical Bayes estimator}
 \usage{
-bf2optim(bfspobj, estimate, useCV = TRUE, control = list())
+bf2optim(bf1obj, paroptim, useCV = TRUE, control = list())
 }
 \arguments{
-\item{bfspobj}{Output from the function \code{\link{bf1skel}} which
+\item{bf1obj}{Output from the function \code{\link{bf1skel}} which
 contains the Bayes factors and importance sampling weights.}
 
-\item{estimate}{A named list with the components "linkp", "phi",
+\item{paroptim}{A named list with the components "linkp", "phi",
 "omg", "kappa". Each component must be numeric with length 1, 2,
 or 3 with elements in increasing order but for the binomial family
 linkp is also allowed to be the character "logit" and "probit". If
@@ -35,5 +35,41 @@ Estimation by empirical Bayes.
 This function is a wrap around \code{\link{bf2new}} using the
 "L-BFGS-B" method of the function \code{\link[stats]{optim}} to
 estimate the parameters.
+}
+\examples{
+\dontrun{
+data(rhizoctonia)
+### Define the model
+corrf <- "spherical"
+kappa <- 0
+ssqdf <- 1
+ssqsc <- 1
+betm0 <- 0
+betQ0 <- .01
+linkp <- "probit"
+### Skeleton points
+philist <- c(100, 140, 180)
+omglist <- c(.5, 1)
+parlist <- expand.grid(phi=philist, linkp=linkp, omg=omglist, kappa = kappa)
+### MCMC sizes
+Nout <- 100
+Nthin <- 1
+Nbi <- 0
+### Take MCMC samples
+runs <- list()
+for (i in 1:NROW(parlist)) {
+  runs[[i]] <- mcsglmm(Infected ~ 1, 'binomial', rhizoctonia, weights = Total,
+                       atsample = ~ Xcoord + Ycoord,
+                       Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+                       betm0 = betm0, betQ0 = betQ0,
+                       ssqdf = ssqdf, ssqsc = ssqsc,
+                       phistart = parlist$phi[i], omgstart = parlist$omg[i],
+                       linkp = parlist$linkp[i], kappa = parlist$kappa[i],
+                       corrfcn = corrf, phisc = 0, omgsc = 0)
+}
+bf <- bf1skel(runs)
+est <- bf2optim(bf, list(linkp = linkp, phi = c(100, 200), omg = c(0, 2)))
+est
+}
 }
 

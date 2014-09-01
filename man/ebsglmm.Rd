@@ -4,16 +4,18 @@
 \title{Empirical Bayes estimation for SGLMM}
 \usage{
 ebsglmm(formula, family = c("gaussian", "binomial", "poisson", "Gamma"), data,
-  weights, subset, atsample, parameters, estimate, corrfcn = c("matern",
-  "spherical", "power"), Nout, Nthin = 1, Nbi = 0, Npro, Nprt = 1,
-  Nprb = 0, betm0, betQ0, ssqdf, ssqsc, zstart, dispersion = 1,
+  weights, subset, atsample, parskel, paroptim, corrfcn = c("matern",
+  "spherical", "powerexponential"), Nout, Nthin = 1, Nbi = 0, Npro,
+  Nprt = 1, Nprb = 0, betm0, betQ0, ssqdf, ssqsc, zstart, dispersion = 1,
   bfsize1 = 0.8, reference = 1, bfmethod = c("RL", "MW"), useCV = TRUE,
   longlat = FALSE, control = list(), verbose = TRUE)
 }
 \arguments{
 \item{formula}{A representation of the model in the form
 \code{response ~ terms}. The response must be set to \code{NA}'s
-at the prediction locations. At the observed locations the
+at the prediction locations (see the example in
+\code{\link{mcsglmm}} for how to do this using
+\code{\link{stackdata}}). At the observed locations the
 response is assumed to be a total of replicated measurements. The
 number of replications is inputted using the argument
 \code{weights}.}
@@ -33,13 +35,16 @@ observations to be used in the fitting process.}
 \item{atsample}{A formula in the form \code{~ x1 + x2 + ... + xd}
 with the coordinates of the sampled locations.}
 
-\item{parameters}{A named list with the components "linkp", "phi",
-"omg", "kappa" with all components being vectors of the same
-length k. Then, k different MCMC samples will be taken from the
-models with parameters fixed at those values. For a square grid
-the function \code{\link[base]{expand.grid}} can be useful.}
+\item{parskel}{A named list with the components "linkp", "phi",
+"omg", "kappa", corresponding to the link function, the spatial
+range, the relative nugget, and the spatial correlation
+parameters. All components must be vectors of the same length k.
+Then, k different MCMC samples will be taken from the models with
+parameters fixed at those values. For a square grid the output
+from the function \code{\link[base]{expand.grid}} can be used
+here.}
 
-\item{estimate}{A named list with the components "linkp", "phi",
+\item{paroptim}{A named list with the components "linkp", "phi",
 "omg", "kappa". Each component must be numeric with length 1, 2,
 or 3 with elements in increasing order but for the binomial family
 linkp is also allowed to be the character "logit" and "probit". If
@@ -49,12 +54,12 @@ lower and upper bounds for the optimisation of that parameter
 (infinities are allowed). If 3, these correspond to lower bound,
 starting value, upper bound for the estimation of that parameter.}
 
-\item{corrfcn}{Spatial correlation function.}
+\item{corrfcn}{Spatial correlation function. See Details.}
 
 \item{Nout}{A scalar or vector of size k. Number of MCMC samples
 to take for each run of the MCMC algorithm for the estimation of
 the Bayes factors. See argument
-\code{parameters}.}
+\code{parskel}.}
 
 \item{Nthin}{A scalar or vector of size k. The thinning of the
 MCMC algorithm for the estimation of the Bayes factors.}
@@ -62,13 +67,16 @@ MCMC algorithm for the estimation of the Bayes factors.}
 \item{Nbi}{A scalar or vector of size k. The burn-in of the MCMC
 algorithm for the estimation of the Bayes factors.}
 
-\item{Npro}{A scalar. The number of Gibbs samples to use for
-estimation of the parameters at the last stage and for prediction
-at the unsampled locations.}
+\item{Npro}{A scalar. The number of Gibbs samples to take for
+estimation of the conjugate parameters and for prediction
+at the unsampled locations while the other parameters are fixed at
+their empirical Bayes estimates.}
 
-\item{Nprt}{The thinning of the Gibbs algorithm.}
+\item{Nprt}{The thinning of the Gibbs algorithm for the estimation
+of the conjugate parameters and for prediction.}
 
-\item{Nprb}{The burn-in of the Gibbs algorithm.}
+\item{Nprb}{The burn-in of the Gibbs algorithm for the estimation
+of the conjugate parameters and for prediction.}
 
 \item{betm0}{Prior mean for beta (a vector or scalar).}
 
@@ -81,20 +89,23 @@ prior for the partial sill parameter.}
 \item{ssqsc}{Scale for the scaled inverse chi-square prior for the
 partial sill parameter.}
 
-\item{zstart}{Starting value for the MCMC for the GRF. Defaults to
-0.}
+\item{zstart}{Optional starting value for the MCMC for the GRF.
+This can be either a scalar, a vector of size n where n is the
+number of sampled locations, or a matrix with dimensions n by k
+where k is the number of the skeleton points in \code{parskel}.}
 
 \item{dispersion}{The fixed dispersion parameter.}
 
-\item{bfsize1}{A scalar or vector of the same length as \code{...}
+\item{bfsize1}{A scalar or vector of length k
 with all integer values or all values in (0, 1]. How many samples
 (or what proportion of the sample) to use for estimating the Bayes
 factors at the first stage. The remaining sample will be used for
 estimating the Bayes factors in the second stage. Setting it to 1
 will perform only the first stage.}
 
-\item{reference}{Which model goes in the denominator of the Bayes
-factors.}
+\item{reference}{An integer between 1 and k. Which model to be
+used as a reference, i.e. the one that goes in the denominator of
+the Bayes factors.}
 
 \item{bfmethod}{Which method to use to calculate the Bayes
 factors: Reverse logistic or Meng-Wong.}
@@ -116,12 +127,14 @@ stage on screen.}
 A list with components
 \itemize{
 \item \code{parest} The parameter estimates
-\item \code{skeleton} The skeleton points used augmented with the
+\item \code{skeleton} The skeleton points used with the corresponding
 logarithm of the Bayes factors at those points.
 \item \code{optim} The output from the \code{\link[stats]{optim}}
 function.
 \item \code{mcmcsample} The MCMC samples for the remaining
-parameters and the random field.
+parameters and the random field. These samples correspond to the
+Gibbs and Metropolis-Hasting samples after fixing the parameters
+estimated by empirical Bayes at their empirical Bayes estimates.
 \item \code{sys_time} The time taken to complete the MCMC
 sampling, calculation of the importance weights, the
 optimization and the final MCMC sampling.
@@ -133,5 +146,75 @@ Empirical Bayes estimation for SGLMM
 \details{
 Runs the MCMC sampling, computes the importance weights, and
 estimates the parameters.
+
+Currently the following spatial correlation functions are
+implemented. Below, \eqn{h} denotes the distance between
+locations, \eqn{d} is the dimensionality of the locations,
+\eqn{\phi}{phi} is the spatial range parameter and \eqn{\kappa}{kappa} is an
+additional parameter. The correlation \eqn{r(u)} beween locations
+with distance \eqn{u} apart is
+\describe{
+\item{Matern}{\deqn{r(h) =
+   \frac{1}{2^{\kappa-1}\Gamma(\kappa)}(\frac{h}{\phi})^\kappa
+   K_{\kappa}(\frac{h}{\phi})}{r(h) =
+   (1/(2^(kappa-1) * Gamma(kappa))) * ((h/phi)^kappa) *
+K_{kappa}(h/phi)}}
+ \item{spherical}{
+ \deqn{r(h) = \left\{ \begin{array}{ll}
+   1 - 1.5\frac{h}{\phi} + 0.5(\frac{h}{\phi})^3
+   \mbox{ , if $h$ < $\phi$} \cr
+   0    \mbox{ ,  otherwise}
+   \end{array} \right.}{r(h) =
+   1 - 1.5 * (h/phi) + 0.5(h/phi)^3   if h < phi ,
+   0   otherwise}
+Note that this is a valid correlation only for \eqn{d \leq 3}{d <=
+3}.}
+ \item{powerexponential}{
+ \deqn{r(h) = \exp\{-(\frac{h}{\phi})^\kappa\}
+   }{r(h) = exp{-(h/phi)^kappa}}
+Note that this is a valid correlation only for \eqn{0 < \kappa
+\leq 2}{0 < kappa <= 2}.}
+}
+}
+\examples{
+\dontrun{
+data(rhizoctonia)
+
+### Define the model
+corrf <- "spherical"
+kappa <- 0
+ssqdf <- 1
+ssqsc <- 1
+betm0 <- 0
+betQ0 <- .01
+
+### Skeleton points
+philist <- c(100,140,180)
+linkp <- "logit"
+omglist <- c(0,.5,1)
+parlist <- expand.grid(phi = philist, linkp = linkp, omg = omglist,
+                       kappa = kappa)
+paroptim <- list(linkp = linkp, phi = c(100, 200), omg = c(0, 2),
+                 kappa = kappa)
+
+### MCMC sizes
+Nout <- Npro <- 100
+Nthin <- Nprt <- 1
+Nbi <- Nprb <- 0
+
+est <- ebsglmm(Infected ~ 1, 'binomial', rhizoctonia, weights = Total,
+               atsample = ~ Xcoord + Ycoord, parskel = parlist,
+               paroptim = paroptim, corrfcn = corrf,
+               Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+               Npro = Npro, Nprt = Nprt, Nprb = Nprb,
+               betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
+               dispersion = 1, useCV=TRUE)
+}
+}
+\references{
+Roy, V., Evangelou, E., and Zhu, Z. (2014). Efficient
+estimation and prediction for the Bayesian spatial generalized
+linear mixed model with flexible link functions. Technical report,
+Iowa State University.
 }
 

@@ -61,10 +61,12 @@ points that fall inside the borders.
 }
 \examples{
 \dontrun{
-  data(rhizoctonia)
-
-  predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
-                           par.x = 100, chull = TRUE, exf = 1.2)
+data(rhizoctonia)
+predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
+                         par.x = 100, chull = TRUE, exf = 1.2)
+plot(predgrid$borders, type = "l")         # Domain for prediction
+points(predgrid$grid, pch = 20, cex = .3)  # Prediction locations
+points(rhizoctonia[c("Xcoord", "Ycoord")]) # Observed locations
 }
 }
 \seealso{

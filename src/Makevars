@@ -4,6 +4,18 @@ PKG_LIBS += $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 
 
 CSRC = auxfcns.c msg.c
-FSRC = interfaces.f90 msgmc.f90 flogsumexp.f90 lbfgsbmod.f90 bmargin.f90 \
-  covfun.f90 linkfcn.f90 mcsp2.f90 bfsp.f90 calcb2.f90
-OBJECTS = $(CSRC:.c=.o) $(FSRC:.f90=.o)
+FMODSRC = interfaces.f90 msgmc.f90 flogsumexp.f90 lbfgsbmod.f90 
+FSRC = bmargin.f90 covfun.f90 linkfcn.f90 mcsp2.f90 bfsp.f90 calcb2.f90
+
+# Define the order of compilation
+OBJECTS = $(CSRC:.c=.o) $(FMODSRC:.f90=.o) $(FSRC:.f90=.o)
+
+$(SHLIB): $(OBJECTS)
+
+# Setup dependencies for parallel make
+bfsp.o: interfaces.o linkfcn.o flogsumexp.o bmargin.o covfun.o
+bmargin.o: lbfgsbmod.o flogsumexp.o
+calcb2.o: interfaces.o flogsumexp.o covfun.o linkfcn.o
+covfun.o: interfaces.o
+linkfcn.o: interfaces.o
+mcsp2.o: linkfcn.o interfaces.o covfun.o msgmc.o

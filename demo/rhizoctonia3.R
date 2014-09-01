@@ -1,6 +1,6 @@
 ######################################################################
 ## 
-### Commentary: MCMC analysis of the rhizoctonia data.
+### Commentary: EB analysis of the rhizoctonia data.
 ## 
 ######################################################################
 
@@ -21,13 +21,13 @@ ssqdf <- 1
 ssqsc <- 1
 betm0 <- 0
 betQ0 <- .01
+linkp <- "probit"
 
 ### Skeleton points
-philist <- c(100,140,180)
-dft <- 20
-omglist <- c(0,.5,1)
-parlist <- expand.grid(phi=philist, linkp=dft, omg=omglist, kappa = kappa)
-estimate <- list(linkp = dft, phi = c(100, 200), omg = c(0, 2),
+philist <- c(100, 140, 180)
+omglist <- c(0, .5, 1, 1.5)
+parlist <- expand.grid(phi=philist, linkp=linkp, omg=omglist, kappa = kappa)
+estimate <- list(linkp = linkp, phi = c(100, 200), omg = c(0, 2),
                  kappa = kappa)
 
 ### MCMC sizes
@@ -41,7 +41,7 @@ est <- ebsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
                Nout = Nout, Nthin = Nthin, Nbi = Nbi,
                Npro = Npro, Nprt = Nprt, Nprb = Nprb, 
                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-               zstart = 0, dispersion = 1, useCV=TRUE)
+               dispersion = 1, useCV=TRUE)
 
 library(geoR)
 z0pred <- rowMeans(est$mcmcsample$z[!est$mcmcsample$whichobs, ])

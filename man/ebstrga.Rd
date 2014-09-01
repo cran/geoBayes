@@ -3,21 +3,22 @@
 \alias{ebstrga}
 \title{Empirical Bayes estimation for the TGRFM}
 \usage{
-ebstrga(formula, data, weights, subset, atsample, parameters, estimate,
-  corrfcn = c("matern", "spherical", "power"), Nout, Nthin = 1, Nbi = 0,
-  Npro, Nprt = 1, Nprb = 0, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsqsc,
-  zstart, dispersion = 1, bfsize1 = 0.8, reference = 1,
+ebstrga(formula, data, weights, subset, atsample, parskel, paroptim,
+  corrfcn = c("matern", "spherical", "powerexponential"), Nout, Nthin = 1,
+  Nbi = 0, Npro, Nprt = 1, Nprb = 0, betm0, betQ0, ssqdf, ssqsc, tsqdf,
+  tsqsc, zstart, dispersion = 1, bfsize1 = 0.8, reference = 1,
   bfmethod = c("RL", "MW"), useCV = TRUE, longlat = FALSE,
   control = list(), verbose = TRUE)
 }
 \arguments{
 \item{formula}{A representation of the model in the form
 \code{response ~ terms}. The response must be set to \code{NA}'s
-at the prediction locations (the function \code{\link{stackdata}}
-can be used to create such data frame). At the observed locations the
+at the prediction locations (see the example in
+\code{\link{mcsglmm}} for how to do this using
+\code{\link{stackdata}}). At the observed locations the
 response is assumed to be a total of replicated measurements. The
 number of replications is inputted using the argument
-\code{weights}.}
+\code{weights}. See the Note for cases where overflow may occur.}
 
 \item{data}{An optional data frame containing the variables in the
 model.}
@@ -32,14 +33,19 @@ observations to be used in the fitting process.}
 \item{atsample}{A formula in the form \code{~ x1 + x2 + ... + xd}
 with the coordinates of the sampled locations.}
 
-\item{parameters}{A named list with the components "linkp", "phi",
-"omg", "kappa" with all components being vectors of the same
-length k. Then, k different MCMC samples will be taken from the
-models with parameters fixed at those values. For a square grid
-the function \code{\link[base]{expand.grid}} can be useful.}
+\item{parskel}{A named list with the components "linkp", "phi",
+"omg", and "kappa", corresponding to the link function, the spatial
+range, the relative nugget, and the spatial correlation
+parameters. The latter can be omitted if not used in the
+correlation function. All components must be vectors of the same length k.
+Then, k different MCMC samples will be taken from the models with
+parameters fixed at those values. For a square grid the output
+from the function \code{\link[base]{expand.grid}} can be used
+here.}
 
-\item{estimate}{A named list with the components "linkp", "phi",
-"omg", "kappa". Each component must be numeric with length 1, 2,
+\item{paroptim}{A named list with the components "linkp", "phi",
+"omg", "kappa". The latter can be omitted if not used in the
+correlation function. Each component must be numeric with length 1, 2,
 or 3 with elements in increasing order but for the binomial family
 linkp is also allowed to be the character "logit" and "probit". If
 its length is 1, then the corresponding parameter is considered to
@@ -48,12 +54,13 @@ lower and upper bounds for the optimisation of that parameter
 (infinities are allowed). If 3, these correspond to lower bound,
 starting value, upper bound for the estimation of that parameter.}
 
-\item{corrfcn}{Spatial correlation function.}
+\item{corrfcn}{Spatial correlation function. See
+\code{\link{ebsglmm}} for details.}
 
 \item{Nout}{A scalar or vector of size k. Number of MCMC samples
 to take for each run of the MCMC algorithm for the estimation of
 the Bayes factors. See argument
-\code{parameters}.}
+\code{parskel}.}
 
 \item{Nthin}{A scalar or vector of size k. The thinning of the
 MCMC algorithm for the estimation of the Bayes factors.}
@@ -61,13 +68,16 @@ MCMC algorithm for the estimation of the Bayes factors.}
 \item{Nbi}{A scalar or vector of size k. The burn-in of the MCMC
 algorithm for the estimation of the Bayes factors.}
 
-\item{Npro}{A scalar. The number of Gibbs samples to use for
-estimation of the parameters at the last stage and for prediction
-at the unsampled locations.}
+\item{Npro}{A scalar. The number of Gibbs samples to take for
+estimation of the conjugate parameters and for prediction
+at the unsampled locations while the other parameters are fixed at
+their empirical Bayes estimates.}
 
-\item{Nprt}{The thinning of the Gibbs algorithm.}
+\item{Nprt}{The thinning of the Gibbs algorithm for the estimation
+of the conjugate parameters and for prediction.}
 
-\item{Nprb}{The burn-in of the Gibbs algorithm.}
+\item{Nprb}{The burn-in of the Gibbs algorithm for the estimation
+of the conjugate parameters and for prediction.}
 
 \item{betm0}{Prior mean for beta (a vector or scalar).}
 
@@ -86,8 +96,10 @@ prior for the measurement error parameter.}
 \item{tsqsc}{Scale for the scaled inverse chi-square prior for the
 measurement error parameter.}
 
-\item{zstart}{Starting value for the MCMC for the GRF. Defaults to
-0.}
+\item{zstart}{Optional starting value for the MCMC for the GRF.
+This can be either a scalar, a vector of size n where n is the
+number of sampled locations, or a matrix with dimensions n by k
+where k is the number of the skeleton points in \code{parskel}.}
 
 \item{dispersion}{The fixed dispersion parameter.}
 
@@ -120,13 +132,15 @@ stage on screen.}
 \value{
 A list with components
 \itemize{
-\item \code{parest} The parameter estimates
-\item \code{skeleton} The skeleton points used augmented with the
+\item \code{parest} The parameter paroptims
+\item \code{skeleton} The skeleton points used with the corresponding
 logarithm of the Bayes factors at those points.
 \item \code{optim} The output from the \code{\link[stats]{optim}}
 function.
 \item \code{mcmcsample} The MCMC samples for the remaining
-parameters and the random field.
+parameters and the random field. These samples correspond to the
+Gibbs and Metropolis-Hasting samples after fixing the parameters
+estimated by empirical Bayes at their empirical Bayes estimates.
 \item \code{sys_time} The time taken to complete the MCMC
 sampling, calculation of the importance weights, the
 optimization and the final MCMC sampling.
@@ -138,5 +152,58 @@ Empirical Bayes estimation for the spatial transformed Gaussian model.
 \details{
 Runs the MCMC sampling, computes the importance weights, and
 estimates the parameters.
+}
+\note{
+To avoid numerical overflow it is recommended to scale the
+response variable by its geometric mean. This is strongly
+recommended when the exponent of the transformation is 0 or less.
+Numerical overflow may occur when samples which are simulated from
+a smaller exponent are being used to compute the likelihood
+corresponding to a larger exponent.
+}
+\examples{
+\dontrun{
+### Load the data
+data(rhizoctonia)
+rhiz <- na.omit(rhizoctonia)
+rhiz$IR <- rhiz$Infected/rhiz$Total # Incidence rate of the
+                              # rhizoctonia disease
+### Define the model
+corrf <- "spherical"
+ssqdf <- 1
+ssqsc <- 1
+tsqdf <- 1
+tsqsc <- 1
+betm0 <- 0
+betQ0 <- diag(.01, 2, 2)
+### Skeleton points
+philist <- seq(120, 280, 40)
+linkp <- 1
+omglist <- seq(0, 2.5, .5)
+parlist <- expand.grid(phi = philist, linkp = linkp, omg = omglist)
+paroptim <- list(linkp = linkp, phi = c(100, 300), omg = c(0, 2))
+### MCMC sizes
+Nout <- Npro <- 100
+Nthin <- Nprt <- 1
+Nbi <- Nprb <- 0
+### Estimate
+est <- ebstrga(Yield ~ IR, rhiz,
+               atsample = ~ Xcoord + Ycoord, parskel = parlist,
+               paroptim = paroptim, corrfcn = corrf,
+               Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+               Npro = Npro, Nprt = Nprt, Nprb = Nprb,
+               betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
+               tsqdf = tsqdf, tsqsc = tsqsc,
+               useCV=TRUE)
+est$parest
+}
+}
+\references{
+Roy, V., Evangelou, E. and Zhu, Z. (2014). Empirical
+Bayes methods for the transformed Gaussian random fields model
+with additive measurement errors. In Upadhyay, S. K., Singh, U.,
+Dey, D. K., and Loganathan, A., editors, \emph{Current Trends in
+Bayesian Methodology with Applications}, Boca Raton, FL, USA, CRC
+Press.
 }
 

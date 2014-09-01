@@ -1,2 +1,20 @@
-rhizoctonia1   Analysis of the rhizoctonia data by MCMC.
-rhizoctonia3   Analysis of the rhizoctonia data by EB.
+yield2         Transformed Gaussian spatial model: Estimate the impact of the
+  rhizoctonia disease on yield using full Bayesian analysis.
+
+yield3         Transformed Gaussian spatial model: Estimate the impact of the
+  rhizoctonia disease on yield using empirical Bayes methods. Does not
+  estimate the link function.
+
+yield4         Transformed Gaussian spatial model: Estimate the impact of the
+  rhizoctonia disease on yield using empirical Bayes methods. Also estimates
+  the link function. This example can be time-consuming.
+
+rhizoctonia1   Binomial SGLMM: Analysis of the rhizoctonia data using full
+  Bayesian analysis.
+
+rhizoctonia3   Binomial SGLMM: Analysis of the rhizoctonia
+  data using empirical Bayes methods. Uses the function ebsglmm.
+
+rhizoctonia2   Binomial SGLMM: Analysis of the rhizoctonia
+  data using empirical Bayes methods. Uses the functions mcsglmm, bf1skel,
+  bf2new, bf2optim.

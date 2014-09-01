@@ -25,7 +25,7 @@ State University.
 \item Infected Number of infected roots found at that location.
 \item Yield Barley yield at that location. These data were
 obtained by hand-harvesting a 4-square-meter area in the sampling
-location.
+location. One observation is missing.
 }
 }
 \note{

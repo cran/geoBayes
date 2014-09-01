@@ -8,9 +8,9 @@ library(geoBayes)
 
 data(rhizoctonia)
 
+### Create prediction grid
 predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
                          par.x = 100, chull = TRUE, exf = 1.2)
-
 rhizdata <- stackdata(rhizoctonia, predgrid$grid)
 
 ### Define the model
@@ -37,7 +37,7 @@ emt <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
                phipars = phiprior, omgpars = omgprior, linkp = linkp, 
                corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc, 
-               zstart = 0, dispersion = 1, test = TRUE)
+               dispersion = 1, test = TRUE)
 
 emc <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
                atsample = ~ Xcoord + Ycoord,
@@ -45,7 +45,7 @@ emc <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
                phipars = phiprior, omgpars = omgprior, linkp = linkp, 
                corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc, 
-               zstart = 0, dispersion = 1, test = FALSE)
+               dispersion = 1, test = FALSE)
 
 emcmc <- mcmcmake(emc)
 

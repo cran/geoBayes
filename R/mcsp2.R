@@ -1,13 +1,24 @@
 ##' Draw MCMC samples from the Spatial GLMM with known link function
 ##'
 ##' Simulates from the posterior distribution of this model.
+##'
+##' The four-parameter prior for \code{phi} is defined by
+##' \deqn{\propto (\phi - \theta_4)^{\theta_2 -1} \exp\{-(\frac{\phi -
+##' \theta_2}{\theta_1})^{\theta_3}\}}{propto (phi -
+##' phiprior[4])^(phiprior[2]-1) *
+##' exp(-((phi-phiprior[4])/phiprior[1])^phiprior[3])} for \eqn{\phi >
+##' \theta_4}{phi > phiprior[4]}. The prior for \code{omg} is similar.
+##' The prior parameters correspond to scale, shape, exponent, and
+##' location. See \code{arXiv:1005.3274} for details of this
+##' distribution. 
 ##' @title MCMC samples from the Spatial GLMM
 ##' @param formula A representation of the model in the form
-##' \code{response ~ terms}. The response is must be set to
-##' \code{NA}'s at the prediction locations. At the observed locations
-##' the response is assumed to be a total of replicated measurements.
-##' The number of replications is inputted using the argument
-##' \code{weights}.
+##' \code{response ~ terms}. The response must be set to \code{NA}'s
+##' at the prediction locations (see the examples on how to do this
+##' using the function \code{\link{stackdata}}). At the observed
+##' locations the response is assumed to be a total of replicated
+##' measurements. The number of replications is inputted using the
+##' argument \code{weights}.
 ##' @param family The distribution of the data.
 ##' @param data An optional data frame containing the variables in the
 ##' model.
@@ -29,13 +40,15 @@
 ##' @param ssqsc Scale for the scaled inverse chi-square prior for the
 ##' partial sill parameter.
 ##' @param phipars Parameters for the generalized inverse gamma prior
-##' for the range parameter \code{phi}. A four dimensional vector with
-##' parameters scale, shape, exponent, location in that order.
+##' for the spatial range parameter \code{phi}. A four dimensional
+##' vector with parameters scale, shape, exponent, location in that
+##' order. See Details.
 ##' @param omgpars Parameters for the generalized inverse gamma prior
 ##' for the relative nugget parameter \code{omg}. A four dimensional
 ##' vector with parameters scale, shape, exponent, location in that
-##' order.
-##' @param corrfcn Spatial correlation function.
+##' order. See Details.
+##' @param corrfcn Spatial correlation function. See
+##' \code{\link{ebsglmm}} for details.
 ##' @param kappa Spatial correlation parameter. Smoothness parameter
 ##' for Matern, exponent for the power family.
 ##' @param linkp Parameter of the link function. For binomial, a
@@ -50,12 +63,17 @@
 ##' increase the acceptance ratio. Set this to 0 for fixed \code{omg}.
 ##' In this case the fixed value is given in the argument
 ##' \code{omgstart}.
-##' @param zstart Starting value for the MCMC for the GRF. Defaults to
-##' 0.
-##' @param phistart Starting value for the MCMC for \code{phi}.
-##' Defaults to the mean of its prior.
-##' @param omgstart Starting value for the MCMC for \code{omg}.
-##' Defaults to the mean of its prior.
+##' @param zstart Optional starting value for the MCMC for the GRF.
+##' This can be either a scalar, a vector of size n where n is the
+##' number of sampled locations.
+##' @param phistart Optional starting value for the MCMC for the
+##' spatial range parameter \code{phi}. Defaults to the mean of its
+##' prior. If \code{phisc} is 0, then this argument is required and it
+##' corresponds to the fixed value of \code{phi}.
+##' @param omgstart Optional starting value for the MCMC for the relative
+##' nugget parameter \code{omg}. Defaults to the mean of its prior. If
+##' \code{omgsc} is 0, then this argument is required and
+##' itcorresponds to the fixed value of \code{omg}.
 ##' @param dispersion The fixed dispersion parameter.
 ##' @param longlat How to compute the distance between locations. If
 ##' \code{FALSE}, Euclidean distance, if \code{TRUE} Great Circle
@@ -75,9 +93,7 @@
 ##'  \item \code{beta} A matrix containing the MCMC samples for the
 ##' regressor coefficients. Each column is one sample. 
 ##'  \item \code{ssq} A vector with the MCMC samples for the partial
-## sill parameter. 
-##'  \item \code{tsq} A vector with the MCMC samples for the
-##' measurement error variance. 
+##' sill parameter. 
 ##'  \item \code{phi} A vector with the MCMC samples for the spatial
 ##' range parameter. 
 ##'  \item \code{omg} A vector with the MCMC samples for the relative
@@ -107,6 +123,59 @@
 ##' the data and in the MCMC samples for the spatial random field
 ##' correspond to the observed locations.
 ##' }
+##' @examples \dontrun{
+##' data(rhizoctonia)
+##'  
+##' ### Create prediction grid
+##' predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
+##'                          par.x = 100, chull = TRUE, exf = 1.2)
+##'  
+##' ### Combine observed and prediction locations
+##' rhizdata <- stackdata(rhizoctonia, predgrid$grid)
+##' 
+##' ### Define the model
+##' corrf <- "spherical"
+##' kappa <- 0
+##' ssqdf <- 1
+##' ssqsc <- 1
+##' betm0 <- 0
+##' betQ0 <- .01
+##' phiprior <- c(100, 1, 1000, 100) # U(100, 200)
+##' phisc <- 3
+##' omgprior <- c(2, 1, 1, 0)        # Exp(mean = 2)
+##' omgsc <- .1
+##' linkp <- "probit"
+##' 
+##' ### MCMC sizes
+##' Nout <- 100
+##' Nthin <- 1
+##' Nbi <- 0
+##' 
+##' ### Trial run
+##' emt <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
+##'                atsample = ~ Xcoord + Ycoord,
+##'                Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+##'                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
+##'                phipars = phiprior, omgpars = omgprior, linkp = linkp, 
+##'                corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc, 
+##'                dispersion = 1, test = 10)
+##' 
+##' ### Full run
+##' emc <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
+##'                atsample = ~ Xcoord + Ycoord,
+##'                Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+##'                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
+##'                phipars = phiprior, omgpars = omgprior, linkp = linkp, 
+##'                corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc, 
+##'                dispersion = 1, test = FALSE)
+##' 
+##' 
+##' plot.ts(cbind(phi = emc$phi, omg = emc$omg, beta = c(emc$beta),
+##'               ssq = emc$ssq), nc = 2)
+##' 
+##' emcmc <- mcmcmake(emc)
+##' summary(emcmc[, c("phi", "omg", "beta", "ssq")])
+##' }
 ##' @importFrom sp spDists
 ##' @export 
 mcsglmm <- function (formula,
@@ -114,7 +183,7 @@ mcsglmm <- function (formula,
                      data, weights, subset, atsample,
                      Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc,
                      phipars, omgpars,
-                     corrfcn = c("matern", "spherical", "power"), 
+                     corrfcn = c("matern", "spherical", "powerexponential"), 
                      kappa, linkp, phisc, omgsc,
                      zstart, phistart, omgstart,
                      dispersion = 1, longlat = FALSE, test = FALSE) {
@@ -125,6 +194,7 @@ mcsglmm <- function (formula,
   ## Correlation function
   corrfcn <- match.arg(corrfcn)
   icf <- match(corrfcn, eval(formals()$corrfcn))
+  needkappa <- corrfcn %in% c("matern", "powerexponential")
 
   ## Design matrix and data
   if (missing(data)) data <- environment(formula)
@@ -138,8 +208,8 @@ mcsglmm <- function (formula,
   mf <- eval(mfc, parent.frame())
   mt <- attr(mf, "terms")
   FF <- model.matrix(mt,mf)
-  if (!all(is.finite(F))) stop ("Non-finite values in the design matrix")
-  p <- NCOL(F)
+  if (!all(is.finite(FF))) stop ("Non-finite values in the design matrix")
+  p <- NCOL(FF)
   yy <- model.response(mf)
   if (!is.vector(yy)) {
     stop ("The response must be a vector")
@@ -192,7 +262,7 @@ mcsglmm <- function (formula,
       if (any (betQ0eig < sqrt(.Machine$double.eps))) {
         stop ('betQ0 not > 0 within tolerance')
       } else {
-        betm0 <- rep_len(as.double(betm0), p)
+        betm0 <- rep(as.double(betm0), length.out = p)
         modeldf <- as.double(k + ssqdf)
       }
     } else stop ('Bad betQ0')
@@ -235,11 +305,11 @@ mcsglmm <- function (formula,
   }
 
   ## Other fixed parameters
-  kappa <- as.double(kappa)
-  if (kappa < 0 & corrfcn %in% c("matern", "power")) {
+  kappa <- if (needkappa) as.double(kappa) else 0
+  if (kappa < 0 & corrfcn %in% c("matern", "powerexponential")) {
     stop ("Argument kappa cannot be negative")
   }
-  if (kappa > 2 & corrfcn == "power") {
+  if (kappa > 2 & corrfcn == "powerexponential") {
     stop ("Argument kappa cannot be more than 2")
   }
   if (corrfcn == "spherical" & NCOL(loc) > 3) {
@@ -249,7 +319,7 @@ grater than 3.")
   dispersion <- as.double(dispersion)
   if (dispersion <= 0) stop ("Invalid argument dispersion")
 
-  if (is.character(linkp)) {
+  if (is.character(linkp) | is.factor(linkp)) {
     if (family == "binomial") {
       if (all(linkp == "logit")) {
         nu <- -1
@@ -281,7 +351,13 @@ the binomial can also be the character \"logit\" or \"probit\"")
   acc <- 0L
 
   ## Starting values
-  if (missing(zstart)) zstart <- 0
+  if (missing(zstart)) {
+    zstart <- switch(family,
+                     binomial =, poisson = (y+.5)/(l+1),
+                     gaussian = y/l)
+    zstart <- linkfcn(zstart, linkp, family)
+    zstart <- pmax(zstart, -1e8) + rnorm(k, 0, sqrt(ssqsc))
+  }
   z[, 1] <- zstart
   if (missing(phistart)) {
     if (phisc == 0) {
@@ -384,11 +460,12 @@ the binomial can also be the character \"logit\" or \"probit\"")
 ##' Simulates from the posterior distribution of this model.
 ##' @title MCMC samples from the transformed Gaussian model
 ##' @param formula A representation of the model in the form
-##' \code{response ~ terms}. The response is must be set to
-##' \code{NA}'s at the prediction locations. At the observed locations
-##' the response is assumed to be a total of replicated measurements.
-##' The number of replications is inputted using the argument
-##' \code{weights}.
+##' \code{response ~ terms}. The response must be set to \code{NA}'s
+##' at the prediction locations (see the example in
+##' \code{\link{mcsglmm}} for how to do this using
+##' \code{\link{stackdata}}). At the observed locations the response
+##' is assumed to be a total of replicated measurements. The number of
+##' replications is inputted using the argument \code{weights}.
 ##' @param data An optional data frame containing the variables in the
 ##' model.
 ##' @param weights An optional vector of weights. Number of replicated
@@ -413,12 +490,14 @@ the binomial can also be the character \"logit\" or \"probit\"")
 ##' measurement error parameter.
 ##' @param phipars Parameters for the generalized inverse gamma prior
 ##' for the range parameter \code{phi}. A four dimensional vector with
-##' parameters scale, shape, exponent, location in that order.
+##' parameters scale, shape, exponent, location in that order. See
+##' \code{\link{mcsglmm}}. 
 ##' @param omgpars Parameters for the generalized inverse gamma prior
 ##' for the relative nugget parameter \code{omg}. A four dimensional
 ##' vector with parameters scale, shape, exponent, location in that
-##' order.
-##' @param corrfcn Spatial correlation function.
+##' order. See \code{\link{mcsglmm}}.
+##' @param corrfcn Spatial correlation function. See
+##' \code{\link{ebsglmm}} for details.
 ##' @param kappa Spatial correlation parameter. Smoothness parameter
 ##' for Matern, exponent for the power family.
 ##' @param linkp The exponent of the Box-Cox transformation.
@@ -430,14 +509,17 @@ the binomial can also be the character \"logit\" or \"probit\"")
 ##' increase the acceptance ratio. Set this to 0 for fixed \code{omg}.
 ##' In this case the fixed value is given in the argument
 ##' \code{omgstart}.
-##' @param zstart Starting value for the MCMC for the GRF. Defaults to
-##' 0.
-##' @param phistart Starting value for the MCMC for \code{phi}.
-##' Defaults to the mean of its prior. If \code{phisc} is 0, this
-##' argument corresponds to the fixed value of \code{phi}.
-##' @param omgstart Starting value for the MCMC for \code{omg}.
-##' Defaults to the mean of its prior. If \code{omgsc} is 0, this
-##' argument corresponds to the fixed value of \code{omg}.
+##' @param zstart Optional starting value for the MCMC for the GRF.
+##' This can be either a scalar, a vector of size n where n is the
+##' number of sampled locations.
+##' @param phistart Optional starting value for the MCMC for the
+##' spatial range parameter \code{phi}. Defaults to the mean of its
+##' prior. If \code{phisc} is 0, then this argument is required and it
+##' corresponds to the fixed value of \code{phi}.
+##' @param omgstart Optional starting value for the MCMC for the relative
+##' nugget parameter \code{omg}. Defaults to the mean of its prior. If
+##' \code{omgsc} is 0, then this argument is required and
+##' itcorresponds to the fixed value of \code{omg}.
 ##' @param longlat How to compute the distance between locations. If
 ##' \code{FALSE}, Euclidean distance, if \code{TRUE} Great Circle
 ##' distance. See \code{\link[sp]{spDists}}.
@@ -488,13 +570,59 @@ the binomial can also be the character \"logit\" or \"probit\"")
 ##' the data and in the MCMC samples for the spatial random field
 ##' correspond to the observed locations.
 ##' }
+##' @examples \dontrun{
+##' ### Load the data
+##' data(rhizoctonia)
+##' rhiz <- na.omit(rhizoctonia)
+##' rhiz$IR <- rhiz$Infected/rhiz$Total # Incidence rate of the
+##'                               # rhizoctonia disease
+##' 
+##' ### Define the model
+##' corrf <- "spherical"
+##' ssqdf <- 1
+##' ssqsc <- 1
+##' tsqdf <- 1
+##' tsqsc <- 1
+##' betm0 <- 0
+##' betQ0 <- diag(.01, 2, 2)
+##' phiprior <- c(200, 1, 1000, 100) # U(100, 300)
+##' phisc <- 1
+##' omgprior <- c(3, 1, 1000, 0) # U(0, 3)
+##' omgsc <- 1.3
+##' linkp <- 1
+##' 
+##' ## MCMC parameters
+##' Nout <- 100
+##' Nbi <- 0
+##' Nthin <- 1
+##' 
+##' samplt <- mcstrga(Yield ~ IR, data = rhiz, 
+##'                   atsample = ~ Xcoord + Ycoord, corrf = corrf, 
+##'                   Nout = Nout, Nthin = Nthin,
+##'                   Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
+##'                   ssqdf = ssqdf, ssqsc = ssqsc,
+##'                   tsqdf = tsqdf, tsqsc = tsqsc,
+##'                   phipars = phiprior, omgpars = omgprior,
+##'                   linkp = linkp,
+##'                   phisc = phisc, omgsc = omgsc, test=10)
+##' 
+##' sample <- mcstrga(Yield ~ IR, data = rhiz, 
+##'                   atsample = ~ Xcoord + Ycoord, corrf = corrf, 
+##'                   Nout = Nout, Nthin = Nthin,
+##'                   Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
+##'                   ssqdf = ssqdf, ssqsc = ssqsc,
+##'                   tsqdf = tsqdf, tsqsc = tsqsc,
+##'                   phipars = phiprior, omgpars = omgprior,
+##'                   linkp = linkp,
+##'                   phisc = phisc, omgsc = omgsc, test=FALSE)
+##' }
 ##' @importFrom sp spDists
 ##' @export 
 mcstrga <- function (formula,
                      data, weights, subset, atsample,
                      Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc,
                      tsqdf, tsqsc, phipars, omgpars,
-                     corrfcn = c("matern", "spherical", "power"), 
+                     corrfcn = c("matern", "spherical", "powerexponential"), 
                      kappa, linkp, phisc, omgsc,
                      zstart, phistart, omgstart, longlat = FALSE,
                      test = FALSE) {
@@ -504,6 +632,7 @@ mcstrga <- function (formula,
   ## Correlation function
   corrfcn <- match.arg(corrfcn)
   icf <- match(corrfcn, eval(formals()$corrfcn))
+  needkappa <- corrfcn %in% c("matern", "powerexponential")
 
   ## Design matrix and data
   if (missing(data)) data <- environment(formula)
@@ -517,8 +646,8 @@ mcstrga <- function (formula,
   mf <- eval(mfc, parent.frame())
   mt <- attr(mf, "terms")
   FF <- model.matrix(mt,mf)
-  if (!all(is.finite(F))) stop ("Non-finite values in the design matrix")
-  p <- NCOL(F)
+  if (!all(is.finite(FF))) stop ("Non-finite values in the design matrix")
+  p <- NCOL(FF)
   yy <- model.response(mf)
   if (!is.vector(yy)) {
     stop ("The response must be a vector")
@@ -569,7 +698,7 @@ mcstrga <- function (formula,
       if (any (betQ0eig < sqrt(.Machine$double.eps))) {
         stop ('betQ0 not > 0 within tolerance')
       } else {
-        betm0 <- rep_len(as.double(betm0), p)
+        betm0 <- rep(as.double(betm0), length.out = p)
         modeldf <- as.double(k + ssqdf)
       }
     } else stop ('Bad betQ0')
@@ -616,11 +745,11 @@ mcstrga <- function (formula,
   }
 
   ## Other fixed parameters
-  kappa <- as.double(kappa)
-  if (kappa < 0 & corrfcn %in% c("matern", "power")) {
+  kappa <- if (needkappa) as.double(kappa) else 0
+  if (kappa < 0 & corrfcn %in% c("matern", "powerexponential")) {
     stop ("Argument kappa cannot be negative")
   }
-  if (kappa > 2 & corrfcn == "power") {
+  if (kappa > 2 & corrfcn == "powerexponential") {
     stop ("Argument kappa cannot be more than 2")
   }
   if (corrfcn == "spherical" & NCOL(loc) > 3) {
@@ -645,7 +774,11 @@ grater than 3.")
   lglk <- numeric(Nout)
 
   ## Starting values
-  if (missing(zstart)) zstart <- 0
+  if (missing(zstart)) {
+    zstart <- y/l
+    zstart <- linkfcn(zstart, linkp, "gaussian")
+    zstart <- pmax(zstart, -1e8) + rnorm(k, 0, sqrt(ssqsc))
+  }
   z[, 1] <- zstart
   if (missing(phistart)) {
     if (phisc == 0) {
@@ -747,9 +880,63 @@ grater than 3.")
 ##' returns an \code{\link[coda]{mcmc}} object or an
 ##' \code{\link[coda]{mcmc.list}} object for coda. The function
 ##' requires the \code{coda} package to be installed.
+
+##' The spatial random field components are assigned the names
+##' \code{z_*} where \code{*} is a number beginning at 1. Similarly,
+##' the regressor coefficients are assigned the names \code{beta_*} if
+##' not unique, or simply \code{beta} if there is only one regressor.
+##' The names \code{ssq}, \code{tsq}, \code{phi}, \code{omg}
+##' correspond to the partial sill, measurement error variance,
+##' spatial range, and relative nugget parameters respectively.
 ##' @title Convert to an \code{\link[coda]{mcmc}} object
 ##' @param ... Output(s) from the functions mentioned in the Details.
 ##' @return An mcmc object.
+##' @examples \dontrun{
+##' ### Load the data
+##' data(rhizoctonia)
+##' rhiz <- na.omit(rhizoctonia)
+##' rhiz$IR <- rhiz$Infected/rhiz$Total # Incidence rate of the
+##'                               # rhizoctonia disease
+##' 
+##' ### Define the model
+##' corrf <- "spherical"
+##' ssqdf <- 1
+##' ssqsc <- 1
+##' tsqdf <- 1
+##' tsqsc <- 1
+##' betm0 <- 0
+##' betQ0 <- diag(.01, 2, 2)
+##' phiprior <- c(200, 1, 1000, 100) # U(100, 300)
+##' phisc <- 1
+##' omgprior <- c(3, 1, 1000, 0) # U(0, 3)
+##' omgsc <- 1.3
+##' linkp <- 1
+##' 
+##' ## MCMC parameters
+##' Nout <- 100
+##' Nbi <- 0
+##' Nthin <- 1
+##'
+##' ### Run MCMC
+##' sample <- mcstrga(Yield ~ IR, data = rhiz, 
+##'                   atsample = ~ Xcoord + Ycoord, corrf = corrf, 
+##'                   Nout = Nout, Nthin = Nthin,
+##'                   Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
+##'                   ssqdf = ssqdf, ssqsc = ssqsc,
+##'                   tsqdf = tsqdf, tsqsc = tsqsc,
+##'                   phipars = phiprior, omgpars = omgprior,
+##'                   linkp = linkp,
+##'                   phisc = phisc, omgsc = omgsc, test=FALSE)
+##' 
+##' mcsample <- mcmcmake(sample)
+##' plot(mcsample[, c("phi", "omg", "beta_1", "beta_2", "ssq", "tsq")],
+##'      density = FALSE)
+##' summary(mcsample[, c("phi", "omg", "beta_1", "beta_2", "ssq", "tsq")])
+##' }
+##' @seealso Functions such as \code{\link[coda]{plot.mcmc}} and
+##' \code{\link[coda]{summary.mcmc}} in the \code{coda} package. The
+##' function \code{\link[base]{do.call}} can be used to pass arguments
+##' stored in a list.
 ##' @importFrom coda mcmc mcmc.list
 ##' @export 
 mcmcmake <- function (...) {

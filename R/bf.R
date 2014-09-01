@@ -1,6 +1,6 @@
 ##' Function to compute the Bayes factors from MCMC samples.
 ##'
-##' Computes the bayes factors using \code{method} with respect to
+##' Computes the Bayes factors using \code{method} with respect to
 ##' \code{reference}. 
 ##' @title Computation of Bayes factors at the skeleton points
 ##' @param runs A list with outputs from the function
@@ -20,6 +20,22 @@
 ##' \item \code{logLik1} \code{logLik2} Matrices with the values of
 ##' the log-likelihood computed from the samples for each model at the
 ##' first and second stages.
+##' \item \code{isweights} A vector with the importance sampling
+##' weights for computing the Bayes factors at new points that will be
+##' used at the second stage. Used internally in
+##' \code{\link{bf2new}} and \code{\link{bf2optim}}.
+##' \item \code{controlvar} A matrix with the control variates
+##' computed at the samples that will be used in the second stage. 
+##' \item \code{z} The MCMC sample for the random field that will be
+##' used in the second stage. Used internally in
+##' \code{\link{bf2new}} and \code{\link{bf2optim}}.
+##' \item \code{betm0}, \code{betQ0}, \code{ssqdf}, \code{ssqsc},
+##' \code{tsqdf}, \code{tsqsc}, \code{dispersion}, \code{response},
+##' \code{weights}, \code{modelmatrix}, \code{locations},
+##' \code{family}, \code{corrfcn} Model parameters used internally in
+##' \code{\link{bf2new}} and \code{\link{bf2optim}}.
+##' \item \code{pnts} A list containing the skeleton points. Used
+##' internally in \code{\link{bf2new}} and \code{\link{bf2optim}}.
 ##' }
 ##' @references Geyer, C. J. (1994). Estimating Normalizing Constants
 ##' and Reweighting Mixtures. Technical report, University of
@@ -27,7 +43,45 @@
 ##'  
 ##' Meng, X. L., & Wong, W. H. (1996). Simulating Ratios of
 ##' Normalizing Constants via a Simple Identity: A Theoretical
-##' Exploration. \emph{Statistica Sinica}, 6, 831-860. 
+##' Exploration. \emph{Statistica Sinica}, 6, 831-860.
+##'
+##' Roy, V., Evangelou, E., and Zhu, Z. (2014). Efficient estimation
+##' and prediction for the Bayesian spatial generalized linear mixed
+##' model with flexible link functions. Technical report, Iowa State
+##' University.
+##' @examples \dontrun{
+##' data(rhizoctonia)
+##' ### Define the model
+##' corrf <- "spherical"
+##' kappa <- 0
+##' ssqdf <- 1
+##' ssqsc <- 1
+##' betm0 <- 0
+##' betQ0 <- .01
+##' linkp <- "probit"
+##' ### Skeleton points
+##' philist <- c(100, 140, 180)
+##' omglist <- c(.5, 1)
+##' parlist <- expand.grid(phi=philist, linkp=linkp, omg=omglist, kappa = kappa)
+##' ### MCMC sizes
+##' Nout <- 100
+##' Nthin <- 1
+##' Nbi <- 0
+##' ### Take MCMC samples
+##' runs <- list()
+##' for (i in 1:NROW(parlist)) {
+##'   runs[[i]] <- mcsglmm(Infected ~ 1, 'binomial', rhizoctonia, weights = Total,
+##'                        atsample = ~ Xcoord + Ycoord,
+##'                        Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+##'                        betm0 = betm0, betQ0 = betQ0,
+##'                        ssqdf = ssqdf, ssqsc = ssqsc,
+##'                        phistart = parlist$phi[i], omgstart = parlist$omg[i],
+##'                        linkp = parlist$linkp[i], kappa = parlist$kappa[i], 
+##'                        corrfcn = corrf, phisc = 0, omgsc = 0)
+##' }
+##' bf <- bf1skel(runs)
+##' bf$logbf
+##' }
 ##' @importFrom sp spDists
 ##' @export 
 bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
@@ -104,7 +158,8 @@ the extra elements will be discarded")
   tsqdf <- model$tsqdf
   tsqsc <- model$tsqsc
   corrfcn <- model$corrfcn
-  icf <- match(corrfcn, c("matern", "spherical", "power"))
+  needkappa <- corrfcn %in% c("matern", "powerexponential")
+  icf <- match(corrfcn, c("matern", "spherical", "powerexponential"))
   loc <- model$locations
   dm <- sp::spDists(loc)
   fixphi <- sapply(runs, function(r) attr(r[["phi"]], "fixed"))
@@ -144,12 +199,16 @@ the extra elements will be discarded")
       stop ("The link functions don't have the same functional form")
     }
   }
-  kappa_pnts <- sapply(runs, function(r) r[["kappa"]][1])
+  if (needkappa) {
+    kappa_pnts <- sapply(runs, function(r) r[["kappa"]][1])
+  } else {
+    kappa_pnts <- rep(0, nruns)
+  }
   kappa_pnts <- as.double(kappa_pnts)
-  if (any(kappa_pnts < 0) & corrfcn %in% c("matern", "power")) {
+  if (any(kappa_pnts < 0) & corrfcn %in% c("matern", "powerexponential")) {
     stop ("Argument kappa_pnts cannot be negative")
   }
-  if (any(kappa_pnts > 2) & corrfcn == "power") {
+  if (any(kappa_pnts > 2) & corrfcn == "powerexponential") {
     stop ("Argument kappa_pnts cannot be more than 2")
   }
 
@@ -181,7 +240,7 @@ the extra elements will be discarded")
               betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc, tsqdf = tsqdf,
               tsqsc = tsqsc, dispersion = dispersion, response = y, weights = l,
               modelmatrix = F, locations = loc, family = family,
-              referencebf = refbf, corrfcn = corrfcn, 
+              corrfcn = corrfcn, 
               pnts = list(nu = nu_pnts, phi = phi_pnts, omg = omg_pnts,
                 kappa = kappa_pnts))
   out

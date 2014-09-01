@@ -5,16 +5,17 @@
 \usage{
 mcstrga(formula, data, weights, subset, atsample, Nout, Nthin = 1, Nbi = 0,
   betm0, betQ0, ssqdf, ssqsc, tsqdf, tsqsc, phipars, omgpars,
-  corrfcn = c("matern", "spherical", "power"), kappa, linkp, phisc, omgsc,
-  zstart, phistart, omgstart, longlat = FALSE, test = FALSE)
+  corrfcn = c("matern", "spherical", "powerexponential"), kappa, linkp, phisc,
+  omgsc, zstart, phistart, omgstart, longlat = FALSE, test = FALSE)
 }
 \arguments{
 \item{formula}{A representation of the model in the form
-\code{response ~ terms}. The response is must be set to
-\code{NA}'s at the prediction locations. At the observed locations
-the response is assumed to be a total of replicated measurements.
-The number of replications is inputted using the argument
-\code{weights}.}
+\code{response ~ terms}. The response must be set to \code{NA}'s
+at the prediction locations (see the example in
+\code{\link{mcsglmm}} for how to do this using
+\code{\link{stackdata}}). At the observed locations the response
+is assumed to be a total of replicated measurements. The number of
+replications is inputted using the argument \code{weights}.}
 
 \item{data}{An optional data frame containing the variables in the
 model.}
@@ -53,14 +54,16 @@ measurement error parameter.}
 
 \item{phipars}{Parameters for the generalized inverse gamma prior
 for the range parameter \code{phi}. A four dimensional vector with
-parameters scale, shape, exponent, location in that order.}
+parameters scale, shape, exponent, location in that order. See
+\code{\link{mcsglmm}}.}
 
 \item{omgpars}{Parameters for the generalized inverse gamma prior
 for the relative nugget parameter \code{omg}. A four dimensional
 vector with parameters scale, shape, exponent, location in that
-order.}
+order. See \code{\link{mcsglmm}}.}
 
-\item{corrfcn}{Spatial correlation function.}
+\item{corrfcn}{Spatial correlation function. See
+\code{\link{ebsglmm}} for details.}
 
 \item{kappa}{Spatial correlation parameter. Smoothness parameter
 for Matern, exponent for the power family.}
@@ -77,16 +80,19 @@ increase the acceptance ratio. Set this to 0 for fixed \code{omg}.
 In this case the fixed value is given in the argument
 \code{omgstart}.}
 
-\item{zstart}{Starting value for the MCMC for the GRF. Defaults to
-0.}
+\item{zstart}{Optional starting value for the MCMC for the GRF.
+This can be either a scalar, a vector of size n where n is the
+number of sampled locations.}
 
-\item{phistart}{Starting value for the MCMC for \code{phi}.
-Defaults to the mean of its prior. If \code{phisc} is 0, this
-argument corresponds to the fixed value of \code{phi}.}
+\item{phistart}{Optional starting value for the MCMC for the
+spatial range parameter \code{phi}. Defaults to the mean of its
+prior. If \code{phisc} is 0, then this argument is required and it
+corresponds to the fixed value of \code{phi}.}
 
-\item{omgstart}{Starting value for the MCMC for \code{omg}.
-Defaults to the mean of its prior. If \code{omgsc} is 0, this
-argument corresponds to the fixed value of \code{omg}.}
+\item{omgstart}{Optional starting value for the MCMC for the relative
+nugget parameter \code{omg}. Defaults to the mean of its prior. If
+\code{omgsc} is 0, then this argument is required and
+itcorresponds to the fixed value of \code{omg}.}
 
 \item{longlat}{How to compute the distance between locations. If
 \code{FALSE}, Euclidean distance, if \code{TRUE} Great Circle
@@ -147,5 +153,53 @@ link function
 }
 \details{
 Simulates from the posterior distribution of this model.
+}
+\examples{
+\dontrun{
+### Load the data
+data(rhizoctonia)
+rhiz <- na.omit(rhizoctonia)
+rhiz$IR <- rhiz$Infected/rhiz$Total # Incidence rate of the
+                              # rhizoctonia disease
+
+### Define the model
+corrf <- "spherical"
+ssqdf <- 1
+ssqsc <- 1
+tsqdf <- 1
+tsqsc <- 1
+betm0 <- 0
+betQ0 <- diag(.01, 2, 2)
+phiprior <- c(200, 1, 1000, 100) # U(100, 300)
+phisc <- 1
+omgprior <- c(3, 1, 1000, 0) # U(0, 3)
+omgsc <- 1.3
+linkp <- 1
+
+## MCMC parameters
+Nout <- 100
+Nbi <- 0
+Nthin <- 1
+
+samplt <- mcstrga(Yield ~ IR, data = rhiz,
+                  atsample = ~ Xcoord + Ycoord, corrf = corrf,
+                  Nout = Nout, Nthin = Nthin,
+                  Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
+                  ssqdf = ssqdf, ssqsc = ssqsc,
+                  tsqdf = tsqdf, tsqsc = tsqsc,
+                  phipars = phiprior, omgpars = omgprior,
+                  linkp = linkp,
+                  phisc = phisc, omgsc = omgsc, test=10)
+
+sample <- mcstrga(Yield ~ IR, data = rhiz,
+                  atsample = ~ Xcoord + Ycoord, corrf = corrf,
+                  Nout = Nout, Nthin = Nthin,
+                  Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
+                  ssqdf = ssqdf, ssqsc = ssqsc,
+                  tsqdf = tsqdf, tsqsc = tsqsc,
+                  phipars = phiprior, omgpars = omgprior,
+                  linkp = linkp,
+                  phisc = phisc, omgsc = omgsc, test=FALSE)
+}
 }
 

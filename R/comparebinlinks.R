@@ -62,7 +62,7 @@ comparebinlinks <- function (d1,d2,a=-8,b=8,n=2001,prob1=NULL,plot=TRUE) {
     if (length(d) != 1) stop('Link input must be a numeric or character
 of lenght 1')
     links <- c('logit','probit')
-    if (is.character(d)) {
+    if (is.character(d) | is.factor(d)) {
       dnm <- match.arg(d,links)
       d <- which(dnm == links) - length(links)
     } else if (d <= 0) {

@@ -1,0 +1,139 @@
+##' Link function for the exponential family.
+##'
+##' \code{linkfcn} maps the mean of the response variable \code{mu} to
+##' the linear predictor \code{z}. \code{linkinv} is its inverse.
+##' 
+##' Note that the logit link for the
+##' binomial family is defined as the quantile of the logistic
+##' distribution with scale 0.6458.
+##'
+##' For the Gaussian family, if the link parameter is positive, then
+##' the extended link is used, defined by \deqn{z =
+##' \frac{sign(\mu)|\mu|^\nu - 1}{\nu}}{z = (sign(mu)*abs(mu)^nu -
+##' 1)/nu} In the other case, the link function is the same as for the
+##' Poisson and gamma families.
+##'  
+##' For the Poisson and gamma families, the Box-Cox transformation is
+##' used, defined by \deqn{z = \frac{\mu^\nu - 1}{\nu}}{z = (mu^nu -
+##' 1)/nu}
+##' @title Calculate the link function for exponential families
+##' @param mu Numeric. The mean of the response variable. 
+##' @param z Numeric. The linear predictor. 
+##' @param linkp The link function parameter. A scalar but for the
+##' binomial family is also allowed to have the character values
+##' "logit" or "probit".
+##' @param family The distribution of the response variable.
+##' @return A numeric array of the same dimension as the function's
+##' first argument.
+##' @seealso \code{\link{comparebinlinks}}
+##' @examples \dontrun{
+##' mu <- seq(0.1, 0.9, 0.1)
+##' linkfcn(mu, 7, "binomial")       # robit(7) link function
+##' linkfcn(mu, "logit", "binomial") # logit link function
+##'
+##' mu <- seq(-3, 3, 1)
+##' linkfcn(mu, 0.5, "gaussian")     # sqrt transformation
+##' linkinv(linkfcn(mu, 0.5, "gaussian"), 0.5, "gaussian")
+##' curve(linkfcn(x, 0.5, "gaussian"), -3, 3)
+##' }
+##' @family linkfcn
+##' @name linkfcn
+##' @rdname linkfcn
+##' @export 
+linkfcn <- function (mu, linkp,
+                     family = c("gaussian", "binomial", "poisson", "Gamma")) {
+  family <- match.arg(family)
+  if (length(linkp) != 1) stop ("The linkp argument must be scalar")
+  if (is.character(linkp) | is.factor(linkp)) {
+    if (family == "binomial") {
+      if (linkp == "logit") {
+        z <- qlogis(mu, scale = 0.6458)
+      } else if (linkp == "probit") {
+        z <- qnorm(mu)
+      } else {
+        stop ("Cannot recognise character link for binomial")
+      }
+    } else stop ("Character link is only allowed for binomial")
+  } else if (!is.numeric(linkp)) {
+    stop ("Argument linkp must be numeric, or in the case of
+the binomial can also be the character \"logit\" or \"probit\"")
+  } else { # Numeric link parameter
+    nu <- as.double(linkp)
+    if (family == "gaussian") {
+      if (nu == 0) {
+        z <- ifelse(mu > 0, log(mu), -Inf)
+      } else if (nu > 0) {
+        z <- (sign(mu)*abs(mu)^nu - 1)/nu
+      } else if (nu < 0) {
+        z <- ifelse(mu > 0, (mu^nu - 1)/nu, -Inf)
+      }
+    } else if (family == "binomial") {
+      if(nu <= 0) {
+        stop ("The robit link parameter must be positive")
+      } else {
+        z <- qt(mu, nu)
+      }
+    } else if (family == "poisson" | family == "gamma") {
+      if (nu == 0) {
+        z <- ifelse(mu > 0, log(mu), -Inf)
+      } else {
+        z <- ifelse(mu > 0, (mu^nu - 1)/nu, -Inf)
+      }
+    } else {
+      stop ("Unrecognised family")
+    }
+  }
+  z
+}
+
+##' @family linkfcn
+##' @rdname linkfcn
+##' @export 
+linkinv <- function (z, linkp, 
+                     family = c("gaussian", "binomial", "poisson", "Gamma")) {
+  family <- match.arg(family)
+  if (length(linkp) != 1) stop ("The linkp argument must be scalar")
+  if (is.character(linkp) | is.factor(linkp)) {
+    if (family == "binomial") {
+      if (linkp == "logit") {
+        mu <- plogis(z, scale = 0.6458)
+      } else if (linkp == "probit") {
+        mu <- pnorm(z)
+      } else {
+        stop ("Cannot recognise character link for binomial")
+      }
+    } else stop ("Character link is only allowed for binomial")
+  } else if (!is.numeric(linkp)) {
+    stop ("Argument linkp must be numeric, or in the case of
+the binomial can also be the character \"logit\" or \"probit\"")
+  } else { # Numeric link parameter
+    nu <- as.double(linkp)
+    if (family == "gaussian") {
+      if (nu == 0) {
+        mu <- exp(z)
+      } else if (nu > 0) {
+        mu <- nu*z + 1
+        mu <- sign(mu)*abs(mu)^(1/nu)
+      } else { # nu < 0
+        mu <- nu*z + 1
+        ifelse(mu > 0, mu^(1/nu), Inf)
+      }
+    } else if (family == "binomial") {
+      if(nu <= 0) {
+        stop ("The robit link parameter must be positive")
+      } else {
+        mu <- pt(z, nu)
+      }
+    } else if (family == "poisson" | family == "gamma") {
+      if (nu == 0) {
+        mu <- exp(z)
+      } else {
+        mu <- nu*z
+        mu <- ifelse(mu > -1, exp(log1p(mu)/nu), 0)
+      }
+    } else {
+      stop ("Unrecognised family")
+    }
+  }
+  mu
+}

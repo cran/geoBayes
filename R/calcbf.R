@@ -1,67 +1,118 @@
 ##' Compute the Bayes factors.
 ##'
-##' Computes the Bayes factors using the importance weights.
-##' @title Compute the Bayes factors at other points
-##' @param bfspobj Output from the function \code{\link{bf1skel}} which
+##' Computes the Bayes factors using the importance weights at the new
+##' points. The new points are taken from the grid derived by
+##' expanding the parameter values inputted. The arguments
+##' \code{linkp} \code{phi} \code{omg} \code{kappa} correspond to the
+##' link function, spatial range, relative nugget, and correlation
+##' function parameters respectively.
+##' @title Compute the Bayes factors at new points
+##' @param bf1obj Output from the function \code{\link{bf1skel}} which
 ##' contains the Bayes factors and importance sampling weights.
-##' @param linkp,phi,omg,kappa Scalar or vector or \code{NULL}. If
-##' scalar or vector, the Bayes factors are calculated at those
-##' values. If \code{NULL} then the unique values from the MCMC
-##' chains that were inputted in \code{\link{bf1skel}} will be used.
+##' @param linkp,phi,omg,kappa Optional scalar or vector or
+##' \code{NULL}. If scalar or vector, the Bayes factors are calculated
+##' at those values with respect to the reference model used in
+##' \code{\link{bf1skel}}. If missing or \code{NULL} then the unique
+##' values from the MCMC chains that were inputted in
+##' \code{\link{bf1skel}} will be used.
 ##' @param useCV Whether to use control variates for finer
 ##' corrections. 
-##' @return An array of size length(linkp) x length(phi) x length(omg)
-##' x length(kappa) containing the Bayes factors for each combination
-##' of the parameters.
+##' @return An array of size \code{length(linkp) * length(phi) *
+##' length(omg) * length(kappa)} containing the Bayes factors for each
+##' combination of the parameters.
+##' @examples \dontrun{
+##' data(rhizoctonia)
+##' ### Define the model
+##' corrf <- "spherical"
+##' kappa <- 0
+##' ssqdf <- 1
+##' ssqsc <- 1
+##' betm0 <- 0
+##' betQ0 <- .01
+##' linkp <- "probit"
+##' ### Skeleton points
+##' philist <- c(100, 140, 180)
+##' omglist <- c(.5, 1)
+##' parlist <- expand.grid(phi=philist, linkp=linkp, omg=omglist, kappa = kappa)
+##' ### MCMC sizes
+##' Nout <- 100
+##' Nthin <- 1
+##' Nbi <- 0
+##' ### Take MCMC samples
+##' runs <- list()
+##' for (i in 1:NROW(parlist)) {
+##'   runs[[i]] <- mcsglmm(Infected ~ 1, 'binomial', rhizoctonia, weights = Total,
+##'                        atsample = ~ Xcoord + Ycoord,
+##'                        Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+##'                        betm0 = betm0, betQ0 = betQ0,
+##'                        ssqdf = ssqdf, ssqsc = ssqsc,
+##'                        phistart = parlist$phi[i], omgstart = parlist$omg[i],
+##'                        linkp = parlist$linkp[i], kappa = parlist$kappa[i], 
+##'                        corrfcn = corrf, phisc = 0, omgsc = 0)
+##' }
+##' bf <- bf1skel(runs)
+##' bfall <- bf2new(bf, phi = seq(100, 200, 10), omg = seq(0, 2, .2))
+##' plotbf2(bfall, c("phi", "omg"))
+##' }
 ##' @importFrom sp spDists
 ##' @references Doss, H. (2010). Estimation of large families of Bayes
 ##' factors from Markov chain output. \emph{Statistica Sinica}, 20(2),
 ##' 537. 
+##'
+##' Roy, V., Evangelou, E., and Zhu, Z. (2014). Efficient estimation
+##' and prediction for the Bayesian spatial generalized linear mixed
+##' model with flexible link functions. Technical report, Iowa State
+##' University.
 ##' @export 
-bf2new <- function (bfspobj, linkp, phi, omg, kappa, useCV = TRUE) {
+bf2new <- function (bf1obj, linkp, phi, omg, kappa, useCV = TRUE) {
+
+  ## Logical input
+  useCV <- isTRUE(useCV)
+
   ## Extract model variables
-  y <- bfspobj$response
+  y <- bf1obj$response
   n <- length(y)
-  l <- bfspobj$weights
-  F <- bfspobj$modelmatrix
+  l <- bf1obj$weights
+  F <- bf1obj$modelmatrix
   p <- NCOL(F)
-  family <- bfspobj$family
+  family <- bf1obj$family
   ifam <- match(family, c("gaussian", "binomial", "poisson", "Gamma"), 0L)
-  corrfcn <- bfspobj$corrfcn
-  icf <- match(corrfcn, c("matern", "spherical", "power"))
-  betm0 <- bfspobj$betm0
-  betQ0 <- bfspobj$betQ0
-  ssqdf <- bfspobj$ssqdf
-  ssqsc <- bfspobj$ssqsc
-  dispersion <- bfspobj$dispersion
-  tsqdf <- bfspobj$tsqdf
-  tsqsc <- bfspobj$tsqsc
+  corrfcn <- bf1obj$corrfcn
+  needkappa <- corrfcn %in% c("matern", "powerexponential")
+  icf <- match(corrfcn, c("matern", "spherical", "powerexponential"))
+  betm0 <- bf1obj$betm0
+  betQ0 <- bf1obj$betQ0
+  ssqdf <- bf1obj$ssqdf
+  ssqsc <- bf1obj$ssqsc
+  dispersion <- bf1obj$dispersion
+  tsqdf <- bf1obj$tsqdf
+  tsqsc <- bf1obj$tsqsc
   tsq <- if (ifam == 0) tsqsc else dispersion
-  loc <- bfspobj$locations
+  loc <- bf1obj$locations
   dm <- sp::spDists(loc)
-  z <- bfspobj$z
+  z <- bf1obj$z
   Ntot <- NCOL(z)
-  isweights <- bfspobj$isweights
-  zcv <- bfspobj$controlvar
+  isweights <- bf1obj$isweights
+  zcv <- bf1obj$controlvar
   kg <- NCOL(zcv)
 
   ## Examine link function parameter
-  if (is.null(linkp)) {
-    linkp <- nu <- unique(bfspobj$pnts$nu)
+  if (missing(linkp) || is.null(linkp)) {
+    linkp <- nu <- unique(bf1obj$pnts$nu)
   } else if (family == "binomial") {
-    if (is.character(linkp)) {
+    if (is.character(linkp) | is.factor(linkp)) {
       if (length(linkp) != 1) {
         stop ("When using character linkp, it must not be a vector")
       }
       if (linkp == "logit") {
-        nu <- unique(bfspobj$pnts$nu)
+        nu <- unique(bf1obj$pnts$nu)
         if (!isTRUE(nu == -1)) {
-          stop ("The logit link is not consistent with the model in bfspobj")
+          stop ("The logit link is not consistent with the model in bf1obj")
         }
       } else if (linkp == "probit") {
-        nu <- unique(bfspobj$pnts$nu)
+        nu <- unique(bf1obj$pnts$nu)
         if (!isTRUE(nu == 0)) {
-          stop ("The logit link is not consistent with the model in bfspobj")
+          stop ("The logit link is not consistent with the model in bf1obj")
         }
       } else {
         stop ("Unrecognised linkp")
@@ -82,15 +133,15 @@ bf2new <- function (bfspobj, linkp, phi, omg, kappa, useCV = TRUE) {
   n_nu <- length(nu)
 
   ## Examine covariance parameters
-  if (is.null(phi)) {
-    phi <- unique(bfspobj$pnts$phi)
+  if (missing(phi) || is.null(phi)) {
+    phi <- unique(bf1obj$pnts$phi)
   } else if (!is.numeric(phi)) {
     stop ("Argument phi must be numeric or NULL")
   }
   phi <- as.double(phi)
   if (any(phi < 0)) stop ("Argument phi must be non-negative")
-  if (is.null(omg)) {
-    omg <- unique(bfspobj$pnts$omg)
+  if (missing(omg) || is.null(omg)) {
+    omg <- unique(bf1obj$pnts$omg)
   } else if (!is.numeric(omg)) {
     stop ("Argument omg must be numeric or NULL")
   }
@@ -98,16 +149,16 @@ bf2new <- function (bfspobj, linkp, phi, omg, kappa, useCV = TRUE) {
   omg <- as.double(omg)
   if (any(omg < 0)) stop ("Argument omg must be non-negative")
   n_omg <- length(omg)
-  if (is.null(kappa)) {
-    kappa <- unique(bfspobj$pnts$kappa)
+  if (!needkappa || missing(kappa) || is.null(kappa)) {
+    kappa <- unique(bf1obj$pnts$kappa)
   } else if (!is.numeric(kappa)) {
     stop ("Argument kappa must be numeric or NULL")
   }
   kappa <- as.double(kappa)
-  if (any(kappa < 0) & corrfcn %in% c("matern", "power")) {
+  if (any(kappa < 0) & corrfcn %in% c("matern", "powerexponential")) {
     stop ("Argument kappa cannot be negative")
   }
-  if (any(kappa > 2) & corrfcn == "power") {
+  if (any(kappa > 2) & corrfcn == "powerexponential") {
     stop ("Argument kappa cannot be more than 2")
   }
   n_kappa <- length(kappa)
@@ -115,6 +166,13 @@ bf2new <- function (bfspobj, linkp, phi, omg, kappa, useCV = TRUE) {
   n_cov <- NROW(covpars)
 
   bfact <- numeric(n_nu*n_cov)
+
+  ## Check for non-finite values in control variates
+  if (useCV && any(!is.finite(zcv))) {
+    warning ("Computed non-finite control variates, probably due to numerical
+overflow. Control variates corrections will not be used.")
+    useCV <- FALSE
+  }
 
   if (useCV) {
     RUN <- .Fortran('calcb_cv', bfact, covpars$phi, nu, covpars$omg,
@@ -128,7 +186,7 @@ bf2new <- function (bfspobj, linkp, phi, omg, kappa, useCV = TRUE) {
                     betQ0, ssqdf, ssqsc, max(tsqdf, 0), tsq, y, l, F, dm, ifam)
   }
   logbf <- array(RUN[[1]], c(n_nu, n_phi, n_omg, n_kappa))
-  logbf <- logbf - bfspobj$referencebf
+  logbf <- logbf + bf1obj$logbf[1] # Constant to match bf1obj$logbf
   maxid <- arrayInd(which.max(logbf), c(n_nu, n_phi, n_omg, n_kappa))
   out <- list(logbf = logbf, linkp = linkp, phi = phi,
               omg = omg, corrfcn = corrfcn, kappa = kappa, indmax = maxid)
@@ -137,54 +195,118 @@ bf2new <- function (bfspobj, linkp, phi, omg, kappa, useCV = TRUE) {
 }
 
 
-##' Creates a plot of the estimated Bayes factors from the function
-##' \code{\link{bf2new}}. 
+##' This function plots the estimated logarithm Bayes factors from the
+##' function \code{\link{bf2new}}.
 ##' 
-##' Depending on whether \code{ipar} is of length 1 or 2, this
-##' function creates a line or a contour plot of the estimated Bayes
-##' factors. 
+##' Depending on whether \code{pars} has length 1 or 2, this function
+##' creates a line or a contour plot of the estimated Bayes factors.
+##' If its length is 3 or 4, then it produces multiple profile plots.
+##' In this case the variable is fixed at different values and the
+##' maximum Bayes factor corresponding to the fixed value is plotted
+##' against that value.
 ##' @title Plot the estimated Bayes factors
-##' @param x Output from the function \code{\link{bf2new}}.
-##' @param ipar One or two unique integers in 1:4 indicating with
-##' respect to which parameters to plot.
-##' @param xlab,ylab,main Graphical parameters
-##' @param ... Other graphical parameters to be passed on either
-##' \code{plot} or \code{contour}.
-##' @method contour bfsp
-##' @return Produces the plot mentioned in the Details.
+##' @param bf2obj Output from the function \code{\link{bf2new}}.
+##' @param pars A vector with the names of the parameters to plot. 
+##' @param profile Whether it should produce a profile plot or a
+##' contour plot if the length of pars is 2.
+##' @param ... Other input to be passed to either \code{plot} or
+##' \code{contour}.
+##' @return This function returns nothing. 
+##' @examples \dontrun{
+##' data(rhizoctonia)
+##' ### Define the model
+##' corrf <- "spherical"
+##' kappa <- 0
+##' ssqdf <- 1
+##' ssqsc <- 1
+##' betm0 <- 0
+##' betQ0 <- .01
+##' linkp <- "probit"
+##' ### Skeleton points
+##' philist <- c(100, 140, 180)
+##' omglist <- c(.5, 1)
+##' parlist <- expand.grid(phi=philist, linkp=linkp, omg=omglist, kappa = kappa)
+##' ### MCMC sizes
+##' Nout <- 100
+##' Nthin <- 1
+##' Nbi <- 0
+##' ### Take MCMC samples
+##' runs <- list()
+##' for (i in 1:NROW(parlist)) {
+##'   runs[[i]] <- mcsglmm(Infected ~ 1, 'binomial', rhizoctonia, weights = Total,
+##'                        atsample = ~ Xcoord + Ycoord,
+##'                        Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+##'                        betm0 = betm0, betQ0 = betQ0,
+##'                        ssqdf = ssqdf, ssqsc = ssqsc,
+##'                        phistart = parlist$phi[i], omgstart = parlist$omg[i],
+##'                        linkp = parlist$linkp[i], kappa = parlist$kappa[i], 
+##'                        corrfcn = corrf, phisc = 0, omgsc = 0)
+##' }
+##' bf <- bf1skel(runs)
+##' bfall <- bf2new(bf, phi = seq(100, 200, 10), omg = seq(0, 2, .2))
+##' plotbf2(bfall, c("phi", "omg"))
+##' plotbf2(bfall, c("phi", "omg"), profile = TRUE, type = "b", ylab="log(BF)")
+##' }
 ##' @export 
-contour.bfsp <- function (x, ipar, xlab, ylab, main, ...) {
-  ipar <- unique(as.integer(ipar))
-  if (any(ipar < 1) | any(ipar > 4)) {
-    stop("Argument ipar must be a vector of integers in 1:4")
-  }
-  npar <- length(ipar)
-  if (length(ipar) < 1) stop ("Missing argument ipar")
-  if (length(ipar) > 2) stop ("Cannot plot more than two parameters at a time")
-  pars <- c("linkp", "phi", "omg", "kappa")
-  maxid <- x$indmax
-  ii <- c(list(), maxid)
-  ii[ipar] <- TRUE
-  bf <- do.call('[', c(list(x$logbf), ii, list(drop = FALSE)))
-  jj <- 1:4; jj[sort(ipar)] <- ipar
-  bf <- drop(aperm(bf, jj))
-  if (length(ipar) == 1) {
-    par1nm <- pars[ipar]
-    par1 <- x[[par1nm]]
-    if (missing(xlab)) xlab <- par1nm
-    if (missing(ylab)) ylab <- "Logarithm of Bayes factor"
-    if (missing(main)) main <- ""
-    plot(par1, bf, type = "l", xlab = xlab, ylab = ylab, main = main, ...)
+plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
+                     profile = length(pars) > 2, ...) {
+  N <- 4
+  pars <- unique(pars)
+  pars <- match.arg(pars, several.ok = TRUE)
+  ipar <- match(pars, eval(formals()$pars))
+  npars <- length(pars)
+  dots <- list(...)
+  nmdots <- names(dots)
+
+  ## Determine type of plot
+  if (profile) {
+    ptype <- "profile"
+  } else if (npars == 1) {
+    ptype <- "line"
+  } else if (npars == 2) {
+    ptype <- "contour"
   } else {
-    par1nm <- pars[ipar[1]]
-    par2nm <- pars[ipar[2]]
-    par1 <- x[[par1nm]]
-    par2 <- x[[par2nm]]
-    if (missing(xlab)) xlab <- par1nm
-    if (missing(ylab)) ylab <- par2nm
-    if (missing(main)) main <- "Logarithm of Bayes factor"
-    contour(par1, par2, bf, xlab = xlab, ylab = ylab, main = main, ...)
-    points(par1[maxid[ipar[1]]], par2[maxid[ipar[2]]])
+    warning ("Only a profile plot is available for more than 3 parameters")
+    ptype <- "profile"
+  }
+  
+  if (ptype == "line") {
+    maxid <- bf2obj$indmax
+    ii <- as.list(maxid)
+    ii[ipar] <- TRUE
+    bf <- drop(do.call('[', c(bf2obj["logbf"], ii, list(drop = FALSE))))
+    pdata <- data.frame(bf2obj[pars], logbf = bf)
+    if ("type" %in% nmdots) {
+      plot(pdata, ...)
+    } else {
+      plot(pdata, type = "l", ...)
+    }
+  } else if (ptype == "contour") {
+    maxid <- bf2obj$indmax
+    ii <- as.list(maxid)
+    ii[ipar] <- TRUE
+    bf <- do.call('[', c(list(bf2obj$logbf), ii, list(drop = FALSE)))
+    jj <- seq(N); jj[sort(ipar)] <- ipar
+    bf <- drop(aperm(bf, jj))
+    CC <- call("contour", bf2obj[[pars[1]]], bf2obj[[pars[2]]], bf,
+               quote(...))
+    if (!("xlab" %in% nmdots)) CC["xlab"] = pars[1]
+    if (!("ylab" %in% nmdots)) CC["ylab"] = pars[2]
+    eval(CC)
+    points((bf2obj[[pars[1]]])[maxid[ipar[1]]],
+           (bf2obj[[pars[2]]])[maxid[ipar[2]]])
+  } else if (ptype == "profile") {
+    ii <- as.list(rep(TRUE, N))
+    if (npars > 1) par(mfrow = c(1, npars))
+    for (i in 1:npars) {
+      bf <- apply(bf2obj[["logbf"]], ipar[i], max)
+      pdata <- data.frame(bf2obj[pars[i]], logbf = bf)
+      if ("type" %in% nmdots) {
+        plot(pdata, ...)
+      } else {
+        plot(pdata, type = "l", ...)
+      }
+    }
   }
   invisible()
 }
@@ -196,9 +318,9 @@ contour.bfsp <- function (x, ipar, xlab, ylab, main, ...) {
 ##' "L-BFGS-B" method of the function \code{\link[stats]{optim}} to
 ##' estimate the parameters.
 ##' @title Empirical Bayes estimator
-##' @param bfspobj Output from the function \code{\link{bf1skel}} which
+##' @param bf1obj Output from the function \code{\link{bf1skel}} which
 ##' contains the Bayes factors and importance sampling weights.
-##' @param estimate A named list with the components "linkp", "phi",
+##' @param paroptim A named list with the components "linkp", "phi",
 ##' "omg", "kappa". Each component must be numeric with length 1, 2,
 ##' or 3 with elements in increasing order but for the binomial family
 ##' linkp is also allowed to be the character "logit" and "probit". If
@@ -212,83 +334,123 @@ contour.bfsp <- function (x, ipar, xlab, ylab, main, ...) {
 ##' @param control A list of control parameters for the optimisation.
 ##' See \code{\link[stats]{optim}}.
 ##' @return The output from the function \code{\link[stats]{optim}}.
+##' @examples \dontrun{
+##' data(rhizoctonia)
+##' ### Define the model
+##' corrf <- "spherical"
+##' kappa <- 0
+##' ssqdf <- 1
+##' ssqsc <- 1
+##' betm0 <- 0
+##' betQ0 <- .01
+##' linkp <- "probit"
+##' ### Skeleton points
+##' philist <- c(100, 140, 180)
+##' omglist <- c(.5, 1)
+##' parlist <- expand.grid(phi=philist, linkp=linkp, omg=omglist, kappa = kappa)
+##' ### MCMC sizes
+##' Nout <- 100
+##' Nthin <- 1
+##' Nbi <- 0
+##' ### Take MCMC samples
+##' runs <- list()
+##' for (i in 1:NROW(parlist)) {
+##'   runs[[i]] <- mcsglmm(Infected ~ 1, 'binomial', rhizoctonia, weights = Total,
+##'                        atsample = ~ Xcoord + Ycoord,
+##'                        Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+##'                        betm0 = betm0, betQ0 = betQ0,
+##'                        ssqdf = ssqdf, ssqsc = ssqsc,
+##'                        phistart = parlist$phi[i], omgstart = parlist$omg[i],
+##'                        linkp = parlist$linkp[i], kappa = parlist$kappa[i], 
+##'                        corrfcn = corrf, phisc = 0, omgsc = 0)
+##' }
+##' bf <- bf1skel(runs)
+##' est <- bf2optim(bf, list(linkp = linkp, phi = c(100, 200), omg = c(0, 2)))
+##' est
+##' }
 ##' @importFrom stats optim
 ##' @export 
-bf2optim <- function (bfspobj, estimate, useCV = TRUE,
+bf2optim <- function (bf1obj, paroptim, useCV = TRUE,
                       control = list()) {
 
+  ## Logical input
+  useCV <- isTRUE(useCV)
+
   ## Extract model variables
-  y <- bfspobj$response
+  y <- bf1obj$response
   n <- length(y)
-  l <- bfspobj$weights
-  F <- bfspobj$modelmatrix
+  l <- bf1obj$weights
+  F <- bf1obj$modelmatrix
   p <- NCOL(F)
-  family <- bfspobj$family
+  family <- bf1obj$family
   ifam <- match(family, c("gaussian", "binomial", "poisson", "Gamma"), 0L)
-  corrfcn <- bfspobj$corrfcn
-  icf <- match(corrfcn, c("matern", "spherical", "power"))
-  betm0 <- bfspobj$betm0
-  betQ0 <- bfspobj$betQ0
-  ssqdf <- bfspobj$ssqdf
-  ssqsc <- bfspobj$ssqsc
-  dispersion <- bfspobj$dispersion
-  tsqdf <- bfspobj$tsqdf
-  tsqsc <- bfspobj$tsqsc
+  corrfcn <- bf1obj$corrfcn
+  needkappa <- corrfcn %in% c("matern", "powerexponential")
+  icf <- match(corrfcn, c("matern", "spherical", "powerexponential"))
+  betm0 <- bf1obj$betm0
+  betQ0 <- bf1obj$betQ0
+  ssqdf <- bf1obj$ssqdf
+  ssqsc <- bf1obj$ssqsc
+  dispersion <- bf1obj$dispersion
+  tsqdf <- bf1obj$tsqdf
+  tsqsc <- bf1obj$tsqsc
   tsq <- if (ifam == 0) tsqsc else dispersion
-  loc <- bfspobj$locations
+  loc <- bf1obj$locations
   dm <- sp::spDists(loc)
-  z <- bfspobj$z
+  z <- bf1obj$z
   Ntot <- NCOL(z)
-  isweights <- bfspobj$isweights
-  zcv <- bfspobj$controlvar
+  isweights <- bf1obj$isweights
+  zcv <- bf1obj$controlvar
   nruns <- NCOL(zcv)
   linkp <- if (family == "binomial") {
-    if (bfspobj$pnts$nu[1] < 0) {
+    if (bf1obj$pnts$nu[1] < 0) {
       "logit"
-    } else if (bfspobj$pnts$nu[1] < 0) {
+    } else if (bf1obj$pnts$nu[1] == 0) {
       "probit"
     } else "robit"
   } else "boxcox"
-  parnm <- c("linkp", "phi", "omg", "kappa")
+  parnmall <- c("linkp", "phi", "omg", "kappa")
+  parnm <- c("linkp", "phi", "omg", if (needkappa) "kappa")
   
-  ## Read and check estimate argument
-  if (!is.list(estimate) | length(estimate) != 4) {
-    stop ("Argument estimate must be a list with 4 components")
+  ## Read and check paroptim argument
+  if (!is.list(paroptim)) {
+    stop ("Argument paroptim must be a list")
   }
-  if (!all(parnm %in% names(estimate))) {
-    stop (paste("Named components in the argument estimate",
+  if (!all(parnm %in% names(paroptim))) {
+    stop (paste("Named components in the argument paroptim",
                 "must be", paste(parnm, collapse = " ")))
   } else {
-    estimate <- estimate[parnm]
+    paroptim <- paroptim[parnm]
   }
+  if (!needkappa) paroptim$kappa <- 0
   lower <- upper <- pstart <- rep.int(NA, 4)
   estim <- rep.int(FALSE, 4)
-  linkpe <- estimate[["linkp"]]
-  if (is.character(linkpe)) {
+  linkpe <- paroptim[["linkp"]]
+  if (is.character(linkpe) | is.factor(linkpe)) {
     if (family == "binomial") {
       if (linkpe == "logit") {
         if (linkp == "logit") {
           pstart[1] <- -1
           estim[1] <- FALSE
         } else {
-          stop ("Link in estimate inconsistent with link in bfspobj")
+          stop ("Link in paroptim inconsistent with link in bf1obj")
         }
       } else if (linkpe == "probit") {
         if (linkp == "probit") {
           pstart[1] <- 0
           estim[1] <- FALSE
         } else {
-          stop ("Link in estimate inconsistent with link in bfspobj")
+          stop ("Link in paroptim inconsistent with link in bf1obj")
         }
       } else {
         stop ("Character link for the binomial family can be either
-\"logit\" or \"probit\" in argument estimate")
+\"logit\" or \"probit\" in argument paroptim")
       }
-    } else stop ("Character link in argument estimate is only used for
+    } else stop ("Character link in argument paroptim is only used for
 the binomial family")
   } else if (is.numeric(linkpe)) {
     if (length(linkpe) < 1 | length(linkpe) > 3) {
-      stop ("The length for a numeric component in estimate must be 1, 2, or 3")
+      stop ("The length for a numeric component in paroptim must be 1, 2, or 3")
     } else if (length(linkpe) == 1) {
       pstart[1] <- linkpe
       estim[1] <- FALSE
@@ -299,7 +461,7 @@ the binomial family")
       upper[1] <- linkpe[2]
       if (lower[1] >= upper[1]) {
         stop ("The lower bound must be less than the upper bound for linkp
-in estimate")
+in paroptim")
       }
     } else {
       pstart[1] <- linkpe[2]
@@ -307,20 +469,20 @@ in estimate")
       lower[1] <- linkpe[1]
       upper[1] <- linkpe[3]
       if (lower[1] > estim[1] | estim[1] > upper[1] | lower[1] == upper[1]) {
-        stop ("The elements in the component linkp in estimate must be ordered")
+        stop ("The elements in the component linkp in paroptim must be ordered")
       }
     }
   } else {
-    stop ("The element linkp in estimate must be either numeric or character")
+    stop ("The element linkp in paroptim must be either numeric or character")
   }
   for (i in 2:4) {
-    ppp <- estimate[[parnm[i]]]
+    ppp <- paroptim[[parnmall[i]]]
     if (!is.numeric(ppp)) {
-      stop(paste("The element", parnm[i], "in estimate must be numeric"))
+      stop(paste("The element", parnmall[i], "in paroptim must be numeric"))
     }
     lppp <- length(ppp)
     if (lppp < 1 | lppp > 3) {
-      stop (paste("The element", parnm[i], "in estimate must have 1, 2, or 3
+      stop (paste("The element", parnmall[i], "in paroptim must have 1, 2, or 3
 components"))
     }
     if (lppp == 1) {
@@ -333,7 +495,7 @@ components"))
       upper[i] <- ppp[2]
       if (lower[i] >= upper[i]) {
         stop (paste("The lower bound must be less than the upper bound for",
-                     parnm[i], "in estimate"))
+                     parnmall[i], "in paroptim"))
       }
     } else {
       pstart[i] <- ppp[2]
@@ -341,10 +503,17 @@ components"))
       lower[i] <- ppp[1]
       upper[i] <- ppp[3]
       if (lower[i] > estim[i] | estim[i] > upper[i] | lower[i] == upper[i]) {
-        stop (paste("The elements in the component", parnm[i],
-                     "in estimate must be ordered"))
+        stop (paste("The elements in the component", parnmall[i],
+                     "in paroptim must be ordered"))
       }
     }
+  }
+
+  ## Check for non-finite values in control variates
+  if (useCV && any(!is.finite(zcv))) {
+    warning ("Computed non-finite control variates, probably due to numerical
+overflow. Control variates corrections will not be used.")
+    useCV <- FALSE
   }
 
   ## Function to optimise
@@ -371,10 +540,10 @@ components"))
   }
   
   method <- if (sum(estim) == 1) "Brent" else "L-BFGS-B"
-  logbf <- bfspobj$logbf
+  logbf <- bf1obj$logbf
   imaxlogbf <- which.max(logbf)
   wbf <- exp(logbf - logbf[imaxlogbf] - log(sum(exp(logbf - logbf[imaxlogbf]))))
-  pstart.d <- colSums(data.frame(bfspobj$pnts[c("nu", "phi", "omg", "kappa")])*
+  pstart.d <- colSums(data.frame(bf1obj$pnts[c("nu", "phi", "omg", "kappa")])*
                       wbf)
   i <- is.na(pstart) & estim
   pstart[i] <- pmax(pmin(upper[i], pstart.d[i]), lower[i])
@@ -383,7 +552,8 @@ components"))
                      control = control)
   parout <- pstart
   parout[estim] <- op$par
+  names(parout) <- c("linkp", "phi", "omg", "kappa")
   op$par <- parout
-  op$value <- -op$value
+  op$value <- -op$value + bf1obj$logbf[1]
   op
 }

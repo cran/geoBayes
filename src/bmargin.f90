@@ -52,12 +52,12 @@ contains
         !       print '(" Convergence in ",I0," iterations")', i
         exit
       else if (iflag < 0) then
-        call rwarn ('BFGS agorithm didn''t converge')
+        call rwarn ('The reverse logistic agorithm didn''t converge')
         exit
       end if
     end do
     if (iflag > 0) then
-      call rwarn ('BFGS algorithm needs more iterations')
+      call rwarn ('The reverse logistic algorithm needs more iterations')
     end if
     eta = eta - eta(1) + log(dble(Nout))
   end subroutine revlogistic

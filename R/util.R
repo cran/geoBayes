@@ -1,30 +1,72 @@
 ##' Combine \code{data.frame}s
 ##'
 ##' This function combines \code{data.frame}s by filling in missing
-##' variables with \code{NA}. This is useful for combining data from
+##' variables. This is useful for combining data from
 ##' sampled locations with prediction locations.
+##'
+##' If \code{fillwith} is a named object, its names must correspond to
+##' the names of variables in the data frames. If a variable is
+##' missing, then it is filled with the corresponding value in
+##' \code{fillwith}. 
 ##' @title Combine \code{data.frame}s
 ##' @param ... \code{data.frame}s or objects that can be coerced to
-##' \code{data.frame}s 
-##' @return A stacked \code{data.frame}
+##' \code{data.frame}s
+##' @param fillwith Which value to use for missing variables. This
+##' could be a scalar, a named vector, or a named list with one value
+##' in each component; see Details.
+##' @param keeptype Whether to preserve the \code{\link[base]{typeof}}
+##' each variable. The elements in \code{fillwith} are converted to
+##' the corresponding variable's type.
+##' @return A stacked \code{data.frame}.
 ##' @export 
 ##' @examples
 ##' \dontrun{
-##'   data(rhizoctonia)
-##' 
-##'   predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
-##'                            par.x = 100, chull = TRUE, exf = 1.2)
-##'   rhizdata <- stackdata(rhizoctonia, predgrid$grid)
+##' d1 <- data.frame(w = 1:3, z = 4:6 + 0.1)
+##' d2 <- data.frame(w = 3:7, x = 1:5, y = 6:10)
+##' (d12a <- stackdata(d1, d2))
+##' lapply(d12a, typeof)
+##' (d12b <- stackdata(d1, d2, fillwith = c(x = NA, y = 0, z = -99)))
+##' lapply(d12b, typeof)
+##' (d12c <- stackdata(d1, d2, fillwith = c(x = NA, y = 0, z = -99),
+##'                    keeptype = TRUE))
+##' lapply(d12c, typeof)
+##'
+##' data(rhizoctonia)
+##' predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
+##'                          par.x = 100, chull = TRUE, exf = 1.2)
+##' rhizdata <- stackdata(rhizoctonia, predgrid$grid)
 ##' }
-stackdata <- function (...) {
-  fillNA <- function (d, allnames) {
-    ii <- !(allnames %in% names(d))
-    d[allnames[ii]] <- NA
+stackdata <- function (..., fillwith = NA, keeptype = FALSE) {
+  fillNA <- function (d, allnames, fillwith) {
+    miss <- allnames[!(allnames %in% names(d))]
+    d[miss] <- fillwith[miss]
     d
   }
   input <- lapply(list(...), data.frame)
   nmall <- unique(unlist(lapply(input, names)))
-  newdata <- lapply(input, fillNA, allnames = nmall)
+  if (all(is.na(fillwith))) {
+    fillwith <- rep(NA, length(nmall))
+    names(fillwith) <- nmall
+    keeptype <- FALSE
+  } else {
+    if (is.numeric(fillwith) | is.logical(fillwith)) {
+      if (length(fillwith) == 1) {
+        fillwith <- rep(fillwith, length(nmall))
+        names(fillwith) <- nmall
+      }
+      fillwith <- as.list(fillwith)
+    } else if (!is.list(fillwith)) {
+      stop ("Argument fillwith must be either numeric or list")
+    }
+  }
+  fmiss <- nmall[!(nmall %in% names(fillwith))]
+  fillwith[fmiss] <- NA
+  fillwith <- fillwith[nmall]
+  if(keeptype) {
+    types <- lapply(stackdata(..., fillwith = NA), typeof)
+    fillwith <- mapply("storage.mode<-", fillwith, types, SIMPLIFY = FALSE)
+  }
+  newdata <- lapply(input, fillNA, allnames = nmall, fillwith = fillwith)
   out <- do.call(rbind, newdata)
   out
 }
@@ -75,10 +117,12 @@ stackdata <- function (...) {
 ##' @export
 ##' @examples
 ##' \dontrun{
-##'   data(rhizoctonia)
-##' 
-##'   predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
-##'                            par.x = 100, chull = TRUE, exf = 1.2)
+##' data(rhizoctonia)
+##' predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
+##'                          par.x = 100, chull = TRUE, exf = 1.2)
+##' plot(predgrid$borders, type = "l")         # Domain for prediction
+##' points(predgrid$grid, pch = 20, cex = .3)  # Prediction locations
+##' points(rhizoctonia[c("Xcoord", "Ycoord")]) # Observed locations
 ##' }
 mkpredgrid2d <- function (pnts.x, pnts.y, par.x, par.y, isby = FALSE,
                           chull = FALSE, exf = 1) {
@@ -110,7 +154,7 @@ mkpredgrid2d <- function (pnts.x, pnts.y, par.x, par.y, isby = FALSE,
     par <- ceiling(par)
     par <- ((ft[2, ] - ft[1, ])/(par - 1))
   } else {
-    par <- rep_len(par, d)
+    par <- rep(par, length.out = d)
   }
   xycoord <- lapply(1:d, function (i) seq(ft[1, i], ft[2, i], par[i]))
   names(xycoord) <- nm

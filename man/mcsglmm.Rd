@@ -5,17 +5,18 @@
 \usage{
 mcsglmm(formula, family = c("gaussian", "binomial", "poisson", "Gamma"), data,
   weights, subset, atsample, Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf,
-  ssqsc, phipars, omgpars, corrfcn = c("matern", "spherical", "power"), kappa,
-  linkp, phisc, omgsc, zstart, phistart, omgstart, dispersion = 1,
-  longlat = FALSE, test = FALSE)
+  ssqsc, phipars, omgpars, corrfcn = c("matern", "spherical",
+  "powerexponential"), kappa, linkp, phisc, omgsc, zstart, phistart, omgstart,
+  dispersion = 1, longlat = FALSE, test = FALSE)
 }
 \arguments{
 \item{formula}{A representation of the model in the form
-\code{response ~ terms}. The response is must be set to
-\code{NA}'s at the prediction locations. At the observed locations
-the response is assumed to be a total of replicated measurements.
-The number of replications is inputted using the argument
-\code{weights}.}
+\code{response ~ terms}. The response must be set to \code{NA}'s
+at the prediction locations (see the examples on how to do this
+using the function \code{\link{stackdata}}). At the observed
+locations the response is assumed to be a total of replicated
+measurements. The number of replications is inputted using the
+argument \code{weights}.}
 
 \item{family}{The distribution of the data.}
 
@@ -50,15 +51,17 @@ prior for the partial sill parameter.}
 partial sill parameter.}
 
 \item{phipars}{Parameters for the generalized inverse gamma prior
-for the range parameter \code{phi}. A four dimensional vector with
-parameters scale, shape, exponent, location in that order.}
+for the spatial range parameter \code{phi}. A four dimensional
+vector with parameters scale, shape, exponent, location in that
+order. See Details.}
 
 \item{omgpars}{Parameters for the generalized inverse gamma prior
 for the relative nugget parameter \code{omg}. A four dimensional
 vector with parameters scale, shape, exponent, location in that
-order.}
+order. See Details.}
 
-\item{corrfcn}{Spatial correlation function.}
+\item{corrfcn}{Spatial correlation function. See
+\code{\link{ebsglmm}} for details.}
 
 \item{kappa}{Spatial correlation parameter. Smoothness parameter
 for Matern, exponent for the power family.}
@@ -78,14 +81,19 @@ increase the acceptance ratio. Set this to 0 for fixed \code{omg}.
 In this case the fixed value is given in the argument
 \code{omgstart}.}
 
-\item{zstart}{Starting value for the MCMC for the GRF. Defaults to
-0.}
+\item{zstart}{Optional starting value for the MCMC for the GRF.
+This can be either a scalar, a vector of size n where n is the
+number of sampled locations.}
 
-\item{phistart}{Starting value for the MCMC for \code{phi}.
-Defaults to the mean of its prior.}
+\item{phistart}{Optional starting value for the MCMC for the
+spatial range parameter \code{phi}. Defaults to the mean of its
+prior. If \code{phisc} is 0, then this argument is required and it
+corresponds to the fixed value of \code{phi}.}
 
-\item{omgstart}{Starting value for the MCMC for \code{omg}.
-Defaults to the mean of its prior.}
+\item{omgstart}{Optional starting value for the MCMC for the relative
+nugget parameter \code{omg}. Defaults to the mean of its prior. If
+\code{omgsc} is 0, then this argument is required and
+itcorresponds to the fixed value of \code{omg}.}
 
 \item{dispersion}{The fixed dispersion parameter.}
 
@@ -110,8 +118,7 @@ spatial random field. Each column is one sample.
  \item \code{beta} A matrix containing the MCMC samples for the
 regressor coefficients. Each column is one sample.
  \item \code{ssq} A vector with the MCMC samples for the partial
- \item \code{tsq} A vector with the MCMC samples for the
-measurement error variance.
+sill parameter.
  \item \code{phi} A vector with the MCMC samples for the spatial
 range parameter.
  \item \code{omg} A vector with the MCMC samples for the relative
@@ -147,5 +154,70 @@ Draw MCMC samples from the Spatial GLMM with known link function
 }
 \details{
 Simulates from the posterior distribution of this model.
+
+The four-parameter prior for \code{phi} is defined by
+\deqn{\propto (\phi - \theta_4)^{\theta_2 -1} \exp\{-(\frac{\phi -
+\theta_2}{\theta_1})^{\theta_3}\}}{propto (phi -
+phiprior[4])^(phiprior[2]-1) *
+exp(-((phi-phiprior[4])/phiprior[1])^phiprior[3])} for \eqn{\phi >
+\theta_4}{phi > phiprior[4]}. The prior for \code{omg} is similar.
+The prior parameters correspond to scale, shape, exponent, and
+location. See \code{arXiv:1005.3274} for details of this
+distribution.
+}
+\examples{
+\dontrun{
+data(rhizoctonia)
+
+### Create prediction grid
+predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
+                         par.x = 100, chull = TRUE, exf = 1.2)
+
+### Combine observed and prediction locations
+rhizdata <- stackdata(rhizoctonia, predgrid$grid)
+
+### Define the model
+corrf <- "spherical"
+kappa <- 0
+ssqdf <- 1
+ssqsc <- 1
+betm0 <- 0
+betQ0 <- .01
+phiprior <- c(100, 1, 1000, 100) # U(100, 200)
+phisc <- 3
+omgprior <- c(2, 1, 1, 0)        # Exp(mean = 2)
+omgsc <- .1
+linkp <- "probit"
+
+### MCMC sizes
+Nout <- 100
+Nthin <- 1
+Nbi <- 0
+
+### Trial run
+emt <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
+               atsample = ~ Xcoord + Ycoord,
+               Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+               betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
+               phipars = phiprior, omgpars = omgprior, linkp = linkp,
+               corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc,
+               dispersion = 1, test = 10)
+
+### Full run
+emc <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
+               atsample = ~ Xcoord + Ycoord,
+               Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+               betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
+               phipars = phiprior, omgpars = omgprior, linkp = linkp,
+               corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc,
+               dispersion = 1, test = FALSE)
+
+
+plot.ts(cbind(phi = emc$phi, omg = emc$omg, beta = c(emc$beta),
+              ssq = emc$ssq), nc = 2)
+
+emcmc <- mcmcmake(emc)
+summary(emcmc[, c("phi", "omg", "beta", "ssq")])
+}
 }
 

@@ -3,30 +3,52 @@
 \alias{stackdata}
 \title{Combine \code{data.frame}s}
 \usage{
-stackdata(...)
+stackdata(..., fillwith = NA, keeptype = FALSE)
 }
 \arguments{
 \item{...}{\code{data.frame}s or objects that can be coerced to
 \code{data.frame}s}
+
+\item{fillwith}{Which value to use for missing variables. This
+could be a scalar, a named vector, or a named list with one value
+in each component; see Details.}
+
+\item{keeptype}{Whether to preserve the \code{\link[base]{typeof}}
+each variable. The elements in \code{fillwith} are converted to
+the corresponding variable's type.}
 }
 \value{
-A stacked \code{data.frame}
+A stacked \code{data.frame}.
 }
 \description{
 Combine \code{data.frame}s
 }
 \details{
 This function combines \code{data.frame}s by filling in missing
-variables with \code{NA}. This is useful for combining data from
+variables. This is useful for combining data from
 sampled locations with prediction locations.
+
+If \code{fillwith} is a named object, its names must correspond to
+the names of variables in the data frames. If a variable is
+missing, then it is filled with the corresponding value in
+\code{fillwith}.
 }
 \examples{
 \dontrun{
-  data(rhizoctonia)
+d1 <- data.frame(w = 1:3, z = 4:6 + 0.1)
+d2 <- data.frame(w = 3:7, x = 1:5, y = 6:10)
+(d12a <- stackdata(d1, d2))
+lapply(d12a, typeof)
+(d12b <- stackdata(d1, d2, fillwith = c(x = NA, y = 0, z = -99)))
+lapply(d12b, typeof)
+(d12c <- stackdata(d1, d2, fillwith = c(x = NA, y = 0, z = -99),
+                   keeptype = TRUE))
+lapply(d12c, typeof)
 
-  predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
-                           par.x = 100, chull = TRUE, exf = 1.2)
-  rhizdata <- stackdata(rhizoctonia, predgrid$grid)
+data(rhizoctonia)
+predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
+                         par.x = 100, chull = TRUE, exf = 1.2)
+rhizdata <- stackdata(rhizoctonia, predgrid$grid)
 }
 }
 
