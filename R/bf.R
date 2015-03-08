@@ -5,15 +5,17 @@
 ##' @title Computation of Bayes factors at the skeleton points
 ##' @param runs A list with outputs from the function
 ##' \code{\link{mcsglmm}} or \code{\link{mcstrga}}.
-##' @param bfsize1 A scalar or vector of the same length as \code{runs}
-##' with all integer values or all values in (0, 1]. How many samples
-##' (or what proportion of the sample) to use for estimating the Bayes
-##' factors at the first stage. The remaining sample will be used for
-##' estimating the Bayes factors in the second stage. Setting it to 1
-##' will perform only the first stage.
+##' @param bfsize1 A scalar or vector of the same length as
+##' \code{runs} with all integer values or all values in (0, 1]. How
+##' many samples (or what proportion of the sample) to use for
+##' estimating the Bayes factors at the first stage. The remaining
+##' sample will be used for estimating the Bayes factors in the second
+##' stage. Setting it to 1 will perform only the first stage.
 ##' @param method Which method to use to calculate the Bayes factors:
 ##' Reverse logistic or Meng-Wong.
 ##' @param reference Which model goes in the denominator.
+##' @param transf Whether to use the transformed sample mu for the
+##' computations. Otherwise it uses z.
 ##' @return A list with components
 ##' \itemize{
 ##' \item \code{logbf} A vector containing logarithm of the Bayes factors.
@@ -26,24 +28,28 @@
 ##' \code{\link{bf2new}} and \code{\link{bf2optim}}.
 ##' \item \code{controlvar} A matrix with the control variates
 ##' computed at the samples that will be used in the second stage. 
-##' \item \code{z} The MCMC sample for the random field that will be
+##' \item \code{sample2} The MCMC sample for mu or z that will be
 ##' used in the second stage. Used internally in
 ##' \code{\link{bf2new}} and \code{\link{bf2optim}}.
+##' \item \code{N1}, \code{N2} Vectors containing the sample sizes
+##' used in the first and second stages.
+##' \item \code{distmat} Matrix of distances between locations.
 ##' \item \code{betm0}, \code{betQ0}, \code{ssqdf}, \code{ssqsc},
 ##' \code{tsqdf}, \code{tsqsc}, \code{dispersion}, \code{response},
 ##' \code{weights}, \code{modelmatrix}, \code{locations},
-##' \code{family}, \code{corrfcn} Model parameters used internally in
+##' \code{family}, \code{corrfcn}, \code{transf} Model parameters used
+##' internally in. 
 ##' \code{\link{bf2new}} and \code{\link{bf2optim}}.
 ##' \item \code{pnts} A list containing the skeleton points. Used
 ##' internally in \code{\link{bf2new}} and \code{\link{bf2optim}}.
 ##' }
-##' @references Geyer, C. J. (1994). Estimating Normalizing Constants
-##' and Reweighting Mixtures. Technical report, University of
+##' @references Geyer, C. J. (1994). Estimating normalizing constants
+##' and reweighting mixtures. Technical report, University of
 ##' Minnesota.
 ##'  
-##' Meng, X. L., & Wong, W. H. (1996). Simulating Ratios of
-##' Normalizing Constants via a Simple Identity: A Theoretical
-##' Exploration. \emph{Statistica Sinica}, 6, 831-860.
+##' Meng, X. L., & Wong, W. H. (1996). Simulating ratios of
+##' normalizing constants via a simple identity: A theoretical
+##' exploration. \emph{Statistica Sinica}, 6, 831-860.
 ##'
 ##' Roy, V., Evangelou, E., and Zhu, Z. (2014). Efficient estimation
 ##' and prediction for the Bayesian spatial generalized linear mixed
@@ -85,26 +91,26 @@
 ##' @importFrom sp spDists
 ##' @export 
 bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
-                    reference = 1){
+                    reference = 1, transf = FALSE){
   method <- match.arg(method)
   imeth <- match(method, eval(formals()$method))
+  classes <- sapply(runs, class)
+  if (any(classes != "geomcmc")) {
+    stop ("Input runs is not a list with elements of class geomcmc")
+  }
   nruns <- length(runs)
   if (nruns == 0) stop ("No runs specified")
   reference <- as.integer(reference)
   if (isTRUE(reference < 1L | reference > nruns)) {
     stop("Argument reference does not correspond to a run in runs")
   }
-  classes <- sapply(runs, class)
-  if (any(classes != "geomcmc")) {
-    stop ("Input object is not of class geomcmc")
-  }
   Nout <- sapply(runs, "[[", "Nout")
   bfsize1 <- as.double(bfsize1)
   if (length(bfsize1) > nruns) {
     warning ("The number of elements in bfsize1 exceeds the number of runs;
 the extra elements will be discarded")
-    bfsize1 <- bfsize1[1:nruns]
   }
+  bfsize1 <- rep(bfsize1, length.out = nruns)
   if (any(bfsize1 <= 0)) {
     stop ("Argument bfsize1 must be positive")
   } else if (all(bfsize1 <= 1)) {
@@ -116,6 +122,17 @@ the extra elements will be discarded")
   } else {
     stop ("Argument bfsize1 is a mix of proportions and sizes")
   }
+  
+  ## Choose sample
+  transf <- as.logical(transf)
+  if (transf) {
+    bfroutine <- "bfspmu"
+    sample <- lapply(runs, function(r) r[["mu"]][r[["whichobs"]], ])
+  } else {
+    bfroutine <- "bfspz"
+    sample <- lapply(runs, function(r) r[["z"]][r[["whichobs"]], ])
+  }
+  
   Ntot1 <- sum(Nout1)
   Nout2 <- Nout - Nout1
   Ntot2 <- sum(Nout2)
@@ -124,12 +141,16 @@ the extra elements will be discarded")
     out <- list(logbf = 1, logLik1 = runs$logLik[1:Ntot1],
                 logLik2 = runs$logLik[-(1:Ntot1)],
                 isweights = rep.int(0, Ntot2),
-                controlvar = matrix(1, Ntot2, 1), z = runs$z[, -(1:Ntot1)],
+                controlvar = matrix(1, Ntot2, 1),
+                z = sample[[1]][, -(1:Ntot1), drop = FALSE],
+                N1 = Nout1, N2 = Nout2, 
                 betm0 = runs$betm0, betQ0 = runs$betQ0, ssqdf = runs$ssqdf,
                 ssqsc = runs$ssqsc, tsqdf = runs$tsqdf, tsqsc = runs$tsqsc,
                 dispersion = runs$dispersion, response = runs$response,
                 weights = runs$weights, modelmatrix = runs$modelmatrix,
-                locations = runs$locations, family = runs$family,
+                locations = runs$locations,
+                distmat = sp::spDists(runs$locations), 
+                family = runs$family,
                 referencebf = 0, corrfcn = runs$corrfcn,
                 pnts = list(nu = runs$nu, phi = runs$phi, omg = runs$omg,
                   kappa = runs$kappa))
@@ -149,7 +170,7 @@ the extra elements will be discarded")
   F <- model$modelmatrix
   p <- NCOL(F)
   family <- model$family
-  ifam <- match(family, c("gaussian", "binomial", "poisson", "Gamma"), 0L)
+  ifam <- match(family, eval(formals(mcsglmm)$family), 0L)
   betm0 <- model$betm0
   betQ0 <- model$betQ0
   ssqdf <- model$ssqdf
@@ -212,35 +233,54 @@ the extra elements will be discarded")
     stop ("Argument kappa_pnts cannot be more than 2")
   }
 
-  zsample <- lapply(runs, function(r) r[["z"]][r[["whichobs"]], ])
-  z1 <- matrix(unlist(mapply(function(z, n) z[, seq_len(n)],
-                             zsample, Nout1)), n, Ntot1)
-  z2 <- matrix(unlist(mapply(function(z, n) z[, n < seq_len(NCOL(z))],
-                             zsample, Nout1)), n, Ntot2)
+  z1 <- matrix(unlist(mapply(function(z, n) z[, seq_len(n), drop = FALSE],
+                             sample, Nout1)), n, Ntot1)
+  z2 <- matrix(unlist(mapply(function(z, n)
+    z[, n < seq_len(NCOL(z)), drop = FALSE],
+                             sample, Nout1)), n, Ntot2)
   logbf <- numeric(nruns)
   lglk1 <- matrix(0., Ntot1, nruns)
   lglk2 <- matrix(0., Ntot2, nruns)
   zcv <- matrix(0., Ntot2, nruns)
   weights <- numeric(Ntot2)
-  tsq <- if (ifam == 0) tsqsc else dispersion 
-  RUN <- .Fortran("bfsp", weights = weights, zcv = zcv, logbf = logbf,
-                  lglk1 = lglk1, lglk2 = lglk2, phi_pnts, omg_pnts,
-                  nu_pnts, z1, Nout1, Ntot1, z2, Nout2, Ntot2,
-                  y, l, F, dm, betm0, betQ0,
-                  ssqdf, ssqsc, max(tsqdf, 0), tsq, kappa_pnts, icf, 
-                  n, p, nruns,
-                  ifam, imeth)
+  if (ifam == 0) {
+    tsq <- tsqsc
+  } else {
+    tsq <- dispersion
+  }
+  RUN <- .Fortran(bfroutine,
+                  weights = weights,
+                  zcv = zcv,
+                  logbf = logbf,
+                  lglk1 = lglk1,
+                  lglk2 = lglk2,
+                  as.double(phi_pnts), as.double(omg_pnts),
+                  as.double(nu_pnts), as.double(z1),
+                  as.integer(Nout1), as.integer(Ntot1),
+                  as.double(z2), as.integer(Nout2), as.integer(Ntot2),
+                  as.double(y), as.double(l), as.double(F),
+                  as.double(dm), as.double(betm0), as.double(betQ0),
+                  as.double(ssqdf), as.double(ssqsc), max(tsqdf, 0),
+                  as.double(tsq), as.double(kappa_pnts), as.integer(icf), 
+                  as.integer(n), as.integer(p), as.integer(nruns),
+                  as.integer(ifam), as.integer(imeth))
   refbf <- RUN$logbf[reference]
   logbf <- RUN$logbf - refbf
-  weights <- if (Ntot2 > 0) RUN$weights
-  lglk2 <- if (Ntot2 > 0) RUN$lglk2
-  zcv <- if (Ntot2 > 0) RUN$zcv
+  if (Ntot2 > 0) {
+    weights <- RUN$weights
+    lglk2 <- RUN$lglk2
+    zcv <- RUN$zcv
+  } else {
+    weights <- lglk2 <- zcv <- NULL
+  }
   out <- list(logbf = logbf, logLik1 = RUN$lglk1, logLik2 = lglk2,
-              isweights = weights, controlvar = zcv, z = z2, betm0 = betm0,
+              isweights = weights, controlvar = zcv, sample2 = z2,
+              N1 = Nout1, N2 = Nout2, 
+              betm0 = betm0,
               betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc, tsqdf = tsqdf,
               tsqsc = tsqsc, dispersion = dispersion, response = y, weights = l,
-              modelmatrix = F, locations = loc, family = family,
-              corrfcn = corrfcn, 
+              modelmatrix = F, locations = loc, distmat = dm, family = family,
+              corrfcn = corrfcn, transf = transf, 
               pnts = list(nu = nu_pnts, phi = phi_pnts, omg = omg_pnts,
                 kappa = kappa_pnts))
   out

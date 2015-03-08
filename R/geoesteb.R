@@ -1,8 +1,5 @@
 ##' Empirical Bayes estimation for SGLMM
 ##'
-##' Runs the MCMC sampling, computes the importance weights, and
-##' estimates the parameters.
-##'
 ##' Currently the following spatial correlation functions are
 ##' implemented. Below, \eqn{h} denotes the distance between
 ##' locations, \eqn{d} is the dimensionality of the locations,
@@ -31,16 +28,23 @@
 ##' Note that this is a valid correlation only for \eqn{0 < \kappa
 ##' \leq 2}{0 < kappa <= 2}.}
 ##' }
+##'
+##' The GEV (Generalised Extreme Value) link is defined by \deqn{\mu =
+##' 1 - \exp\{-\max(0, 1 + \nu x)^{\frac{1}{\nu}}\}}{mu = 1 -
+##' \exp[-max(0, 1 + nu x)^(1/nu)]} for any real \eqn{\nu}{nu}. At
+##' \eqn{\nu = 0}{nu = 0} it reduces to the complementary log-log
+##' link.
 ##' @title Empirical Bayes estimation for SGLMM
 ##' @param formula A representation of the model in the form
 ##' \code{response ~ terms}. The response must be set to \code{NA}'s
 ##' at the prediction locations (see the example in
 ##' \code{\link{mcsglmm}} for how to do this using
-##' \code{\link{stackdata}}). At the observed locations the
-##' response is assumed to be a total of replicated measurements. The
-##' number of replications is inputted using the argument
-##' \code{weights}.
-##' @param family The distribution of the data.
+##' \code{\link{stackdata}}). At the observed locations the response
+##' is assumed to be a total of replicated measurements. The number of
+##' replications is inputted using the argument \code{weights}.
+##' @param family The distribution of the data. The
+##' \code{"GEVbinomial"} family is the binomial family with link the
+##' GEV link (see Details).
 ##' @param data An optional data frame containing the variables in the
 ##' model.
 ##' @param weights An optional vector of weights. Number of replicated
@@ -50,11 +54,12 @@
 ##' observations to be used in the fitting process.
 ##' @param atsample A formula in the form \code{~ x1 + x2 + ... + xd}
 ##' with the coordinates of the sampled locations.
-##' @param parskel A named list with the components "linkp", "phi",
-##' "omg", "kappa", corresponding to the link function, the spatial
-##' range, the relative nugget, and the spatial correlation
-##' parameters. All components must be vectors of the same length k.
-##' Then, k different MCMC samples will be taken from the models with
+##' @param parskel A data frame with the components "linkp", "phi",
+##' "omg", and "kappa", corresponding to the link function, the
+##' spatial range, the relative nugget, and the spatial smoothness
+##' parameters. The latter can be omitted if not used in the
+##' correlation function. Let k denote the number of rows. Then, k
+##' different MCMC samples will be taken from the models with
 ##' parameters fixed at those values. For a square grid the output
 ##' from the function \code{\link[base]{expand.grid}} can be used
 ##' here.
@@ -70,23 +75,24 @@
 ##' @param corrfcn Spatial correlation function. See Details.
 ##' @param Nout A scalar or vector of size k. Number of MCMC samples
 ##' to take for each run of the MCMC algorithm for the estimation of
-##' the Bayes factors. See argument
-##' \code{parskel}.
+##' the Bayes factors. See argument \code{parskel}.
 ##' @param Nthin A scalar or vector of size k. The thinning of the
 ##' MCMC algorithm for the estimation of the Bayes factors.
 ##' @param Nbi A scalar or vector of size k. The burn-in of the MCMC
 ##' algorithm for the estimation of the Bayes factors.
 ##' @param Npro A scalar. The number of Gibbs samples to take for
-##' estimation of the conjugate parameters and for prediction
-##' at the unsampled locations while the other parameters are fixed at
-##' their empirical Bayes estimates.
+##' estimation of the conjugate parameters and for prediction at the
+##' unsampled locations while the other parameters are fixed at their
+##' empirical Bayes estimates.
 ##' @param Nprt The thinning of the Gibbs algorithm for the estimation
 ##' of the conjugate parameters and for prediction.
 ##' @param Nprb The burn-in of the Gibbs algorithm for the estimation
 ##' of the conjugate parameters and for prediction.
 ##' @param betm0 Prior mean for beta (a vector or scalar).
 ##' @param betQ0 Prior standardised precision (inverse variance)
-##' matrix.
+##' matrix. Can be a scalar, vector or matrix. The first two imply a
+##' diagonal with those elements. Set this to 0 to indicate a flat
+##' improper prior.
 ##' @param ssqdf Degrees of freedom for the scaled inverse chi-square
 ##' prior for the partial sill parameter.
 ##' @param ssqsc Scale for the scaled inverse chi-square prior for the
@@ -94,12 +100,12 @@
 ##' @param zstart Optional starting value for the MCMC for the GRF.
 ##' This can be either a scalar, a vector of size n where n is the
 ##' number of sampled locations, or a matrix with dimensions n by k
-##' where k is the number of the skeleton points in \code{parskel}. 
+##' where k is the number of the skeleton points in \code{parskel}.
 ##' @param dispersion The fixed dispersion parameter.
-##' @param bfsize1 A scalar or vector of length k
-##' with all integer values or all values in (0, 1]. How many samples
-##' (or what proportion of the sample) to use for estimating the Bayes
-##' factors at the first stage. The remaining sample will be used for
+##' @param bfsize1 A scalar or vector of length k with all integer
+##' values or all values in (0, 1]. How many samples (or what
+##' proportion of the sample) to use for estimating the Bayes factors
+##' at the first stage. The remaining sample will be used for
 ##' estimating the Bayes factors in the second stage. Setting it to 1
 ##' will perform only the first stage.
 ##' @param reference An integer between 1 and k. Which model to be
@@ -107,6 +113,8 @@
 ##' the Bayes factors.
 ##' @param bfmethod Which method to use to calculate the Bayes
 ##' factors: Reverse logistic or Meng-Wong.
+##' @param transf Whether to use the transformed sample mu for the
+##' computations. Otherwise it uses z.
 ##' @param useCV Whether to use control variates for finer
 ##' corrections.
 ##' @param longlat How to compute the distance between locations. If
@@ -172,14 +180,15 @@
 ##' @importFrom sp spDists
 ##' @export 
 ebsglmm <- function (formula,
-                     family = c("gaussian", "binomial", "poisson", "Gamma"),
+                     family = c("gaussian", "binomial", "poisson", "Gamma",
+                                "GEVbinomial", "GEVDbinomial"),
                      data, weights, subset, atsample, parskel, paroptim,
                      corrfcn = c("matern", "spherical", "powerexponential"), 
                      Nout, Nthin = 1, Nbi = 0, Npro, Nprt = 1, Nprb = 0, 
                      betm0, betQ0, ssqdf, ssqsc,
                      zstart, dispersion = 1,
                      bfsize1 = 0.8, reference = 1, bfmethod = c("RL", "MW"), 
-                     useCV = TRUE, longlat = FALSE, 
+                     transf = FALSE, useCV = TRUE, longlat = FALSE, 
                      control = list(), verbose = TRUE) {
 
   ## Family
@@ -210,10 +219,11 @@ ebsglmm <- function (formula,
   FF <- model.matrix(mt,mf)
   if (!all(is.finite(FF))) stop ("Non-finite values in the design matrix")
   p <- NCOL(FF)
-  yy <- model.response(mf)
+  yy <- unclass(model.response(mf))
   if (!is.vector(yy)) {
     stop ("The response must be a vector")
   }
+  yy <- as.double(yy)
   ll <- model.weights(mf)
 
   ## All locations
@@ -227,6 +237,12 @@ ebsglmm <- function (formula,
   loc <- as.matrix(mf1[, m])
   if (!all(is.finite(loc))) stop ("Non-finite values in the locations")
 
+  ## Check corrfcn with loc
+  if (corrfcn == "spherical" & NCOL(loc) > 3) {
+    stop ("Cannot use the spherical correlation for dimensions
+grater than 3.")
+  }
+
   ## Split sample, prediction
   ii <- is.finite(yy)
   y <- yy[ii]
@@ -235,18 +251,20 @@ ebsglmm <- function (formula,
   l <- if (is.null(l)) rep.int(1.0, n) else as.double(l)
   if (any(!is.finite(l))) stop ("Non-finite values in the weights")
   if (any(l <= 0)) stop ("Non-positive weights not allowed")
-  if (family == "binomial") {
+  if (family %in% c("binomial", "GEVbinomial", "GEVDbinomial")) {
     l <- l - y # Number of failures
   }
-  F <- FF[ii, ]
-  dm <- sp::spDists(loc[ii, ], longlat = longlat)
+  F <- FF[ii, , drop = FALSE]
+  dm <- sp::spDists(loc[ii, , drop = FALSE], longlat = longlat)
   n0 <- sum(!ii)
   if (n0 > 0) {
-    F0 <- FF[!ii, ]
-    dmdm0 <- sp::spDists(loc[ii, ], loc[!ii, ], longlat = longlat)
+    F0 <- FF[!ii, , drop = FALSE]
+    dmdm0 <- sp::spDists(loc[ii, , drop = FALSE], loc[!ii, , drop = FALSE],
+                         longlat = longlat)
   } else {
-    F0 <- numeric(p)
-    dmdm0 <- numeric(n)
+    F0 <- dmdm0 <- numeric(0)
+    dim(F0) <- c(0, p)
+    dim(dmdm0) <- c(n, 0)
   }
 
   ## Priors
@@ -255,16 +273,20 @@ ebsglmm <- function (formula,
       ## Uniform prior
       betQ0 <- matrix(0, p, p)
       betm0 <- rep(0, p)
+    } else if (length(betQ0) == 1 || length(betQ0) == p) {
+      if (any(betQ0 <= 0)) stop ('betQ0 not > 0')
+      betQ0 <- diag(betQ0, p, p)
+      betm0 <- rep(as.double(betm0), length.out = p)
+      modeldf <- as.double(n + ssqdf)
     } else if (length(betQ0) == p*p) {
       betQ0 <- matrix(as.double(betQ0), p, p)
       betQ0[lower.tri(betQ0)] <- 0
       betQ0eig <- eigen(t(betQ0), 1, 1)$values
       if (any (betQ0eig < sqrt(.Machine$double.eps))) {
         stop ('betQ0 not > 0 within tolerance')
-      } else {
-        betm0 <- rep(as.double(betm0), length.out = p)
-        modeldf <- as.double(n + ssqdf)
       }
+      betm0 <- rep(as.double(betm0), length.out = p)
+      modeldf <- as.double(n + ssqdf)
     } else stop ('Bad betQ0')
   } else stop ('Non-finite betQ0')
   ssqdf <- as.double(ssqdf)
@@ -273,55 +295,15 @@ ebsglmm <- function (formula,
   if (ssqsc <= 0) stop ("Argument ssqsc must > 0")
 
   ## Read and check parskel
-  if(!is.list(parskel)) stop ("Argument parskel must be a list")
+  parskel <- .check_pargrid(parskel, family, corrfcn)
+  nruns <- nrow(parskel)
+  linkp <- parskel$linkp
+  phi <- parskel$phi
+  omg <- parskel$omg
+  kappa <- parskel$kappa
+  nu <- parskel$nu
   parnmall <- c("linkp", "phi", "omg", "kappa")
-  parnm <- c("linkp", "phi", "omg", if (needkappa) "kappa")
-  if (!all(parnm %in% names(parskel))) {
-    stop (paste("Argument parskel must have the names",
-                paste(parnm, collapse=" ")))
-  } else {
-    parskel <- parskel[parnm]
-  }
-  phi <- parskel[["phi"]]
-  nruns <- length(phi)
-  omg <- parskel[["omg"]]
-  kappa <- if (needkappa) parskel[["kappa"]] else rep(0, length.out = nruns)
-  linkp <- parskel[["linkp"]]
-  if (length(omg) != nruns | length(kappa) != nruns | length(linkp) != nruns) {
-    stop ("Elements in parskel don't have the same length")
-  }
-  if (any (phi < 0)) stop ("Element phi in parskel must be non-negative")
-  if (any (omg < 0)) stop ("Element omg in parskel must be non-negative")
-
-  kappa <- as.double(kappa)
-  if (any(kappa < 0) & corrfcn %in% c("matern", "powerexponential")) {
-    stop ("Argument kappa cannot be negative")
-  }
-  if (any(kappa > 2) & corrfcn == "powerexponential") {
-    stop ("Argument kappa cannot be more than 2")
-  }
-  if (corrfcn == "spherical" & NCOL(loc) > 3) {
-    stop ("Cannot use the spherical correlation for dimensions
-grater than 3.")
-  }
-  
-  if (is.character(linkp) | is.factor(linkp)) {
-    if (family == "binomial") {
-      if (all(linkp == "logit")) {
-        nu <- rep.int(-1, nruns)
-      } else if (all(linkp == "probit")) {
-        nu <- rep.int(0, nruns)
-      } else stop ("Cannot recognise character link for binomial")
-    } else stop ("Character link is only allowed for binomial")
-  } else if (!is.numeric(linkp)) {
-    stop ("Element linkp in parskel must be numeric, or in the case of
-the binomial can also be the character \"logit\" or \"probit\"")
-  } else {
-    nu <- as.double(linkp)
-    if (family == "binomial" && any(nu <= 0)) {
-      stop ("The robit link parameter must be positive")
-    }
-  }
+  parnm <- c("linkp", "phi", "omg", if(needkappa) "kappa")
 
   ## Method for computing the Bayes factors
   bfmethod <- match.arg(bfmethod)
@@ -417,7 +399,7 @@ components"))
       estim[i] <- TRUE
       lower[i] <- ppp[1]
       upper[i] <- ppp[3]
-      if (lower[i] > estim[i] | estim[i] > upper[i] | lower[i] == upper[i]) {
+      if (lower[i] > pstart[i] | pstart[i] > upper[i] | lower[i] == upper[i]) {
         stop (paste("The elements in the component", parnmall[i],
                      "in paroptim must be ordered"))
       }
@@ -436,18 +418,18 @@ components"))
   ## Starting value for z
   if (missing(zstart)) {
     zstart <- switch(family,
-                     binomial =, poisson = (y+.5)/(l+1),
-                     gaussian = y/l)
+                     binomial = (y+.5)/(y+l+1),
+                     GEVbinomial =, GEVDbinomial = (l+.5)/(y+l+1), 
+                     poisson = (y+.5)/(l+1), gaussian = y/l)
     zstart <- sapply(1:nruns,
                      function (i) linkfcn(zstart, linkp[i], family))
-    zstart <- pmax(zstart, -1e8) + rnorm(n*nruns, 0, sqrt(ssqsc))
   }
   z[, 1 + c(0, cumsum(Nout[-nruns]))] <- zstart
 
   bfsize1 <- as.double(bfsize1)
   if (length(bfsize1) > nruns) {
     warning ("The number of elements in bfsize1 exceeds the number of runs;
-the extra elements will be discarded")
+the excess elements will be discarded")
     bfsize1 <- bfsize1[1:nruns]
   }
   if (any(bfsize1 <= 0)) {
@@ -469,9 +451,17 @@ the extra elements will be discarded")
 
   ## RUN MCMC
   tm1 <- system.time({
-    RUN1 <- .Fortran("samplemulti", lglk = lglk, z = z, phi, omg, y, l,
-                     F, betm0, betQ0, ssqdf, ssqsc, kappa, icf, nu, tsqdf, tsq,
-                     dm, Ntot, Nout, Nbi, Nthin, n, p, nruns, ifam)
+    RUN1 <- .Fortran("samplemulti",
+                     lglk = lglk, z = z, mu = z, 
+                     as.double(phi), as.double(omg), as.double(y),
+                     as.double(l),
+                     as.double(F), as.double(betm0), as.double(betQ0),
+                     as.double(ssqdf), as.double(ssqsc), as.double(kappa),
+                     as.integer(icf), as.double(nu), as.double(tsqdf),
+                     as.double(tsq),
+                     as.double(dm), as.integer(Ntot), as.integer(Nout),
+                     as.integer(Nbi), as.integer(Nthin), as.integer(n),
+                     as.integer(p), as.integer(nruns), as.integer(ifam))
   })
 
   if (verbose) {
@@ -480,11 +470,18 @@ the extra elements will be discarded")
 
   ## Prepare data for first stage
   z <- RUN1$z
+  mu <- RUN1$mu
   lz <- unlist(lapply(1:nruns, function(i)
                       c(rep.int(TRUE, Nout1[i]), rep.int(FALSE, Nout2[i]))))
-  z1 <- z[, lz]
-  z2 <- z[, !lz]
-
+  if (transf) {
+    bfroutine <- "bfspmu"
+    s1 <- mu[, lz, drop = FALSE]
+    s2 <- mu[, !lz, drop = FALSE]
+  } else {
+    bfroutine <- "bfspz"
+    s1 <- z[, lz, drop = FALSE]
+    s2 <- z[, !lz, drop = FALSE]
+  }
   logbf <- numeric(nruns)
   lglk1 <- matrix(0., Ntot1, nruns)
   lglk2 <- matrix(0., Ntot2, nruns)
@@ -493,12 +490,19 @@ the extra elements will be discarded")
 
   ## RUN estimation of Bayes factors
   tm2 <- system.time({
-    RUN2 <- .Fortran("bfsp", isweights = isweights, zcv = zcv, logbf = logbf,
-                     lglk1 = lglk1, lglk2 = lglk2, phi, omg,
-                     nu, z1, Nout1, Ntot1, z2, Nout2, Ntot2,
-                     y, l, F, dm, betm0, betQ0,
-                     ssqdf, ssqsc, tsqdf, tsq, kappa, icf, n, p, nruns,
-                     ifam, imeth)
+    RUN2 <- .Fortran(bfroutine,
+                     isweights = isweights, zcv = zcv, logbf = logbf,
+                     lglk1 = lglk1, lglk2 = lglk2,
+                     as.double(phi), as.double(omg),
+                     as.double(nu), as.double(s1), as.integer(Nout1),
+                     as.integer(Ntot1), as.double(s2), as.integer(Nout2),
+                     as.integer(Ntot2),
+                     as.double(y), as.double(l), as.double(F),
+                     as.double(dm), as.double(betm0), as.double(betQ0),
+                     as.double(ssqdf), as.double(ssqsc), as.double(tsqdf),
+                     as.double(tsq), as.double(kappa), as.integer(icf),
+                     as.integer(n), as.integer(p), as.integer(nruns),
+                     as.integer(ifam), as.integer(imeth))
   })
 
   if (verbose) {
@@ -525,24 +529,43 @@ overflow. Control variates corrections will not be used.")
   i <- is.na(pstart) & estim
   pstart[i] <- pmax(pmin(upper[i], pstart.d[i]), lower[i])
   ## Function to optimise
-  fn <- if (useCV) {
-    function (par) {
-      parin <- pstart
+  if (useCV) {
+    if (transf) {
+      froutine <- "calcbmu_cv"
+    } else {
+      froutine <- "calcbz_cv"
+    }
+    fn <- function (par) {
+      parin <- as.double(pstart)
       parin[estim] <- par
-      RUN <- .Fortran('calcb_cv', 0.0, parin[2], parin[1], parin[3], parin[4],
-                      icf, 1L, 1L, Ntot2, z2, isweights, zcv, n, p, nruns, betm0,
-                      betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm,
-                      ifam)
+      RUN <- .Fortran(froutine, 0.0, parin[2], parin[1], parin[3], parin[4],
+                      as.integer(icf), 1L, 1L, as.integer(Ntot2),
+                      as.double(s2), as.double(isweights), as.double(zcv),
+                      as.integer(n), as.integer(p), as.integer(nruns),
+                      as.double(betm0),
+                      as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
+                      as.double(tsqdf), as.double(tsq), as.double(y),
+                      as.double(l), as.double(F), as.double(dm),
+                      as.integer(ifam))
       -RUN[[1]][1]
     }
   } else {
-    function (par) {
-      parin <- pstart
+    if (transf) {
+      froutine <- "calcbmu_st"
+    } else {
+      froutine <- "calcbz_st"
+    }
+    fn <- function (par) {
+      parin <- as.double(pstart)
       parin[estim] <- par
-      RUN <- .Fortran('calcb_st', 0.0, parin[2], parin[1], parin[3], parin[4],
-                      icf, 1L, 1L, Ntot2, z2, isweights, n, p, betm0,
-                      betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm,
-                      ifam)
+      RUN <- .Fortran(froutine, 0.0, parin[2], parin[1], parin[3], parin[4],
+                      as.integer(icf), 1L, 1L, as.integer(Ntot2), as.double(s2),
+                      as.double(isweights), as.integer(n), as.integer(p),
+                      as.double(betm0),
+                      as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
+                      as.double(tsqdf), as.double(tsq), as.double(y),
+                      as.double(l), as.double(F), as.double(dm),
+                      as.integer(ifam))
       -RUN[[1]][1]
     }
   }
@@ -557,7 +580,7 @@ overflow. Control variates corrections will not be used.")
     message ("Finished optimization: ", round(tm3[1]), " sec")
   }
 
-  parest <- pstart
+  parest <- as.double(pstart)
   parest[estim] <- op$par
   names(parest) <- parnmall
 
@@ -579,23 +602,33 @@ overflow. Control variates corrections will not be used.")
     tmppars <- rep.int(0, 4)
     tm4 <- system.time({
       RUN4 <- .Fortran("mcspsample", ll = lglks, z = zs, z0 = z0s,
-                       beta = beta, ssq = ssq, phis, omgs, acc = acc,
-                       y, l, F, F0, betm0, betQ0, ssqdf, ssqsc,
-                       tmppars, 0, tmppars, 0, parest[4], icf, parest[1], 
-                       tsq, dm, dmdm0, Npro, Nprb, Nprt, n, n0, p, ifam)
+                       mu = zs, mu0 = z0s, 
+                       beta = beta, ssq = ssq, as.double(phis), as.double(omgs),
+                       acc = acc,
+                       as.double(y), as.double(l), as.double(F), as.double(F0),
+                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
+                       as.double(ssqsc),
+                       as.double(tmppars), 0, as.double(tmppars), 0, parest[4],
+                       as.integer(icf), parest[1], 
+                       as.double(tsq), as.double(dm), as.double(dmdm0),
+                       as.integer(Npro), as.integer(Nprb), as.integer(Nprt),
+                       as.integer(n), as.integer(n0), as.integer(p),
+                       as.integer(ifam))
     })
     if (verbose) {
       message ("Performed Gibbs sampling: ", round(tm4[1]), " sec")
     }
     ll <- RUN4$ll
-    zz0 <- matrix(NA, NROW(yy), Nout)
+    zz0 <- mm0 <- matrix(NA, NROW(yy), Nout)
     zz0[ii, ] <- RUN4$z
     zz0[!ii, ] <- RUN4$z0
+    mm0[ii, ] <- RUN4$mu
+    mm0[!ii, ] <- RUN4$mu0
     beta <- RUN4$beta
     ssq <- RUN4$ssq
     acc_ratio <- RUN4$acc/Npro
-    sample <- list(z = zz0, beta = beta, ssq = ssq, acc_ratio = acc_ratio,
-                   whichobs = ii)
+    sample <- list(z = zz0, mu = mm0, beta = beta, ssq = ssq,
+                   acc_ratio = acc_ratio, whichobs = ii)
   } else {
     sample <- NULL
     tm4 <- NULL
@@ -603,7 +636,7 @@ overflow. Control variates corrections will not be used.")
   
   times <- rbind(sampling = tm1, importance = tm2, optimization = tm3,
                  MCMC = tm4)
-  out <- list(parest = parest, skeleton = cbind(parskel, logbf = logbf),
+  out <- list(parest = parest, skeleton = cbind(parskel[parnm], logbf = logbf),
               optim = op, mcmcsample = sample, sys_time = times)
   out
 }
@@ -618,10 +651,10 @@ overflow. Control variates corrections will not be used.")
 ##' \code{response ~ terms}. The response must be set to \code{NA}'s
 ##' at the prediction locations (see the example in
 ##' \code{\link{mcsglmm}} for how to do this using
-##' \code{\link{stackdata}}). At the observed locations the
-##' response is assumed to be a total of replicated measurements. The
-##' number of replications is inputted using the argument
-##' \code{weights}. See the Note for cases where overflow may occur.
+##' \code{\link{stackdata}}). At the observed locations the response
+##' is assumed to be a total of replicated measurements. The number of
+##' replications is inputted using the argument \code{weights}. See
+##' the Note for cases where overflow may occur.
 ##' @param data An optional data frame containing the variables in the
 ##' model.
 ##' @param weights An optional vector of weights. Number of replicated
@@ -631,46 +664,48 @@ overflow. Control variates corrections will not be used.")
 ##' observations to be used in the fitting process.
 ##' @param atsample A formula in the form \code{~ x1 + x2 + ... + xd}
 ##' with the coordinates of the sampled locations.
-##' @param parskel A named list with the components "linkp", "phi",
-##' "omg", and "kappa", corresponding to the link function, the spatial
-##' range, the relative nugget, and the spatial correlation
+##' @param parskel A data frame with the components "linkp", "phi",
+##' "omg", and "kappa", corresponding to the link function, the
+##' spatial range, the relative nugget, and the spatial smoothness
 ##' parameters. The latter can be omitted if not used in the
-##' correlation function. All components must be vectors of the same length k.
-##' Then, k different MCMC samples will be taken from the models with
+##' correlation function. Let k denote the number of rows. Then, k
+##' different MCMC samples will be taken from the models with
 ##' parameters fixed at those values. For a square grid the output
 ##' from the function \code{\link[base]{expand.grid}} can be used
 ##' here.
 ##' @param paroptim A named list with the components "linkp", "phi",
 ##' "omg", "kappa". The latter can be omitted if not used in the
-##' correlation function. Each component must be numeric with length 1, 2,
-##' or 3 with elements in increasing order but for the binomial family
-##' linkp is also allowed to be the character "logit" and "probit". If
-##' its length is 1, then the corresponding parameter is considered to
-##' be fixed at that value. If 2, then the two numbers denote the
-##' lower and upper bounds for the optimisation of that parameter
-##' (infinities are allowed). If 3, these correspond to lower bound,
-##' starting value, upper bound for the estimation of that parameter.
+##' correlation function. Each component must be numeric with length
+##' 1, 2, or 3 with elements in increasing order but for the binomial
+##' family linkp is also allowed to be the character "logit" and
+##' "probit". If its length is 1, then the corresponding parameter is
+##' considered to be fixed at that value. If 2, then the two numbers
+##' denote the lower and upper bounds for the optimisation of that
+##' parameter (infinities are allowed). If 3, these correspond to
+##' lower bound, starting value, upper bound for the estimation of
+##' that parameter.
 ##' @param corrfcn Spatial correlation function. See
 ##' \code{\link{ebsglmm}} for details.
 ##' @param Nout A scalar or vector of size k. Number of MCMC samples
 ##' to take for each run of the MCMC algorithm for the estimation of
-##' the Bayes factors. See argument
-##' \code{parskel}.
+##' the Bayes factors. See argument \code{parskel}.
 ##' @param Nthin A scalar or vector of size k. The thinning of the
 ##' MCMC algorithm for the estimation of the Bayes factors.
 ##' @param Nbi A scalar or vector of size k. The burn-in of the MCMC
 ##' algorithm for the estimation of the Bayes factors.
 ##' @param Npro A scalar. The number of Gibbs samples to take for
-##' estimation of the conjugate parameters and for prediction
-##' at the unsampled locations while the other parameters are fixed at
-##' their empirical Bayes estimates.
+##' estimation of the conjugate parameters and for prediction at the
+##' unsampled locations while the other parameters are fixed at their
+##' empirical Bayes estimates.
 ##' @param Nprt The thinning of the Gibbs algorithm for the estimation
 ##' of the conjugate parameters and for prediction.
 ##' @param Nprb The burn-in of the Gibbs algorithm for the estimation
 ##' of the conjugate parameters and for prediction.
 ##' @param betm0 Prior mean for beta (a vector or scalar).
 ##' @param betQ0 Prior standardised precision (inverse variance)
-##' matrix.
+##' matrix. Can be a scalar, vector or matrix. The first two imply a
+##' diagonal with those elements. Set this to 0 to indicate a flat
+##' improper prior.
 ##' @param ssqdf Degrees of freedom for the scaled inverse chi-square
 ##' prior for the partial sill parameter.
 ##' @param ssqsc Scale for the scaled inverse chi-square prior for the
@@ -694,6 +729,8 @@ overflow. Control variates corrections will not be used.")
 ##' factors.
 ##' @param bfmethod Which method to use to calculate the Bayes
 ##' factors: Reverse logistic or Meng-Wong.
+##' @param transf Whether to use the transformed sample mu for the
+##' computations. Otherwise it uses z.
 ##' @param useCV Whether to use control variates for finer
 ##' corrections.
 ##' @param longlat How to compute the distance between locations. If
@@ -774,7 +811,7 @@ ebstrga <- function (formula,
                      betm0, betQ0, ssqdf, ssqsc,
                      tsqdf, tsqsc, zstart, dispersion = 1,
                      bfsize1 = 0.8, reference = 1, bfmethod = c("RL", "MW"), 
-                     useCV = TRUE, longlat = FALSE, 
+                     transf = FALSE, useCV = TRUE, longlat = FALSE, 
                      control = list(), verbose = TRUE) {
 
   ## Family
@@ -805,10 +842,11 @@ ebstrga <- function (formula,
   FF <- model.matrix(mt,mf)
   if (!all(is.finite(FF))) stop ("Non-finite values in the design matrix")
   p <- NCOL(FF)
-  yy <- model.response(mf)
+  yy <- unclass(model.response(mf))
   if (!is.vector(yy)) {
     stop ("The response must be a vector")
   }
+  yy <- as.double(yy)
   ll <- model.weights(mf)
 
   ## All locations
@@ -822,6 +860,12 @@ ebstrga <- function (formula,
   loc <- as.matrix(mf1[, m])
   if (!all(is.finite(loc))) stop ("Non-finite values in the locations")
 
+  ## Check corrfcn with loc
+  if (corrfcn == "spherical" & NCOL(loc) > 3) {
+    stop ("Cannot use the spherical correlation for dimensions
+grater than 3.")
+  }
+
   ## Split sample, prediction
   ii <- is.finite(yy)
   y <- yy[ii]
@@ -830,18 +874,17 @@ ebstrga <- function (formula,
   l <- if (is.null(l)) rep.int(1.0, n) else as.double(l)
   if (any(!is.finite(l))) stop ("Non-finite values in the weights")
   if (any(l <= 0)) stop ("Non-positive weights not allowed")
-  if (family == "binomial") {
-    l <- l - y # Number of failures
-  }
-  F <- FF[ii, ]
-  dm <- sp::spDists(loc[ii, ], longlat = longlat)
+  F <- FF[ii, , drop = FALSE]
+  dm <- sp::spDists(loc[ii, , drop = FALSE], longlat = longlat)
   n0 <- sum(!ii)
   if (n0 > 0) {
-    F0 <- FF[!ii, ]
-    dmdm0 <- sp::spDists(loc[ii, ], loc[!ii, ], longlat = longlat)
+    F0 <- FF[!ii, , drop = FALSE]
+    dmdm0 <- sp::spDists(loc[ii, , drop = FALSE], loc[!ii, , drop = FALSE],
+                         longlat = longlat)
   } else {
-    F0 <- numeric(p)
-    dmdm0 <- numeric(n)
+    F0 <- dmdm0 <- numeric(0)
+    dim(F0) <- c(0, p)
+    dim(dmdm0) <- c(n, 0)
   }
 
   ## Priors
@@ -850,16 +893,20 @@ ebstrga <- function (formula,
       ## Uniform prior
       betQ0 <- matrix(0, p, p)
       betm0 <- rep(0, p)
+    } else if (length(betQ0) == 1 || length(betQ0) == p) {
+      if (any(betQ0 <= 0)) stop ('betQ0 not > 0')
+      betQ0 <- diag(betQ0, p, p)
+      betm0 <- rep(as.double(betm0), length.out = p)
+      modeldf <- as.double(n + ssqdf)
     } else if (length(betQ0) == p*p) {
       betQ0 <- matrix(as.double(betQ0), p, p)
       betQ0[lower.tri(betQ0)] <- 0
       betQ0eig <- eigen(t(betQ0), 1, 1)$values
       if (any (betQ0eig < sqrt(.Machine$double.eps))) {
         stop ('betQ0 not > 0 within tolerance')
-      } else {
-        betm0 <- rep(as.double(betm0), length.out = p)
-        modeldf <- as.double(n + ssqdf)
       }
+      betm0 <- rep(as.double(betm0), length.out = p)
+      modeldf <- as.double(n + ssqdf)
     } else stop ('Bad betQ0')
   } else stop ('Non-finite betQ0')
   ssqdf <- as.double(ssqdf)
@@ -868,39 +915,15 @@ ebstrga <- function (formula,
   if (ssqsc <= 0) stop ("Argument ssqsc must > 0")
 
   ## Read and check parskel
-  if(!is.list(parskel)) stop ("Argument parskel must be a list")
+  parskel <- .check_pargrid(parskel, family, corrfcn)
+  nruns <- nrow(parskel)
+  linkp <- parskel$linkp
+  phi <- parskel$phi
+  omg <- parskel$omg
+  kappa <- parskel$kappa
+  nu <- parskel$nu
   parnmall <- c("linkp", "phi", "omg", "kappa")
   parnm <- c("linkp", "phi", "omg", if(needkappa) "kappa")
-  if (!all(parnm %in% names(parskel))) {
-    stop (paste("Argument parskel must have the names",
-                paste(parnm, collapse=" ")))
-  } else {
-    parskel <- parskel[parnm]
-  }
-  phi <- parskel[["phi"]]
-  nruns <- length(phi)
-  omg <- parskel[["omg"]]
-  kappa <- if(needkappa) parskel[["kappa"]] else rep(0, length.out = nruns)
-  linkp <- parskel[["linkp"]]
-  if (length(omg) != nruns | length(kappa) != nruns | length(linkp) != nruns) {
-    stop ("Elements in parskel don't have the same length")
-  }
-  if (any (phi < 0)) stop ("Element phi in parskel must be non-negative")
-  if (any (omg < 0)) stop ("Element omg in parskel must be non-negative")
-  
-  kappa <- as.double(kappa)
-  if (any(kappa < 0) & corrfcn %in% c("matern", "powerexponential")) {
-    stop ("Argument kappa cannot be negative")
-  }
-  if (any(kappa > 2) & corrfcn == "powerexponential") {
-    stop ("Argument kappa cannot be more than 2")
-  }
-  if (corrfcn == "spherical" & NCOL(loc) > 3) {
-    stop ("Cannot use the spherical correlation for dimensions
-grater than 3.")
-  }
-
-  nu <- as.double(linkp)
 
   ## Method for computing the Bayes factors
   bfmethod <- match.arg(bfmethod)
@@ -1017,7 +1040,7 @@ components"))
     zstart <- y/l
     zstart <- sapply(1:nruns,
                      function (i) linkfcn(zstart, linkp[i], "gaussian"))
-    zstart <- pmax(zstart, -1e8) + rnorm(n*nruns, 0, sqrt(ssqsc))
+    ## zstart <- pmax(zstart, -1e8) + rnorm(n*nruns, 0, sqrt(ssqsc))
   }
   z[, 1 + c(0, cumsum(Nout[-nruns]))] <- zstart
 
@@ -1047,9 +1070,16 @@ the extra elements will be discarded")
 
   ## RUN MCMC
   tm1 <- system.time({
-    RUN1 <- .Fortran("samplemulti", lglk = lglk, z = z, phi, omg, y, l,
-                     F, betm0, betQ0, ssqdf, ssqsc, kappa, icf, nu, tsqdf, tsq,
-                     dm, Ntot, Nout, Nbi, Nthin, n, p, nruns, ifam)
+    RUN1 <- .Fortran("samplemulti", lglk = lglk, z = z, mu = z,
+                     as.double(phi), as.double(omg),
+                     as.double(y), as.double(l),
+                     as.double(F), as.double(betm0), as.double(betQ0),
+                     as.double(ssqdf), as.double(ssqsc), as.double(kappa),
+                     as.integer(icf), as.double(nu), as.double(tsqdf),
+                     as.double(tsq),
+                     as.double(dm), as.integer(Ntot), as.integer(Nout),
+                     as.integer(Nbi), as.integer(Nthin), as.integer(n),
+                     as.integer(p), as.integer(nruns), as.integer(ifam))
   })
 
   if (verbose) {
@@ -1058,11 +1088,18 @@ the extra elements will be discarded")
 
   ## Prepare data for first stage
   z <- RUN1$z
+  mu <- RUN1$mu
   lz <- unlist(lapply(1:nruns, function(i)
                       c(rep.int(TRUE, Nout1[i]), rep.int(FALSE, Nout2[i]))))
-  z1 <- z[, lz]
-  z2 <- z[, !lz]
-
+  if (transf) {
+    bfroutine <- "bfspmu"
+    s1 <- mu[, lz, drop = FALSE]
+    s2 <- mu[, !lz, drop = FALSE]
+  } else {
+    bfroutine <- "bfspz"
+    s1 <- z[, lz, drop = FALSE]
+    s2 <- z[, !lz, drop = FALSE]
+  }
   logbf <- numeric(nruns)
   lglk1 <- matrix(0., Ntot1, nruns)
   lglk2 <- matrix(0., Ntot2, nruns)
@@ -1071,12 +1108,19 @@ the extra elements will be discarded")
 
   ## RUN estimation of Bayes factors
   tm2 <- system.time({
-    RUN2 <- .Fortran("bfsp", isweights = isweights, zcv = zcv, logbf = logbf,
-                     lglk1 = lglk1, lglk2 = lglk2, phi, omg,
-                     nu, z1, Nout1, Ntot1, z2, Nout2, Ntot2,
-                     y, l, F, dm, betm0, betQ0,
-                     ssqdf, ssqsc, tsqdf, tsq, kappa, icf, n, p, nruns,
-                     ifam, imeth)
+    RUN2 <- .Fortran(bfroutine,
+                     isweights = isweights, zcv = zcv, logbf = logbf,
+                     lglk1 = lglk1, lglk2 = lglk2,
+                     as.double(phi), as.double(omg),
+                     as.double(nu), as.double(s1), as.integer(Nout1),
+                     as.integer(Ntot1), as.double(s2), as.integer(Nout2),
+                     as.integer(Ntot2),
+                     as.double(y), as.double(l), as.double(F), as.double(dm),
+                     as.double(betm0), as.double(betQ0),
+                     as.double(ssqdf), as.double(ssqsc), as.double(tsqdf),
+                     as.double(tsq), as.double(kappa), as.integer(icf),
+                     as.integer(n), as.integer(p), as.integer(nruns),
+                     as.integer(ifam), as.integer(imeth))
   })
 
   if (verbose) {
@@ -1103,24 +1147,43 @@ overflow. Control variates corrections will not be used.")
   i <- is.na(pstart) & estim
   pstart[i] <- pmax(pmin(upper[i], pmaxlogbf[i]), lower[i])
   ## Function to optimise
-  fn <- if (useCV) {
-    function (par) {
-      parin <- pstart
+  if (useCV) {
+    if (transf) {
+      froutine <- "calcbmu_cv"
+    } else {
+      froutine <- "calcbz_cv"
+    }
+    fn <- function (par) {
+      parin <- as.double(pstart)
       parin[estim] <- par
-      RUN <- .Fortran('calcb_cv', 0.0, parin[2], parin[1], parin[3], parin[4],
-                      icf, 1L, 1L, Ntot2, z2, isweights, zcv, n, p, nruns, betm0,
-                      betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm,
-                      ifam)
+      RUN <- .Fortran(froutine, 0.0, parin[2], parin[1], parin[3], parin[4],
+                      as.integer(icf), 1L, 1L, as.integer(Ntot2),
+                      as.double(s2), as.double(isweights), as.double(zcv),
+                      as.integer(n), as.integer(p), as.integer(nruns),
+                      as.double(betm0),
+                      as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
+                      as.double(tsqdf), as.double(tsq), as.double(y),
+                      as.double(l), as.double(F), as.double(dm),
+                      as.integer(ifam))
       -RUN[[1]][1]
     }
   } else {
-    function (par) {
-      parin <- pstart
+    if (transf) {
+      froutine <- "calcbmu_st"
+    } else {
+      froutine <- "calcbz_st"
+    }
+    fn <- function (par) {
+      parin <- as.double(pstart)
       parin[estim] <- par
-      RUN <- .Fortran('calcb_st', 0.0, parin[2], parin[1], parin[3], parin[4],
-                      icf, 1L, 1L, Ntot2, z2, isweights, n, p, betm0,
-                      betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm,
-                      ifam)
+      RUN <- .Fortran(froutine, 0.0, parin[2], parin[1], parin[3], parin[4],
+                      as.integer(icf), 1L, 1L, as.integer(Ntot2), as.double(s2),
+                      as.double(isweights), as.integer(n), as.integer(p),
+                      as.double(betm0),
+                      as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
+                      as.double(tsqdf), as.double(tsq), as.double(y),
+                      as.double(l), as.double(F), as.double(dm),
+                      as.integer(ifam))
       -RUN[[1]][1]
     }
   }
@@ -1136,7 +1199,7 @@ overflow. Control variates corrections will not be used.")
   }
 
   ## Output
-  parest <- pstart
+  parest <- as.double(pstart)
   parest[estim] <- op$par
   names(parest) <- parnmall
 
@@ -1160,11 +1223,15 @@ overflow. Control variates corrections will not be used.")
     tm4 <- system.time({
       RUN4 <- .Fortran("trgasample", ll = lglks, z = zs, z0 = z0s,
                        beta = beta, ssq = ssq, tsq = tsqs,
-                       phis, omgs, acc = acc,
-                       y, l, F, F0, betm0, betQ0, ssqdf, ssqsc,
-                       tsqdf, tsqsc, 
-                       tmppars, 0, tmppars, 0, parest[4], icf, parest[1],
-                       dm, dmdm0, Npro, Nprb, Nprt, n, n0, p)
+                       as.double(phis), as.double(omgs), acc = acc,
+                       as.double(y), as.double(l), as.double(F), as.double(F0),
+                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
+                       as.double(ssqsc), as.double(tsqdf), as.double(tsqsc), 
+                       as.double(tmppars), 0, as.double(tmppars), 0, parest[4],
+                       as.integer(icf), parest[1],
+                       as.double(dm), as.double(dmdm0), as.integer(Npro),
+                       as.integer(Nprb), as.integer(Nprt), as.integer(n),
+                       as.integer(n0), as.integer(p))
     })
     if (verbose) {
       message ("Performed Gibbs sampling: ", round(tm4[1]), " sec")
@@ -1187,7 +1254,63 @@ overflow. Control variates corrections will not be used.")
   
   times <- rbind(sampling = tm1, importance = tm2, optimization = tm3,
                  MCMC = tm4)
-  out <- list(parest = parest, skeleton = cbind(parskel, logbf = logbf),
+  out <- list(parest = parest, skeleton = cbind(parskel[parnm], logbf = logbf),
               optim = op, mcmcsample = sample, sys_time = times)
   out
+}
+
+
+## Check and return the parameter grid
+.check_pargrid <- function(pargrid, family, corrfcn)
+{
+  pargrid <- data.frame(pargrid, stringsAsFactors = FALSE)
+  ##if(!is.list(pargrid)) stop ("Argument pargrid must be a list")
+  parnm <- c("linkp", "phi", "omg", "kappa")
+  needkappa <- corrfcn %in% c("matern", "powerexponential")
+  if (!needkappa) pargrid$kappa <- 0
+  if (!all(parnm %in% names(pargrid))) {
+    stop (paste("Argument pargrid must have the names",
+                paste(c("linkp", "phi", "omg", if (needkappa) "kappa"),
+                      collapse=" ")))
+  } else {
+    pargrid <- pargrid[parnm]
+  }
+  nruns <- nrow(pargrid)
+  phi <- pargrid[["phi"]]
+  omg <- pargrid[["omg"]]
+  kappa <- pargrid[["kappa"]]
+  linkp <- pargrid[["linkp"]]
+  if (any (phi < 0)) stop ("Element phi given must be non-negative")
+  if (any (omg < 0)) stop ("Element omg given must be non-negative")
+
+  ## Check kappa and corrfcn
+  kappa <- as.double(kappa)
+  if (any(kappa < 0) & corrfcn %in% c("matern", "powerexponential")) {
+    stop ("Argument kappa cannot be negative")
+  }
+  if (any(kappa > 2) & corrfcn == "powerexponential") {
+    stop ("Argument kappa cannot be more than 2")
+  }
+
+  ## Check if linkp conforms with family
+  if (is.character(linkp) | is.factor(linkp)) {
+    if (family == "binomial") {
+      if (all(linkp == "logit")) {
+        nu <- rep.int(-1, nruns)
+      } else if (all(linkp == "probit")) {
+        nu <- rep.int(0, nruns)
+      } else stop ("Cannot recognise character link for binomial")
+    } else stop ("Character link is only allowed for binomial")
+  } else if (!is.numeric(linkp)) {
+    stop ("Element linkp in list must be numeric, or in the case of
+the binomial can also be the character \"logit\" or \"probit\"")
+  } else {
+    nu <- as.double(linkp)
+    if (family == "binomial" && any(nu <= 0)) {
+      stop ("The robit link parameter must be positive")
+    }
+  }
+
+  ## Output
+  data.frame(linkp = linkp, phi = phi, omg = omg, kappa = kappa, nu = nu)
 }

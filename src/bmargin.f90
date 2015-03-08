@@ -86,6 +86,7 @@ contains
     r = exp(eta)/a
     a = a/dble(Ntot)
 
+    convergence = .false. 
     iterations: do it = 1, maxit
       call rchkusr ! Check if user has requested interrupt
       ia = 1

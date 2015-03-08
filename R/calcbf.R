@@ -67,16 +67,17 @@
 bf2new <- function (bf1obj, linkp, phi, omg, kappa, useCV = TRUE) {
 
   ## Logical input
-  useCV <- isTRUE(useCV)
+  useCV <- as.logical(useCV)
 
   ## Extract model variables
+  transf <- bf1obj$transf
   y <- bf1obj$response
   n <- length(y)
   l <- bf1obj$weights
   F <- bf1obj$modelmatrix
   p <- NCOL(F)
   family <- bf1obj$family
-  ifam <- match(family, c("gaussian", "binomial", "poisson", "Gamma"), 0L)
+  ifam <- match(family, eval(formals(mcsglmm)$family), 0L)
   corrfcn <- bf1obj$corrfcn
   needkappa <- corrfcn %in% c("matern", "powerexponential")
   icf <- match(corrfcn, c("matern", "spherical", "powerexponential"))
@@ -90,8 +91,8 @@ bf2new <- function (bf1obj, linkp, phi, omg, kappa, useCV = TRUE) {
   tsq <- if (ifam == 0) tsqsc else dispersion
   loc <- bf1obj$locations
   dm <- sp::spDists(loc)
-  z <- bf1obj$z
-  Ntot <- NCOL(z)
+  sample <- bf1obj$sample2
+  Ntot <- NCOL(sample)
   isweights <- bf1obj$isweights
   zcv <- bf1obj$controlvar
   kg <- NCOL(zcv)
@@ -174,16 +175,36 @@ overflow. Control variates corrections will not be used.")
     useCV <- FALSE
   }
 
-  if (useCV) {
-    RUN <- .Fortran('calcb_cv', bfact, covpars$phi, nu, covpars$omg,
-                    covpars$kappa, icf, 
-                    n_cov, n_nu, Ntot, z, isweights, zcv, n, p, kg, betm0,
-                    betQ0, ssqdf, ssqsc, max(tsqdf, 0), tsq, y, l, F, dm, ifam)
+  if (transf) {
+    froutine <- "calcbmu"
   } else {
-    RUN <- .Fortran('calcb_st', bfact, covpars$phi, nu, covpars$omg,
-                    covpars$kappa, icf, 
-                    n_cov, n_nu, Ntot, z, isweights, n, p, betm0,
-                    betQ0, ssqdf, ssqsc, max(tsqdf, 0), tsq, y, l, F, dm, ifam)
+    froutine <- "calcbz"
+  }
+
+  if (useCV) {
+    froutine <- paste(froutine, '_cv', sep='')
+    RUN <- .Fortran(froutine, bfact,
+                    as.double(covpars$phi), as.double(nu),
+                    as.double(covpars$omg),
+                    as.double(covpars$kappa), as.integer(icf), 
+                    as.integer(n_cov), as.integer(n_nu), as.integer(Ntot),
+                    as.double(sample), as.double(isweights), as.double(zcv),
+                    as.integer(n), as.integer(p), as.integer(kg),
+                    as.double(betm0),
+                    as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
+                    max(tsqdf, 0), as.double(tsq), as.double(y),
+                    as.double(l), as.double(F), as.double(dm), as.integer(ifam))
+  } else {
+    froutine <- paste(froutine, '_st', sep='')
+    RUN <- .Fortran(froutine, bfact,
+                    as.double(covpars$phi), as.double(nu),
+                    as.double(covpars$omg),
+                    as.double(covpars$kappa), as.integer(icf), 
+                    n_cov, n_nu, Ntot, as.double(sample), as.double(isweights),
+                    as.integer(n), as.integer(p), as.double(betm0),
+                    as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
+                    max(tsqdf, 0), as.double(tsq), as.double(y), as.double(l),
+                    as.double(F), as.double(dm), as.integer(ifam))
   }
   logbf <- array(RUN[[1]], c(n_nu, n_phi, n_omg, n_kappa))
   logbf <- logbf + bf1obj$logbf[1] # Constant to match bf1obj$logbf
@@ -269,6 +290,9 @@ plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
     warning ("Only a profile plot is available for more than 3 parameters")
     ptype <- "profile"
   }
+
+  grknm <- list(nu = expression(nu), phi = expression(phi),
+                omg = expression(omega), kappa = expression(kappa))
   
   if (ptype == "line") {
     maxid <- bf2obj$indmax
@@ -301,10 +325,16 @@ plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
     for (i in 1:npars) {
       bf <- apply(bf2obj[["logbf"]], ipar[i], max)
       pdata <- data.frame(bf2obj[pars[i]], logbf = bf)
-      if ("type" %in% nmdots) {
-        plot(pdata, ...)
-      } else {
-        plot(pdata, type = "l", ...)
+      CC <- call("plot", pdata, quote(...))
+      if (!("type" %in% nmdots)) CC["type"] = "l"
+      if (!("xlab" %in% nmdots)) CC["xlab"] = ""
+      eval(CC)
+      if (!("xlab" %in% nmdots)) {
+        title(xlab = switch(pars[i],
+                linkp = expression(nu),
+                phi = expression(phi),
+                omg = expression(omega),
+                kappa = expression(kappa)))
       }
     }
   }
@@ -324,11 +354,12 @@ plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
 ##' "omg", "kappa". Each component must be numeric with length 1, 2,
 ##' or 3 with elements in increasing order but for the binomial family
 ##' linkp is also allowed to be the character "logit" and "probit". If
-##' its length is 1, then the corresponding parameter is considered to
-##' be fixed at that value. If 2, then the two numbers denote the
-##' lower and upper bounds for the optimisation of that parameter
-##' (infinities are allowed). If 3, these correspond to lower bound,
-##' starting value, upper bound for the estimation of that parameter.
+##' the compontent's length is 1, then the corresponding parameter is
+##' considered to be fixed at that value. If 2, then the two numbers
+##' denote the lower and upper bounds for the optimisation of that
+##' parameter (infinities are allowed). If 3, these correspond to
+##' lower bound, starting value, upper bound for the estimation of
+##' that parameter.
 ##' @param useCV Whether to use control variates for finer
 ##' corrections.
 ##' @param control A list of control parameters for the optimisation.
@@ -377,13 +408,14 @@ bf2optim <- function (bf1obj, paroptim, useCV = TRUE,
   useCV <- isTRUE(useCV)
 
   ## Extract model variables
+  transf <- bf1obj$transf
   y <- bf1obj$response
   n <- length(y)
   l <- bf1obj$weights
   F <- bf1obj$modelmatrix
   p <- NCOL(F)
   family <- bf1obj$family
-  ifam <- match(family, c("gaussian", "binomial", "poisson", "Gamma"), 0L)
+  ifam <- match(family, eval(formals(mcsglmm)$family), 0L)
   corrfcn <- bf1obj$corrfcn
   needkappa <- corrfcn %in% c("matern", "powerexponential")
   icf <- match(corrfcn, c("matern", "spherical", "powerexponential"))
@@ -397,8 +429,8 @@ bf2optim <- function (bf1obj, paroptim, useCV = TRUE,
   tsq <- if (ifam == 0) tsqsc else dispersion
   loc <- bf1obj$locations
   dm <- sp::spDists(loc)
-  z <- bf1obj$z
-  Ntot <- NCOL(z)
+  sample <- bf1obj$sample2
+  Ntot <- NCOL(sample)
   isweights <- bf1obj$isweights
   zcv <- bf1obj$controlvar
   nruns <- NCOL(zcv)
@@ -468,7 +500,7 @@ in paroptim")
       estim[1] <- TRUE
       lower[1] <- linkpe[1]
       upper[1] <- linkpe[3]
-      if (lower[1] > estim[1] | estim[1] > upper[1] | lower[1] == upper[1]) {
+      if (lower[1] > pstart[1] | pstart[1] > upper[1] | lower[1] == upper[1]) {
         stop ("The elements in the component linkp in paroptim must be ordered")
       }
     }
@@ -502,7 +534,7 @@ components"))
       estim[i] <- TRUE
       lower[i] <- ppp[1]
       upper[i] <- ppp[3]
-      if (lower[i] > estim[i] | estim[i] > upper[i] | lower[i] == upper[i]) {
+      if (lower[i] > pstart[i] | pstart[i] > upper[i] | lower[i] == upper[i]) {
         stop (paste("The elements in the component", parnmall[i],
                      "in paroptim must be ordered"))
       }
@@ -517,24 +549,43 @@ overflow. Control variates corrections will not be used.")
   }
 
   ## Function to optimise
-  fn <- if (useCV) {
-    function (par) {
-      parin <- pstart
+  if (useCV) {
+    if (transf) {
+      froutine <- "calcbmu_cv"
+    } else {
+      froutine <- "calcbz_cv"
+    }
+    fn <- function (par) {
+      parin <- as.double(pstart)
       parin[estim] <- par
-      RUN <- .Fortran('calcb_cv', 0.0, parin[2], parin[1], parin[3], parin[4],
-                      icf, 1L, 1L, Ntot, z, isweights, zcv, n, p, nruns, betm0,
-                      betQ0, ssqdf, ssqsc, max(tsqdf, 0), tsq, y, l, F, dm,
-                      ifam)
+      RUN <- .Fortran(froutine, 0.0, parin[2], parin[1], parin[3], parin[4],
+                      as.integer(icf), 1L, 1L, as.integer(Ntot),
+                      as.double(sample), as.double(isweights), as.double(zcv),
+                      as.integer(n), as.integer(p),
+                      as.integer(nruns), as.double(betm0),
+                      as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
+                      max(tsqdf, 0), as.double(tsq), as.double(y),
+                      as.double(l), as.double(F), as.double(dm),
+                      as.integer(ifam))
       -RUN[[1]][1]
     }
   } else {
-    function (par) {
-      parin <- pstart
+    if (transf) {
+      froutine <- "calcbmu_st"
+    } else {
+      froutine <- "calcbz_st"
+    }
+    fn <- function (par) {
+      parin <- as.double(pstart)
       parin[estim] <- par
-      RUN <- .Fortran('calcb_st', 0.0, parin[2], parin[1], parin[3], parin[4],
-                      icf, 1L, 1L, Ntot, z, isweights, n, p, betm0,
-                      betQ0, ssqdf, ssqsc, max(tsqdf, 0), tsq, y, l, F, dm,
-                      ifam)
+      RUN <- .Fortran(froutine, 0.0, parin[2], parin[1], parin[3], parin[4],
+                      as.integer(icf), 1L, 1L, as.integer(Ntot), as.double(sample),
+                      as.double(isweights), as.integer(n), as.integer(p),
+                      as.double(betm0),
+                      as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
+                      max(tsqdf, 0), as.double(tsq), as.double(y), as.double(l),
+                      as.double(F), as.double(dm),
+                      as.integer(ifam))
       -RUN[[1]][1]
     }
   }

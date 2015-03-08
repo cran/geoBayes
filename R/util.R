@@ -7,16 +7,17 @@
 ##' If \code{fillwith} is a named object, its names must correspond to
 ##' the names of variables in the data frames. If a variable is
 ##' missing, then it is filled with the corresponding value in
-##' \code{fillwith}. 
+##' \code{fillwith}. \code{fillwith} can contain only one unnamed
+##' component which corresponds to the default filling.
 ##' @title Combine \code{data.frame}s
 ##' @param ... \code{data.frame}s or objects that can be coerced to
 ##' \code{data.frame}s
 ##' @param fillwith Which value to use for missing variables. This
 ##' could be a scalar, a named vector, or a named list with one value
 ##' in each component; see Details.
-##' @param keeptype Whether to preserve the \code{\link[base]{typeof}}
-##' each variable. The elements in \code{fillwith} are converted to
-##' the corresponding variable's type.
+##' @param keepclass Whether to preserve the \code{\link[base]{class}}
+##' of each variable. The elements in \code{fillwith} are coerced to
+##' the corresponding variable's class.
 ##' @return A stacked \code{data.frame}.
 ##' @export 
 ##' @examples
@@ -24,19 +25,20 @@
 ##' d1 <- data.frame(w = 1:3, z = 4:6 + 0.1)
 ##' d2 <- data.frame(w = 3:7, x = 1:5, y = 6:10)
 ##' (d12a <- stackdata(d1, d2))
-##' lapply(d12a, typeof)
+##' lapply(d12a, class)
 ##' (d12b <- stackdata(d1, d2, fillwith = c(x = NA, y = 0, z = -99)))
-##' lapply(d12b, typeof)
+##' lapply(d12b, class)
 ##' (d12c <- stackdata(d1, d2, fillwith = c(x = NA, y = 0, z = -99),
-##'                    keeptype = TRUE))
-##' lapply(d12c, typeof)
+##'                    keepclass = TRUE))
+##' lapply(d12c, class)
+##' (d12d <- stackdata(d1, d2, fillwith = c(x = NA, 0)))
 ##'
 ##' data(rhizoctonia)
 ##' predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
 ##'                          par.x = 100, chull = TRUE, exf = 1.2)
 ##' rhizdata <- stackdata(rhizoctonia, predgrid$grid)
 ##' }
-stackdata <- function (..., fillwith = NA, keeptype = FALSE) {
+stackdata <- function (..., fillwith = NA, keepclass = FALSE) {
   fillNA <- function (d, allnames, fillwith) {
     miss <- allnames[!(allnames %in% names(d))]
     d[miss] <- fillwith[miss]
@@ -47,27 +49,38 @@ stackdata <- function (..., fillwith = NA, keeptype = FALSE) {
   if (all(is.na(fillwith))) {
     fillwith <- rep(NA, length(nmall))
     names(fillwith) <- nmall
-    keeptype <- FALSE
+    keepclass <- FALSE
   } else {
     if (is.numeric(fillwith) | is.logical(fillwith)) {
       if (length(fillwith) == 1) {
         fillwith <- rep(fillwith, length(nmall))
+        fillwith <- as.list(fillwith)
+        names(fillwith) <- nmall
+      } else {
+        fillwith <- lapply(nmall, function(nm)
+          do.call("switch", c(list(nm), as.list(fillwith))))
         names(fillwith) <- nmall
       }
-      fillwith <- as.list(fillwith)
     } else if (!is.list(fillwith)) {
       stop ("Argument fillwith must be either numeric or list")
-    }
+    } else {
+      fillwith <- lapply(nmall, function(nm)
+        do.call("switch", c(list(nm), fillwith)))
+      names(fillwith) <- nmall
+    }      
   }
   fmiss <- nmall[!(nmall %in% names(fillwith))]
   fillwith[fmiss] <- NA
   fillwith <- fillwith[nmall]
-  if(keeptype) {
-    types <- lapply(stackdata(..., fillwith = NA), typeof)
-    fillwith <- mapply("storage.mode<-", fillwith, types, SIMPLIFY = FALSE)
+  if(keepclass) {
+    types <- lapply(stackdata(..., fillwith = NA), class)
+    typef <- lapply(types, function (c) match.fun(paste("as.", c, sep = "")))
+    fillwith <- lapply(nmall, function(nm) typef[[nm]](fillwith[[nm]]))
+    names(fillwith) <- nmall
+    # fillwith <- mapply("class<-", fillwith, types, SIMPLIFY = FALSE)
   }
   newdata <- lapply(input, fillNA, allnames = nmall, fillwith = fillwith)
-  out <- do.call(rbind, newdata)
+  out <- do.call("rbind", newdata)
   out
 }
 
@@ -132,18 +145,20 @@ mkpredgrid2d <- function (pnts.x, pnts.y, par.x, par.y, isby = FALSE,
   if (!is.null(pnts.x)) pnts.x <- as.matrix(pnts.x)
   if (!is.null(pnts.y)) pnts.y <- as.matrix(pnts.y)
   ph <- cbind(pnts.x, pnts.y)
-  nm <- dimnames(ph)[[2]]
+  nm <- colnames(ph)
   par <- c(par.x[1], par.y[1])
   d <- NCOL(ph)
   if (d != 2) stop ("Can only generate 2-dimensional grids")
   if (isTRUE(chull)) {
-    ph <- ph[chull(ph), ]
+    ph <- ph[chull(ph), , drop = FALSE]
   }
   if (exf != 1) { ## Extend the covex hull by a factor exf
     centr <- colMeans(ph)     # Central coordinate of the polygon
-    phu <- cbind(ph[, 1] - centr[1], ph[, 2] - centr[2]) # Uncenter
-    phu_r <- exf*sqrt(phu[, 2]^2 + phu[, 1]^2) # Covert to polar
-    phu_u <- atan2(phu[, 2], phu[, 1])
+    phu <- cbind(ph[, 1, drop = FALSE] - centr[1],
+                 ph[, 2, drop = FALSE] - centr[2]) # Uncenter
+    phu_r <- exf*sqrt(phu[, 2, drop = FALSE]^2 +
+                        phu[, 1, drop = FALSE]^2) # Covert to polar
+    phu_u <- atan2(phu[, 2, drop = FALSE], phu[, 1, drop = FALSE])
     phu_x <- phu_r*cos(phu_u) # Convert back to cartesian
     phu_y <- phu_r*sin(phu_u)
     ph[, 1] <- phu_x + centr[1]
@@ -152,7 +167,7 @@ mkpredgrid2d <- function (pnts.x, pnts.y, par.x, par.y, isby = FALSE,
   ft <- apply(ph, 2, range)
   if (isTRUE(!isby)) {
     par <- ceiling(par)
-    par <- ((ft[2, ] - ft[1, ])/(par - 1))
+    par <- ((ft[2, , drop = FALSE] - ft[1, , drop = FALSE])/(par - 1))
   } else {
     par <- rep(par, length.out = d)
   }
@@ -160,8 +175,11 @@ mkpredgrid2d <- function (pnts.x, pnts.y, par.x, par.y, isby = FALSE,
   names(xycoord) <- nm
   eg <- as.matrix(expand.grid(xycoord, KEEP.OUT.ATTRS = FALSE))
   dimnames(eg) <- list(NULL, nm)
-  iin <- sp::point.in.polygon(eg[, 1], eg[, 2], ph[, 1], ph[, 2]) > 0
-  grid <- eg[iin, ]
+  iin <- sp::point.in.polygon(eg[, 1, drop = FALSE],
+                              eg[, 2, drop = FALSE],
+                              ph[, 1, drop = FALSE],
+                              ph[, 2, drop = FALSE]) > 0
+  grid <- eg[iin, , drop = FALSE]
   out <- list(grid = grid, xycoord = xycoord, xygrid  = eg, borders = ph)
   out
 }

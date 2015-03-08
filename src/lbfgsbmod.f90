@@ -350,14 +350,11 @@ contains
        iword,nfree,nact,ileave,nenter
     double precision :: theta,fold,ddot,dr,rr,tol, &
        xstep,sbgnrm,ddum,dnorm,dtd,epsmch, &
-       cpu1,cpu2,cachyt,sbtime,lnscht,time1,time2, &
-       gd,gdold,stp,stpmx,time
+       gd,gdold,stp,stpmx
     double precision :: one,zero
     parameter        (one=1.0d0,zero=0.0d0)
 
     if (task == 'START') then
-
-      call timer(time1)
 
       ! Generate the current machine precision.
 
@@ -382,11 +379,6 @@ contains
 
       ! for stopping tolerance:
       tol = factr*epsmch
-
-      ! for measuring running time:
-      cachyt = 0
-      sbtime = 0
-      lnscht = 0
 
       ! 'info' records the termination information.
       info = 0
@@ -442,11 +434,6 @@ contains
       tol    = dsave(3)
       dnorm  = dsave(4)
       epsmch = dsave(5)
-      cpu1   = dsave(6)
-      cachyt = dsave(7)
-      sbtime = dsave(8)
-      lnscht = dsave(9)
-      time1  = dsave(10)
       gd     = dsave(11)
       stpmx  = dsave(12)
       sbgnrm = dsave(13)
@@ -508,7 +495,6 @@ contains
 
     ! cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-    call timer(cpu1)
     call cauchy(n,x,l,u,nbd,g,indx2,iwhere,t,d,z, &
        m,wy,ws,sy,wt,theta,col,head, &
        wa(1),wa(2*m+1),wa(4*m+1),wa(6*m+1),nint, &
@@ -521,12 +507,8 @@ contains
       theta  = one
       iupdat = 0
       updatd = .false.
-      call timer(cpu2)
-      cachyt = cachyt + cpu2 - cpu1
       goto 222
     endif
-    call timer(cpu2)
-    cachyt = cachyt + cpu2 - cpu1
     nintol = nintol + nint
 
     ! Count the entering and leaving variables for iter > 0;
@@ -550,8 +532,6 @@ contains
 
     ! cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-    call timer(cpu1)
-
     ! Form  the LEL^T factorization of the indefinite
     ! matrix    K = [-D -Y'ZZ'Y/theta     L_a'-R_z'  ]
     ! [L_a -R_z           theta*S'AA'S ]
@@ -569,8 +549,6 @@ contains
       theta  = one
       iupdat = 0
       updatd = .false.
-      call timer(cpu2)
-      sbtime = sbtime + cpu2 - cpu1
       goto 222
     endif
 
@@ -592,13 +570,9 @@ contains
       theta  = one
       iupdat = 0
       updatd = .false.
-      call timer(cpu2)
-      sbtime = sbtime + cpu2 - cpu1
       goto 222
     endif
 
-    call timer(cpu2)
-    sbtime = sbtime + cpu2 - cpu1
 555 continue
 
     ! cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -612,7 +586,6 @@ contains
     do 40 i = 1, n
       d(i) = z(i) - x(i)
 40  ENDDO
-    call timer(cpu1)
 666 continue
     call lnsrlb(n,l,u,nbd,x,f,fold,gd,gdold,g,d,r,t,z,stp,dnorm, &
        dtd,xstep,stpmx,iter,ifun,iback,nfgv,info,task, &
@@ -644,8 +617,6 @@ contains
         iupdat = 0
         updatd = .false.
         task   = 'RESTART_FROM_LNSRCH'
-        call timer(cpu2)
-        lnscht = lnscht + cpu2 - cpu1
         goto 222
       endif
     else if (task(1:5) == 'FG_LN') then
@@ -653,8 +624,6 @@ contains
       goto 1000
     else
       ! calculate and print out the quantities related to the new X.
-      call timer(cpu2)
-      lnscht = lnscht + cpu2 - cpu1
       iter = iter + 1
 
       ! Compute the infinity norm of the projected (-)gradient.
@@ -748,8 +717,6 @@ contains
 
     goto 222
 999 continue
-    call timer(time2)
-    time = time2 - time1
 1000 continue
 
     ! Save local variables.
@@ -783,11 +750,6 @@ contains
     dsave(3)  = tol
     dsave(4)  = dnorm
     dsave(5)  = epsmch
-    dsave(6)  = cpu1
-    dsave(7)  = cachyt
-    dsave(8)  = sbtime
-    dsave(9)  = lnscht
-    dsave(10) = time1
     dsave(11) = gd
     dsave(12) = stpmx
     dsave(13) = sbgnrm
@@ -3335,49 +3297,6 @@ contains
   end subroutine dcstep
 
   !====================== The end of dcstep ==============================
-
-  subroutine timer(ttime)
-    double precision :: ttime
-    ! *********
-
-    ! Subroutine timer
-
-    ! This subroutine is used to determine user time. In a typical
-    ! application, the user time for a code segment requires calls
-    ! to subroutine timer to determine the initial and final time.
-
-    ! The subroutine statement is
-
-    ! subroutine timer(ttime)
-
-    ! where
-
-    ! ttime is an output variable which specifies the user time.
-
-    ! Argonne National Laboratory and University of Minnesota.
-    ! MINPACK-2 Project.
-
-    ! Modified October 1990 by Brett M. Averick.
-
-    ! **********
-    real :: temp
-!!     real :: tarray(2)
-!!     real :: etime
-!! 
-!!     ! The first element of the array tarray specifies user time
-!! 
-!!     temp = etime(tarray)
-!! 
-!!     ttime = dble(tarray(1))
-
-    call cpu_time(temp)
-    ttime = dble(temp)
-    
-    return
-
-  end subroutine timer
-
-  !====================== The end of timer ===============================
 
   double precision function dnrm2(n,x,incx)
     integer :: n,incx

@@ -38,7 +38,9 @@ with the coordinates of the sampled locations.}
 \item{betm0}{Prior mean for beta (a vector or scalar).}
 
 \item{betQ0}{Prior standardised precision (inverse variance)
-matrix.}
+matrix. Can be a scalar, vector or matrix. The first two imply a
+diagonal with those elements. Set this to 0 to indicate a flat
+improper prior.}
 
 \item{ssqdf}{Degrees of freedom for the scaled inverse chi-square
 prior for the partial sill parameter.}
@@ -112,6 +114,8 @@ follows:
 \itemize{
  \item \code{z} A matrix containing the MCMC samples for the
 spatial random field. Each column is one sample.
+ \item \code{mu} A matrix containing the MCMC samples for the
+mean response (a transformation of z). Each column is one sample.
  \item \code{beta} A matrix containing the MCMC samples for the
 regressor coefficients. Each column is one sample.
  \item \code{ssq} A vector with the MCMC samples for the partial
@@ -130,8 +134,9 @@ of the parameters \code{phi} and \code{omg}.
  \item \code{sys_time} The total computing time for the MCMC sampling.
  \item \code{Nout}, \code{Nbi},  \code{Nthin} As in input. Used
 internally in other functions.
- \item \code{response} The value of the response variable at the
-observed locations. Used internally in other functions.
+ \item \code{response} The average of the response variable at the
+observed locations, i.e. its value divided by the corresponding
+weight. Used internally in other functions.
  \item \code{weights} The response weights at the observed
 locations. Used internally in other functions.
  \item \code{modelmatrix} The model matrix at the observed

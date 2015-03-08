@@ -3,23 +3,27 @@
 \alias{bf1skel}
 \title{Computation of Bayes factors at the skeleton points}
 \usage{
-bf1skel(runs, bfsize1 = 0.8, method = c("RL", "MW"), reference = 1)
+bf1skel(runs, bfsize1 = 0.8, method = c("RL", "MW"), reference = 1,
+  transf = FALSE)
 }
 \arguments{
 \item{runs}{A list with outputs from the function
 \code{\link{mcsglmm}} or \code{\link{mcstrga}}.}
 
-\item{bfsize1}{A scalar or vector of the same length as \code{runs}
-with all integer values or all values in (0, 1]. How many samples
-(or what proportion of the sample) to use for estimating the Bayes
-factors at the first stage. The remaining sample will be used for
-estimating the Bayes factors in the second stage. Setting it to 1
-will perform only the first stage.}
+\item{bfsize1}{A scalar or vector of the same length as
+\code{runs} with all integer values or all values in (0, 1]. How
+many samples (or what proportion of the sample) to use for
+estimating the Bayes factors at the first stage. The remaining
+sample will be used for estimating the Bayes factors in the second
+stage. Setting it to 1 will perform only the first stage.}
 
 \item{method}{Which method to use to calculate the Bayes factors:
 Reverse logistic or Meng-Wong.}
 
 \item{reference}{Which model goes in the denominator.}
+
+\item{transf}{Whether to use the transformed sample mu for the
+computations. Otherwise it uses z.}
 }
 \value{
 A list with components
@@ -34,13 +38,17 @@ used at the second stage. Used internally in
 \code{\link{bf2new}} and \code{\link{bf2optim}}.
 \item \code{controlvar} A matrix with the control variates
 computed at the samples that will be used in the second stage.
-\item \code{z} The MCMC sample for the random field that will be
+\item \code{sample2} The MCMC sample for mu or z that will be
 used in the second stage. Used internally in
 \code{\link{bf2new}} and \code{\link{bf2optim}}.
+\item \code{N1}, \code{N2} Vectors containing the sample sizes
+used in the first and second stages.
+\item \code{distmat} Matrix of distances between locations.
 \item \code{betm0}, \code{betQ0}, \code{ssqdf}, \code{ssqsc},
 \code{tsqdf}, \code{tsqsc}, \code{dispersion}, \code{response},
 \code{weights}, \code{modelmatrix}, \code{locations},
-\code{family}, \code{corrfcn} Model parameters used internally in
+\code{family}, \code{corrfcn}, \code{transf} Model parameters used
+internally in.
 \code{\link{bf2new}} and \code{\link{bf2optim}}.
 \item \code{pnts} A list containing the skeleton points. Used
 internally in \code{\link{bf2new}} and \code{\link{bf2optim}}.
@@ -89,13 +97,13 @@ bf$logbf
 }
 }
 \references{
-Geyer, C. J. (1994). Estimating Normalizing Constants
-and Reweighting Mixtures. Technical report, University of
+Geyer, C. J. (1994). Estimating normalizing constants
+and reweighting mixtures. Technical report, University of
 Minnesota.
 
-Meng, X. L., & Wong, W. H. (1996). Simulating Ratios of
-Normalizing Constants via a Simple Identity: A Theoretical
-Exploration. \emph{Statistica Sinica}, 6, 831-860.
+Meng, X. L., & Wong, W. H. (1996). Simulating ratios of
+normalizing constants via a simple identity: A theoretical
+exploration. \emph{Statistica Sinica}, 6, 831-860.
 
 Roy, V., Evangelou, E., and Zhu, Z. (2014). Efficient estimation
 and prediction for the Bayesian spatial generalized linear mixed

@@ -3,11 +3,12 @@
 \alias{ebsglmm}
 \title{Empirical Bayes estimation for SGLMM}
 \usage{
-ebsglmm(formula, family = c("gaussian", "binomial", "poisson", "Gamma"), data,
-  weights, subset, atsample, parskel, paroptim, corrfcn = c("matern",
-  "spherical", "powerexponential"), Nout, Nthin = 1, Nbi = 0, Npro,
-  Nprt = 1, Nprb = 0, betm0, betQ0, ssqdf, ssqsc, zstart, dispersion = 1,
-  bfsize1 = 0.8, reference = 1, bfmethod = c("RL", "MW"), useCV = TRUE,
+ebsglmm(formula, family = c("gaussian", "binomial", "poisson", "Gamma",
+  "GEVbinomial", "GEVDbinomial"), data, weights, subset, atsample, parskel,
+  paroptim, corrfcn = c("matern", "spherical", "powerexponential"), Nout,
+  Nthin = 1, Nbi = 0, Npro, Nprt = 1, Nprb = 0, betm0, betQ0, ssqdf,
+  ssqsc, zstart, dispersion = 1, bfsize1 = 0.8, reference = 1,
+  bfmethod = c("RL", "MW"), transf = FALSE, useCV = TRUE,
   longlat = FALSE, control = list(), verbose = TRUE)
 }
 \arguments{
@@ -15,12 +16,13 @@ ebsglmm(formula, family = c("gaussian", "binomial", "poisson", "Gamma"), data,
 \code{response ~ terms}. The response must be set to \code{NA}'s
 at the prediction locations (see the example in
 \code{\link{mcsglmm}} for how to do this using
-\code{\link{stackdata}}). At the observed locations the
-response is assumed to be a total of replicated measurements. The
-number of replications is inputted using the argument
-\code{weights}.}
+\code{\link{stackdata}}). At the observed locations the response
+is assumed to be a total of replicated measurements. The number of
+replications is inputted using the argument \code{weights}.}
 
-\item{family}{The distribution of the data.}
+\item{family}{The distribution of the data. The
+\code{"GEVbinomial"} family is the binomial family with link the
+GEV link (see Details).}
 
 \item{data}{An optional data frame containing the variables in the
 model.}
@@ -35,11 +37,12 @@ observations to be used in the fitting process.}
 \item{atsample}{A formula in the form \code{~ x1 + x2 + ... + xd}
 with the coordinates of the sampled locations.}
 
-\item{parskel}{A named list with the components "linkp", "phi",
-"omg", "kappa", corresponding to the link function, the spatial
-range, the relative nugget, and the spatial correlation
-parameters. All components must be vectors of the same length k.
-Then, k different MCMC samples will be taken from the models with
+\item{parskel}{A data frame with the components "linkp", "phi",
+"omg", and "kappa", corresponding to the link function, the
+spatial range, the relative nugget, and the spatial smoothness
+parameters. The latter can be omitted if not used in the
+correlation function. Let k denote the number of rows. Then, k
+different MCMC samples will be taken from the models with
 parameters fixed at those values. For a square grid the output
 from the function \code{\link[base]{expand.grid}} can be used
 here.}
@@ -58,8 +61,7 @@ starting value, upper bound for the estimation of that parameter.}
 
 \item{Nout}{A scalar or vector of size k. Number of MCMC samples
 to take for each run of the MCMC algorithm for the estimation of
-the Bayes factors. See argument
-\code{parskel}.}
+the Bayes factors. See argument \code{parskel}.}
 
 \item{Nthin}{A scalar or vector of size k. The thinning of the
 MCMC algorithm for the estimation of the Bayes factors.}
@@ -68,9 +70,9 @@ MCMC algorithm for the estimation of the Bayes factors.}
 algorithm for the estimation of the Bayes factors.}
 
 \item{Npro}{A scalar. The number of Gibbs samples to take for
-estimation of the conjugate parameters and for prediction
-at the unsampled locations while the other parameters are fixed at
-their empirical Bayes estimates.}
+estimation of the conjugate parameters and for prediction at the
+unsampled locations while the other parameters are fixed at their
+empirical Bayes estimates.}
 
 \item{Nprt}{The thinning of the Gibbs algorithm for the estimation
 of the conjugate parameters and for prediction.}
@@ -81,7 +83,9 @@ of the conjugate parameters and for prediction.}
 \item{betm0}{Prior mean for beta (a vector or scalar).}
 
 \item{betQ0}{Prior standardised precision (inverse variance)
-matrix.}
+matrix. Can be a scalar, vector or matrix. The first two imply a
+diagonal with those elements. Set this to 0 to indicate a flat
+improper prior.}
 
 \item{ssqdf}{Degrees of freedom for the scaled inverse chi-square
 prior for the partial sill parameter.}
@@ -96,10 +100,10 @@ where k is the number of the skeleton points in \code{parskel}.}
 
 \item{dispersion}{The fixed dispersion parameter.}
 
-\item{bfsize1}{A scalar or vector of length k
-with all integer values or all values in (0, 1]. How many samples
-(or what proportion of the sample) to use for estimating the Bayes
-factors at the first stage. The remaining sample will be used for
+\item{bfsize1}{A scalar or vector of length k with all integer
+values or all values in (0, 1]. How many samples (or what
+proportion of the sample) to use for estimating the Bayes factors
+at the first stage. The remaining sample will be used for
 estimating the Bayes factors in the second stage. Setting it to 1
 will perform only the first stage.}
 
@@ -109,6 +113,9 @@ the Bayes factors.}
 
 \item{bfmethod}{Which method to use to calculate the Bayes
 factors: Reverse logistic or Meng-Wong.}
+
+\item{transf}{Whether to use the transformed sample mu for the
+computations. Otherwise it uses z.}
 
 \item{useCV}{Whether to use control variates for finer
 corrections.}
@@ -144,9 +151,6 @@ optimization and the final MCMC sampling.
 Empirical Bayes estimation for SGLMM
 }
 \details{
-Runs the MCMC sampling, computes the importance weights, and
-estimates the parameters.
-
 Currently the following spatial correlation functions are
 implemented. Below, \eqn{h} denotes the distance between
 locations, \eqn{d} is the dimensionality of the locations,
@@ -175,6 +179,12 @@ Note that this is a valid correlation only for \eqn{d \leq 3}{d <=
 Note that this is a valid correlation only for \eqn{0 < \kappa
 \leq 2}{0 < kappa <= 2}.}
 }
+
+The GEV (Generalised Extreme Value) link is defined by \deqn{\mu =
+1 - \exp\{-\max(0, 1 + \nu x)^{\frac{1}{\nu}}\}}{mu = 1 -
+\exp[-max(0, 1 + nu x)^(1/nu)]} for any real \eqn{\nu}{nu}. At
+\eqn{\nu = 0}{nu = 0} it reduces to the complementary log-log
+link.
 }
 \examples{
 \dontrun{

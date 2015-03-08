@@ -3,7 +3,7 @@
 \alias{stackdata}
 \title{Combine \code{data.frame}s}
 \usage{
-stackdata(..., fillwith = NA, keeptype = FALSE)
+stackdata(..., fillwith = NA, keepclass = FALSE)
 }
 \arguments{
 \item{...}{\code{data.frame}s or objects that can be coerced to
@@ -13,9 +13,9 @@ stackdata(..., fillwith = NA, keeptype = FALSE)
 could be a scalar, a named vector, or a named list with one value
 in each component; see Details.}
 
-\item{keeptype}{Whether to preserve the \code{\link[base]{typeof}}
-each variable. The elements in \code{fillwith} are converted to
-the corresponding variable's type.}
+\item{keepclass}{Whether to preserve the \code{\link[base]{class}}
+of each variable. The elements in \code{fillwith} are coerced to
+the corresponding variable's class.}
 }
 \value{
 A stacked \code{data.frame}.
@@ -31,19 +31,21 @@ sampled locations with prediction locations.
 If \code{fillwith} is a named object, its names must correspond to
 the names of variables in the data frames. If a variable is
 missing, then it is filled with the corresponding value in
-\code{fillwith}.
+\code{fillwith}. \code{fillwith} can contain only one unnamed
+component which corresponds to the default filling.
 }
 \examples{
 \dontrun{
 d1 <- data.frame(w = 1:3, z = 4:6 + 0.1)
 d2 <- data.frame(w = 3:7, x = 1:5, y = 6:10)
 (d12a <- stackdata(d1, d2))
-lapply(d12a, typeof)
+lapply(d12a, class)
 (d12b <- stackdata(d1, d2, fillwith = c(x = NA, y = 0, z = -99)))
-lapply(d12b, typeof)
+lapply(d12b, class)
 (d12c <- stackdata(d1, d2, fillwith = c(x = NA, y = 0, z = -99),
-                   keeptype = TRUE))
-lapply(d12c, typeof)
+                   keepclass = TRUE))
+lapply(d12c, class)
+(d12d <- stackdata(d1, d2, fillwith = c(x = NA, 0)))
 
 data(rhizoctonia)
 predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],

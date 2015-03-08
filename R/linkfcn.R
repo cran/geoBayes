@@ -16,6 +16,12 @@
 ##' For the Poisson and gamma families, the Box-Cox transformation is
 ##' used, defined by \deqn{z = \frac{\mu^\nu - 1}{\nu}}{z = (mu^nu -
 ##' 1)/nu}
+##'
+##' For the GEV binomial family, the link function is defined by
+##' \deqn{\mu = 1 - \exp\{-\max(0, 1 + \nu z)^{\frac{1}{\nu}}\}}{mu =
+##' 1 - exp[-max(0, 1 + nu z)^(1/nu)]} for any real \eqn{\nu}{nu}. At
+##' \eqn{\nu = 0}{nu = 0} it reduces to the complementary log-log
+##' link.
 ##' @title Calculate the link function for exponential families
 ##' @param mu Numeric. The mean of the response variable. 
 ##' @param z Numeric. The linear predictor. 
@@ -41,7 +47,8 @@
 ##' @rdname linkfcn
 ##' @export 
 linkfcn <- function (mu, linkp,
-                     family = c("gaussian", "binomial", "poisson", "Gamma")) {
+                     family = c("gaussian", "binomial", "poisson", "Gamma",
+                                "GEVbinomial", "GEVDbinomial")) {
   family <- match.arg(family)
   if (length(linkp) != 1) stop ("The linkp argument must be scalar")
   if (is.character(linkp) | is.factor(linkp)) {
@@ -73,11 +80,25 @@ the binomial can also be the character \"logit\" or \"probit\"")
       } else {
         z <- qt(mu, nu)
       }
-    } else if (family == "poisson" | family == "gamma") {
+    } else if (family == "poisson" | family == "Gamma") {
       if (nu == 0) {
         z <- ifelse(mu > 0, log(mu), -Inf)
       } else {
         z <- ifelse(mu > 0, (mu^nu - 1)/nu, -Inf)
+      }
+    } else if (family == "GEVbinomial") {
+      z <- -log(1 - mu)
+      if (nu == 0) {
+        z <- ifelse(mu > 0, ifelse(mu < 1, log(z), Inf), -Inf)
+      } else {
+        z <- ifelse(mu > 0, ifelse(mu < 1, (-1 + z^nu)/nu, Inf), -Inf)
+      }
+    } else if (family == "GEVDbinomial") {
+      z <- -log(1 - mu)
+      if (nu == 0) {
+        z <- ifelse(mu > 0, ifelse(mu < 1, -log(z), -Inf), Inf)
+      } else {
+        z <- ifelse(mu > 0, ifelse(mu < 1, (-1 + z^(-nu))/nu, -Inf), Inf)
       }
     } else {
       stop ("Unrecognised family")
@@ -90,7 +111,8 @@ the binomial can also be the character \"logit\" or \"probit\"")
 ##' @rdname linkfcn
 ##' @export 
 linkinv <- function (z, linkp, 
-                     family = c("gaussian", "binomial", "poisson", "Gamma")) {
+                     family = c("gaussian", "binomial", "poisson", "Gamma",
+                                "GEVbinomial", "GEVDbinomial")) {
   family <- match.arg(family)
   if (length(linkp) != 1) stop ("The linkp argument must be scalar")
   if (is.character(linkp) | is.factor(linkp)) {
@@ -124,12 +146,26 @@ the binomial can also be the character \"logit\" or \"probit\"")
       } else {
         mu <- pt(z, nu)
       }
-    } else if (family == "poisson" | family == "gamma") {
+    } else if (family == "poisson" | family == "Gamma") {
       if (nu == 0) {
         mu <- exp(z)
       } else {
         mu <- nu*z
         mu <- ifelse(mu > -1, exp(log1p(mu)/nu), 0)
+      }
+    } else if (family == "GEVbinomial") {
+      if (nu == 0) {
+        mu <- 1 - exp(-exp(z))
+      } else {
+        mu <- 1 + nu*z
+        mu <- ifelse(mu > 0, 1 - exp(-mu^(1/nu)), as.double(nu < 0))
+      }
+    } else if (family == "GEVDbinomial") {
+      if (nu == 0) {
+        mu <- 1 - exp(-exp(-z))
+      } else {
+        mu <- 1 + nu*z
+        mu <- ifelse(mu > 0, 1 - exp(-mu^(-1/nu)), as.double(nu > 0))
       }
     } else {
       stop ("Unrecognised family")

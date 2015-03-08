@@ -7,18 +7,18 @@ ebstrga(formula, data, weights, subset, atsample, parskel, paroptim,
   corrfcn = c("matern", "spherical", "powerexponential"), Nout, Nthin = 1,
   Nbi = 0, Npro, Nprt = 1, Nprb = 0, betm0, betQ0, ssqdf, ssqsc, tsqdf,
   tsqsc, zstart, dispersion = 1, bfsize1 = 0.8, reference = 1,
-  bfmethod = c("RL", "MW"), useCV = TRUE, longlat = FALSE,
-  control = list(), verbose = TRUE)
+  bfmethod = c("RL", "MW"), transf = FALSE, useCV = TRUE,
+  longlat = FALSE, control = list(), verbose = TRUE)
 }
 \arguments{
 \item{formula}{A representation of the model in the form
 \code{response ~ terms}. The response must be set to \code{NA}'s
 at the prediction locations (see the example in
 \code{\link{mcsglmm}} for how to do this using
-\code{\link{stackdata}}). At the observed locations the
-response is assumed to be a total of replicated measurements. The
-number of replications is inputted using the argument
-\code{weights}. See the Note for cases where overflow may occur.}
+\code{\link{stackdata}}). At the observed locations the response
+is assumed to be a total of replicated measurements. The number of
+replications is inputted using the argument \code{weights}. See
+the Note for cases where overflow may occur.}
 
 \item{data}{An optional data frame containing the variables in the
 model.}
@@ -33,34 +33,34 @@ observations to be used in the fitting process.}
 \item{atsample}{A formula in the form \code{~ x1 + x2 + ... + xd}
 with the coordinates of the sampled locations.}
 
-\item{parskel}{A named list with the components "linkp", "phi",
-"omg", and "kappa", corresponding to the link function, the spatial
-range, the relative nugget, and the spatial correlation
+\item{parskel}{A data frame with the components "linkp", "phi",
+"omg", and "kappa", corresponding to the link function, the
+spatial range, the relative nugget, and the spatial smoothness
 parameters. The latter can be omitted if not used in the
-correlation function. All components must be vectors of the same length k.
-Then, k different MCMC samples will be taken from the models with
+correlation function. Let k denote the number of rows. Then, k
+different MCMC samples will be taken from the models with
 parameters fixed at those values. For a square grid the output
 from the function \code{\link[base]{expand.grid}} can be used
 here.}
 
 \item{paroptim}{A named list with the components "linkp", "phi",
 "omg", "kappa". The latter can be omitted if not used in the
-correlation function. Each component must be numeric with length 1, 2,
-or 3 with elements in increasing order but for the binomial family
-linkp is also allowed to be the character "logit" and "probit". If
-its length is 1, then the corresponding parameter is considered to
-be fixed at that value. If 2, then the two numbers denote the
-lower and upper bounds for the optimisation of that parameter
-(infinities are allowed). If 3, these correspond to lower bound,
-starting value, upper bound for the estimation of that parameter.}
+correlation function. Each component must be numeric with length
+1, 2, or 3 with elements in increasing order but for the binomial
+family linkp is also allowed to be the character "logit" and
+"probit". If its length is 1, then the corresponding parameter is
+considered to be fixed at that value. If 2, then the two numbers
+denote the lower and upper bounds for the optimisation of that
+parameter (infinities are allowed). If 3, these correspond to
+lower bound, starting value, upper bound for the estimation of
+that parameter.}
 
 \item{corrfcn}{Spatial correlation function. See
 \code{\link{ebsglmm}} for details.}
 
 \item{Nout}{A scalar or vector of size k. Number of MCMC samples
 to take for each run of the MCMC algorithm for the estimation of
-the Bayes factors. See argument
-\code{parskel}.}
+the Bayes factors. See argument \code{parskel}.}
 
 \item{Nthin}{A scalar or vector of size k. The thinning of the
 MCMC algorithm for the estimation of the Bayes factors.}
@@ -69,9 +69,9 @@ MCMC algorithm for the estimation of the Bayes factors.}
 algorithm for the estimation of the Bayes factors.}
 
 \item{Npro}{A scalar. The number of Gibbs samples to take for
-estimation of the conjugate parameters and for prediction
-at the unsampled locations while the other parameters are fixed at
-their empirical Bayes estimates.}
+estimation of the conjugate parameters and for prediction at the
+unsampled locations while the other parameters are fixed at their
+empirical Bayes estimates.}
 
 \item{Nprt}{The thinning of the Gibbs algorithm for the estimation
 of the conjugate parameters and for prediction.}
@@ -82,7 +82,9 @@ of the conjugate parameters and for prediction.}
 \item{betm0}{Prior mean for beta (a vector or scalar).}
 
 \item{betQ0}{Prior standardised precision (inverse variance)
-matrix.}
+matrix. Can be a scalar, vector or matrix. The first two imply a
+diagonal with those elements. Set this to 0 to indicate a flat
+improper prior.}
 
 \item{ssqdf}{Degrees of freedom for the scaled inverse chi-square
 prior for the partial sill parameter.}
@@ -115,6 +117,9 @@ factors.}
 
 \item{bfmethod}{Which method to use to calculate the Bayes
 factors: Reverse logistic or Meng-Wong.}
+
+\item{transf}{Whether to use the transformed sample mu for the
+computations. Otherwise it uses z.}
 
 \item{useCV}{Whether to use control variates for finer
 corrections.}

@@ -4,9 +4,11 @@
 \alias{linkinv}
 \title{Calculate the link function for exponential families}
 \usage{
-linkfcn(mu, linkp, family = c("gaussian", "binomial", "poisson", "Gamma"))
+linkfcn(mu, linkp, family = c("gaussian", "binomial", "poisson", "Gamma",
+  "GEVbinomial", "GEVDbinomial"))
 
-linkinv(z, linkp, family = c("gaussian", "binomial", "poisson", "Gamma"))
+linkinv(z, linkp, family = c("gaussian", "binomial", "poisson", "Gamma",
+  "GEVbinomial", "GEVDbinomial"))
 }
 \arguments{
 \item{mu}{Numeric. The mean of the response variable.}
@@ -43,6 +45,12 @@ Poisson and gamma families.
 For the Poisson and gamma families, the Box-Cox transformation is
 used, defined by \deqn{z = \frac{\mu^\nu - 1}{\nu}}{z = (mu^nu -
 1)/nu}
+
+For the GEV binomial family, the link function is defined by
+\deqn{\mu = 1 - \exp\{-\max(0, 1 + \nu z)^{\frac{1}{\nu}}\}}{mu =
+1 - exp[-max(0, 1 + nu z)^(1/nu)]} for any real \eqn{\nu}{nu}. At
+\eqn{\nu = 0}{nu = 0} it reduces to the complementary log-log
+link.
 }
 \examples{
 \dontrun{

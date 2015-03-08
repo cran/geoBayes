@@ -3,11 +3,12 @@
 \alias{mcsglmm}
 \title{MCMC samples from the Spatial GLMM}
 \usage{
-mcsglmm(formula, family = c("gaussian", "binomial", "poisson", "Gamma"), data,
-  weights, subset, atsample, Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf,
-  ssqsc, phipars, omgpars, corrfcn = c("matern", "spherical",
-  "powerexponential"), kappa, linkp, phisc, omgsc, zstart, phistart, omgstart,
-  dispersion = 1, longlat = FALSE, test = FALSE)
+mcsglmm(formula, family = c("gaussian", "binomial", "poisson", "Gamma",
+  "GEVbinomial", "GEVDbinomial"), data, weights, subset, atsample, Nout,
+  Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc, phipars, omgpars,
+  corrfcn = c("matern", "spherical", "powerexponential"), kappa, linkp, phisc,
+  omgsc, zstart, phistart, omgstart, dispersion = 1, longlat = FALSE,
+  test = FALSE)
 }
 \arguments{
 \item{formula}{A representation of the model in the form
@@ -18,7 +19,9 @@ locations the response is assumed to be a total of replicated
 measurements. The number of replications is inputted using the
 argument \code{weights}.}
 
-\item{family}{The distribution of the data.}
+\item{family}{The distribution of the data. The
+\code{"GEVbinomial"} family is the binomial family with link the
+GEV link (see Details).}
 
 \item{data}{An optional data frame containing the variables in the
 model.}
@@ -42,7 +45,9 @@ with the coordinates of the sampled locations.}
 \item{betm0}{Prior mean for beta (a vector or scalar).}
 
 \item{betQ0}{Prior standardised precision (inverse variance)
-matrix.}
+matrix. Can be a scalar, vector or matrix. The first two imply a
+diagonal with those elements. Set this to 0 to indicate a flat
+improper prior.}
 
 \item{ssqdf}{Degrees of freedom for the scaled inverse chi-square
 prior for the partial sill parameter.}
@@ -115,6 +120,8 @@ follows:
 \itemize{
  \item \code{z} A matrix containing the MCMC samples for the
 spatial random field. Each column is one sample.
+ \item \code{mu} A matrix containing the MCMC samples for the
+mean response (a transformation of z). Each column is one sample.
  \item \code{beta} A matrix containing the MCMC samples for the
 regressor coefficients. Each column is one sample.
  \item \code{ssq} A vector with the MCMC samples for the partial
@@ -153,17 +160,21 @@ correspond to the observed locations.
 Draw MCMC samples from the Spatial GLMM with known link function
 }
 \details{
-Simulates from the posterior distribution of this model.
-
 The four-parameter prior for \code{phi} is defined by
 \deqn{\propto (\phi - \theta_4)^{\theta_2 -1} \exp\{-(\frac{\phi -
-\theta_2}{\theta_1})^{\theta_3}\}}{propto (phi -
+\theta_4}{\theta_1})^{\theta_3}\}}{propto (phi -
 phiprior[4])^(phiprior[2]-1) *
 exp(-((phi-phiprior[4])/phiprior[1])^phiprior[3])} for \eqn{\phi >
 \theta_4}{phi > phiprior[4]}. The prior for \code{omg} is similar.
 The prior parameters correspond to scale, shape, exponent, and
 location. See \code{arXiv:1005.3274} for details of this
 distribution.
+
+The GEV (Generalised Extreme Value) link is defined by \deqn{\mu =
+1 - \exp\{-\max(0, 1 + \nu x)^{\frac{1}{\nu}}\}}{mu = 1 -
+\exp[-max(0, 1 + nu x)^(1/nu)]} for any real \eqn{\nu}{nu}. At
+\eqn{\nu = 0}{nu = 0} it reduces to the complementary log-log
+link.
 }
 \examples{
 \dontrun{

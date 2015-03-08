@@ -12,9 +12,12 @@ yield4         Transformed Gaussian spatial model: Estimate the impact of the
 rhizoctonia1   Binomial SGLMM: Analysis of the rhizoctonia data using full
   Bayesian analysis.
 
-rhizoctonia3   Binomial SGLMM: Analysis of the rhizoctonia
-  data using empirical Bayes methods. Uses the function ebsglmm.
-
 rhizoctonia2   Binomial SGLMM: Analysis of the rhizoctonia
   data using empirical Bayes methods. Uses the functions mcsglmm, bf1skel,
   bf2new, bf2optim.
+
+rhizoctonia3   Binomial SGLMM: Analysis of the rhizoctonia
+  data using empirical Bayes methods. Uses the function ebsglmm.
+
+rhizoctonia5   Binomial-GEV SGLMM: Analysis of the rhizoctonia
+  data using empirical Bayes methods. Uses the function ebsglmm.

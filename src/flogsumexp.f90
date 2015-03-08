@@ -2,8 +2,8 @@
 !! 
 !! Author: Evangelos Evangelou
 !! Created: Thu, 19 Jun, 2014 13:34 (BST)
-!! Last-Updated: Thu, 19 Jun, 2014 13:35 (BST)
-!!     Update #: 1
+!! Last-Updated: Tue, 13 Jan, 2015 15:19 (GMT)
+!!     Update #: 2
 !! 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! 
@@ -14,7 +14,7 @@
 
 module flogsumexp
 contains
-  function logrsumexp (x,m,n)
+  pure function logrsumexp (x,m,n)
     implicit none
     integer, intent(in) :: m, n
     double precision, intent(in) :: x(m,n)
@@ -28,7 +28,7 @@ contains
     logrsumexp = logrsumexp + log(se)
   end function logrsumexp
 
-  function logcsumexp (x,m,n)
+  pure function logcsumexp (x,m,n)
     implicit none
     integer, intent(in) :: m, n
     double precision, intent(in) :: x(m,n)

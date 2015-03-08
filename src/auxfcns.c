@@ -49,12 +49,12 @@ double F77_SUB(randchisq) (double *df)
 }
 
 // d-p-q for t
-double F77_SUB(logprobt1)(double *q, double *d)
+double F77_SUB(logprobt)(double *q, double *d)
 {
   return pt((*q),(*d),1,1);
 }
 
-double F77_SUB(logprobt0)(double *q, double *d)
+double F77_SUB(logborpt)(double *q, double *d)
 {
   return pt((*q),(*d),0,1);
 }
@@ -70,12 +70,12 @@ double F77_SUB(logpdft)(double *x, double *d)
 }
 
 // d-p-q for normal 
-double F77_SUB(logprobnorm1)(double *q)
+double F77_SUB(logprobnorm)(double *q)
 {
   return pnorm((*q),0.0,1.0,1,1);
 }
 
-double F77_SUB(logprobnorm0)(double *q)
+double F77_SUB(logborpnorm)(double *q)
 {
   return pnorm((*q),0.0,1.0,0,1);
 }
@@ -92,12 +92,12 @@ double F77_SUB(logpdfnorm)(double *x)
 
 
 // d-p-q for logistic
-double F77_SUB(logproblogis1)(double *q)
+double F77_SUB(logproblogis)(double *q)
 {
   return plogis((*q),0.0,0.6458,1,1);
 }
 
-double F77_SUB(logproblogis0)(double *q)
+double F77_SUB(logborplogis)(double *q)
 {
   return plogis((*q),0.0,0.6458,0,1);
 }
@@ -121,6 +121,11 @@ double F77_SUB(flog1p)(double *x)
 double F77_SUB(fexpm1)(double *x)
 {
   return expm1((*x));
+}
+
+double F77_SUB(flog1pexp)(double *x)
+{
+  return -plogis((*x),0.0,1.0,0,1);
 }
 
 double F77_SUB(flog1mexp)(double *x)

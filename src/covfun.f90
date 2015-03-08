@@ -89,9 +89,9 @@ contains
     double precision FTF(p,p), TFFT(n,p), T(n,n), TiF(n,p)
     logical lup(n,n)
 
-    lup = .false.
-    do i = 2, n
+    do i = 1, n
       lup(:i-1,i) = .true.
+      lup(i:,i) = .false. 
     end do
 
     do i = 1, kg

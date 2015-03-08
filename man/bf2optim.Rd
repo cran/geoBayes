@@ -13,11 +13,12 @@ contains the Bayes factors and importance sampling weights.}
 "omg", "kappa". Each component must be numeric with length 1, 2,
 or 3 with elements in increasing order but for the binomial family
 linkp is also allowed to be the character "logit" and "probit". If
-its length is 1, then the corresponding parameter is considered to
-be fixed at that value. If 2, then the two numbers denote the
-lower and upper bounds for the optimisation of that parameter
-(infinities are allowed). If 3, these correspond to lower bound,
-starting value, upper bound for the estimation of that parameter.}
+the compontent's length is 1, then the corresponding parameter is
+considered to be fixed at that value. If 2, then the two numbers
+denote the lower and upper bounds for the optimisation of that
+parameter (infinities are allowed). If 3, these correspond to
+lower bound, starting value, upper bound for the estimation of
+that parameter.}
 
 \item{useCV}{Whether to use control variates for finer
 corrections.}

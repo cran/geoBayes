@@ -1,16 +1,20 @@
 ##' Draw MCMC samples from the Spatial GLMM with known link function
 ##'
-##' Simulates from the posterior distribution of this model.
-##'
 ##' The four-parameter prior for \code{phi} is defined by
 ##' \deqn{\propto (\phi - \theta_4)^{\theta_2 -1} \exp\{-(\frac{\phi -
-##' \theta_2}{\theta_1})^{\theta_3}\}}{propto (phi -
+##' \theta_4}{\theta_1})^{\theta_3}\}}{propto (phi -
 ##' phiprior[4])^(phiprior[2]-1) *
 ##' exp(-((phi-phiprior[4])/phiprior[1])^phiprior[3])} for \eqn{\phi >
 ##' \theta_4}{phi > phiprior[4]}. The prior for \code{omg} is similar.
 ##' The prior parameters correspond to scale, shape, exponent, and
 ##' location. See \code{arXiv:1005.3274} for details of this
-##' distribution. 
+##' distribution.
+##'
+##' The GEV (Generalised Extreme Value) link is defined by \deqn{\mu =
+##' 1 - \exp\{-\max(0, 1 + \nu x)^{\frac{1}{\nu}}\}}{mu = 1 -
+##' \exp[-max(0, 1 + nu x)^(1/nu)]} for any real \eqn{\nu}{nu}. At
+##' \eqn{\nu = 0}{nu = 0} it reduces to the complementary log-log
+##' link.
 ##' @title MCMC samples from the Spatial GLMM
 ##' @param formula A representation of the model in the form
 ##' \code{response ~ terms}. The response must be set to \code{NA}'s
@@ -19,7 +23,9 @@
 ##' locations the response is assumed to be a total of replicated
 ##' measurements. The number of replications is inputted using the
 ##' argument \code{weights}.
-##' @param family The distribution of the data.
+##' @param family The distribution of the data. The
+##' \code{"GEVbinomial"} family is the binomial family with link the
+##' GEV link (see Details).
 ##' @param data An optional data frame containing the variables in the
 ##' model.
 ##' @param weights An optional vector of weights. Number of replicated
@@ -34,7 +40,9 @@
 ##' @param Nbi The burn-in of the MCMC algorithm.
 ##' @param betm0 Prior mean for beta (a vector or scalar).
 ##' @param betQ0 Prior standardised precision (inverse variance)
-##' matrix.
+##' matrix. Can be a scalar, vector or matrix. The first two imply a
+##' diagonal with those elements. Set this to 0 to indicate a flat
+##' improper prior.
 ##' @param ssqdf Degrees of freedom for the scaled inverse chi-square
 ##' prior for the partial sill parameter.
 ##' @param ssqsc Scale for the scaled inverse chi-square prior for the
@@ -90,6 +98,8 @@
 ##' \itemize{
 ##'  \item \code{z} A matrix containing the MCMC samples for the
 ##' spatial random field. Each column is one sample. 
+##'  \item \code{mu} A matrix containing the MCMC samples for the
+##' mean response (a transformation of z). Each column is one sample. 
 ##'  \item \code{beta} A matrix containing the MCMC samples for the
 ##' regressor coefficients. Each column is one sample. 
 ##'  \item \code{ssq} A vector with the MCMC samples for the partial
@@ -179,7 +189,8 @@
 ##' @importFrom sp spDists
 ##' @export 
 mcsglmm <- function (formula,
-                     family = c("gaussian", "binomial", "poisson", "Gamma"),
+                     family = c("gaussian", "binomial", "poisson", "Gamma",
+                                "GEVbinomial", "GEVDbinomial"),
                      data, weights, subset, atsample,
                      Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc,
                      phipars, omgpars,
@@ -210,10 +221,11 @@ mcsglmm <- function (formula,
   FF <- model.matrix(mt,mf)
   if (!all(is.finite(FF))) stop ("Non-finite values in the design matrix")
   p <- NCOL(FF)
-  yy <- model.response(mf)
+  yy <- unclass(model.response(mf))
   if (!is.vector(yy)) {
     stop ("The response must be a vector")
   }
+  yy <- as.double(yy)
   ll <- model.weights(mf)
 
   ## All locations
@@ -235,18 +247,20 @@ mcsglmm <- function (formula,
   l <- if (is.null(l)) rep.int(1.0, k) else as.double(l)
   if (any(!is.finite(l))) stop ("Non-finite values in the weights")
   if (any(l <= 0)) stop ("Non-positive weights not allowed")
-  if (family == "binomial") {
+  if (family %in% c("binomial", "GEVbinomial", "GEVDbinomial")) {
     l <- l - y # Number of failures
   }
-  F <- FF[ii, ]
-  dm <- sp::spDists(loc[ii, ], longlat = longlat)
+  F <- FF[ii, , drop = FALSE]
+  dm <- sp::spDists(loc[ii, , drop = FALSE], longlat = longlat)
   k0 <- sum(!ii)
   if (k0 > 0) {
-    F0 <- FF[!ii, ]
-    dmdm0 <- sp::spDists(loc[ii, ], loc[!ii, ], longlat = longlat)
+    F0 <- FF[!ii, , drop = FALSE]
+    dmdm0 <- sp::spDists(loc[ii, , drop = FALSE], loc[!ii, , drop = FALSE],
+                         longlat = longlat)
   } else {
-    F0 <- numeric(p)
-    dmdm0 <- numeric(k)
+    F0 <- dmdm0 <- numeric(0)
+    dim(F0) <- c(0, p)
+    dim(dmdm0) <- c(k, 0)
   }
 
   ## Priors
@@ -255,16 +269,20 @@ mcsglmm <- function (formula,
       ## Uniform prior
       betQ0 <- matrix(0, p, p)
       betm0 <- rep(0, p)
+    } else if (length(betQ0) == 1 || length(betQ0) == p) {
+      if (any(betQ0 <= 0)) stop ('betQ0 not > 0')
+      betQ0 <- diag(betQ0, p, p)
+      betm0 <- rep(as.double(betm0), length.out = p)
+      modeldf <- as.double(k + ssqdf)
     } else if (length(betQ0) == p*p) {
       betQ0 <- matrix(as.double(betQ0), p, p)
       betQ0[lower.tri(betQ0)] <- 0
       betQ0eig <- eigen(t(betQ0), 1, 1)$values
       if (any (betQ0eig < sqrt(.Machine$double.eps))) {
         stop ('betQ0 not > 0 within tolerance')
-      } else {
-        betm0 <- rep(as.double(betm0), length.out = p)
-        modeldf <- as.double(k + ssqdf)
-      }
+      } 
+      betm0 <- rep(as.double(betm0), length.out = p)
+      modeldf <- as.double(k + ssqdf)
     } else stop ('Bad betQ0')
   } else stop ('Non-finite betQ0')
   ssqdf <- as.double(ssqdf)
@@ -284,7 +302,7 @@ mcsglmm <- function (formula,
       stop ("Argument phipars must be a vector of length 4")
     }
     if (!all(is.finite(phipars))) stop ("Non-finite values in phipars")
-    if (any(phipars[1:3] <= 0) || phipars[4] < 0) {
+    if (phipars[1] <= 0 || phipars[4] < 0 || phipars[2]*phipars[3] <= 0) {
       stop ("Invalid values in phipars")
     }
   } else {
@@ -353,17 +371,23 @@ the binomial can also be the character \"logit\" or \"probit\"")
   ## Starting values
   if (missing(zstart)) {
     zstart <- switch(family,
-                     binomial =, poisson = (y+.5)/(l+1),
-                     gaussian = y/l)
+                     binomial =, GEVbinomial = (y+.5)/(y+l+1),
+                     GEVDbinomial = (l+.5)/(y+l+1),
+                     poisson = (y+.5)/(l+1), Gamma =, gaussian = y/l)
     zstart <- linkfcn(zstart, linkp, family)
-    zstart <- pmax(zstart, -1e8) + rnorm(k, 0, sqrt(ssqsc))
+    ## zstart <- pmax(zstart, -1e8) + rnorm(k, 0, sqrt(ssqsc))
   }
   z[, 1] <- zstart
   if (missing(phistart)) {
     if (phisc == 0) {
       stop ("Argument phistart needed for fixed phi")
     } else {
-      phistart <- phipars[4] + phipars[1]*gamma((phipars[2]+1)/phipars[3])/
+      if(phipars[2] == -1) {
+        tmp <- .1/abs(phipars[3])
+      } else {
+        tmp <- abs((phipars[2]+1)/phipars[3])
+      }
+      phistart <- phipars[4] + phipars[1]*gamma(tmp)/
         gamma(phipars[2]/phipars[3])
     }
   } else {
@@ -377,7 +401,12 @@ the binomial can also be the character \"logit\" or \"probit\"")
     if (omgsc == 0) {
       stop ("Argument omgstart needed for fixed omg")
     } else {
-      omgstart <- omgpars[4] + omgpars[1]*gamma((omgpars[2]+1)/omgpars[3])/
+      if(omgpars[2] == -1) {
+        tmp <- .1/abs(omgpars[3])
+      } else {
+        tmp <- abs((omgpars[2]+1)/omgpars[3])
+      }
+      omgstart <- omgpars[4] + omgpars[1]*gamma(tmp)/
         gamma(omgpars[2]/omgpars[3])
     }
   } else {
@@ -394,10 +423,15 @@ the binomial can also be the character \"logit\" or \"probit\"")
     test <- as.integer(test)
     tm <- system.time({
       RUN <- .Fortran("mcspsamtry", ll = lglk, z = z, phi = phi, omg = omg,
-                      acc = acc, y, l, F, 
-                      betm0, betQ0, ssqdf, ssqsc, phipars, phisc, omgpars,
-                      omgsc, kappa, icf, 
-                      nu, dispersion, dm, Nout, test, k, p, ifam)
+                      acc = acc,
+                      as.double(y), as.double(l), as.double(F), 
+                      as.double(betm0), as.double(betQ0), as.double(ssqdf),
+                      as.double(ssqsc), as.double(phipars), as.double(phisc),
+                      as.double(omgpars),
+                      as.double(omgsc), as.double(kappa), as.integer(icf), 
+                      as.double(nu), as.double(dispersion), as.double(dm),
+                      as.integer(Nout), as.integer(test), as.integer(k),
+                      as.integer(p), as.integer(ifam))
     })
     ## Store samples
     ll <- RUN$ll
@@ -417,22 +451,31 @@ the binomial can also be the character \"logit\" or \"probit\"")
                 response = y, weights = l, modelmatrix = F, family = family,
                 betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
                 corrfcn = corrfcn, kappa = kappa, 
-                dispersion = dispersion, locations = loc[ii, ], whichobs = ii)
+                dispersion = dispersion, locations = loc[ii, , drop = FALSE],
+                whichobs = ii)
   } else {
     tm <- system.time({
-      RUN <- .Fortran("mcspsample", ll = lglk, z = z, z0 = z0, beta = beta,
-                      ssq = ssq,
-                      phi = phi, omg = omg, acc = acc, y, l, F, F0,
-                      betm0, betQ0, ssqdf, ssqsc, phipars, phisc, omgpars,
-                      omgsc, kappa, icf, 
-                      nu, dispersion, dm, dmdm0, Nout, Nbi, Nthin, k, k0,
-                      p, ifam)
+      RUN <- .Fortran("mcspsample", ll = lglk, z = z, z0 = z0,
+                      mu = z, mu0 = z0, 
+                      beta = beta, ssq = ssq,
+                      phi = phi, omg = omg, acc = acc,
+                      as.double(y), as.double(l), as.double(F), as.double(F0),
+                      as.double(betm0), as.double(betQ0), as.double(ssqdf),
+                      as.double(ssqsc), as.double(phipars), as.double(phisc),
+                      as.double(omgpars),
+                      as.double(omgsc), as.double(kappa), as.integer(icf), 
+                      as.double(nu), as.double(dispersion), as.double(dm),
+                      as.double(dmdm0), as.integer(Nout), as.integer(Nbi),
+                      as.integer(Nthin), as.integer(k), as.integer(k0),
+                      as.integer(p), as.integer(ifam))
     })
     ## Store samples
     ll <- RUN$ll
-    zz0 <- matrix(NA, NROW(yy), Nout)
+    zz0 <- mm0 <- matrix(NA, NROW(yy), Nout)
     zz0[ii, ] <- RUN$z
     zz0[!ii, ] <- RUN$z0
+    mm0[ii, ] <- RUN$mu
+    mm0[!ii, ] <- RUN$mu0
     beta <- RUN$beta
     ssq <- RUN$ssq
     phi <- RUN$phi
@@ -441,13 +484,15 @@ the binomial can also be the character \"logit\" or \"probit\"")
     attr(omg, 'fixed') <- omgsc == 0
     attr(nu, 'fixed') <- TRUE
     acc_ratio <- RUN$acc/(Nout*Nthin + max(Nthin, Nbi))
-    out <- list(z = zz0, beta = beta, ssq = ssq, phi = phi, omg = omg, nu = nu, 
+    out <- list(z = zz0, mu = mm0,
+                beta = beta, ssq = ssq, phi = phi, omg = omg, nu = nu, 
                 logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
                 Nout = Nout, Nbi = Nbi, Nthin = Nthin,
                 response = y, weights = l, modelmatrix = F, family = family,
                 betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
                 corrfcn = corrfcn, kappa = kappa, 
-                dispersion = dispersion, locations = loc[ii, ], whichobs = ii)
+                dispersion = dispersion, locations = loc[ii, , drop = FALSE],
+                whichobs = ii)
   }
   class(out) <- "geomcmc"
   out
@@ -479,7 +524,9 @@ the binomial can also be the character \"logit\" or \"probit\"")
 ##' @param Nbi The burn-in of the MCMC algorithm.
 ##' @param betm0 Prior mean for beta (a vector or scalar).
 ##' @param betQ0 Prior standardised precision (inverse variance)
-##' matrix.
+##' matrix. Can be a scalar, vector or matrix. The first two imply a
+##' diagonal with those elements. Set this to 0 to indicate a flat
+##' improper prior.
 ##' @param ssqdf Degrees of freedom for the scaled inverse chi-square
 ##' prior for the partial sill parameter.
 ##' @param ssqsc Scale for the scaled inverse chi-square prior for the
@@ -535,6 +582,8 @@ the binomial can also be the character \"logit\" or \"probit\"")
 ##' \itemize{
 ##'  \item \code{z} A matrix containing the MCMC samples for the
 ##' spatial random field. Each column is one sample. 
+##'  \item \code{mu} A matrix containing the MCMC samples for the
+##' mean response (a transformation of z). Each column is one sample. 
 ##'  \item \code{beta} A matrix containing the MCMC samples for the
 ##' regressor coefficients. Each column is one sample. 
 ##'  \item \code{ssq} A vector with the MCMC samples for the partial
@@ -554,8 +603,9 @@ the binomial can also be the character \"logit\" or \"probit\"")
 ##'  \item \code{sys_time} The total computing time for the MCMC sampling.
 ##'  \item \code{Nout}, \code{Nbi},  \code{Nthin} As in input. Used
 ##' internally in other functions. 
-##'  \item \code{response} The value of the response variable at the
-##' observed locations. Used internally in other functions. 
+##'  \item \code{response} The average of the response variable at the
+##' observed locations, i.e. its value divided by the corresponding
+##' weight. Used internally in other functions.  
 ##'  \item \code{weights} The response weights at the observed
 ##' locations. Used internally in other functions. 
 ##'  \item \code{modelmatrix} The model matrix at the observed
@@ -648,10 +698,11 @@ mcstrga <- function (formula,
   FF <- model.matrix(mt,mf)
   if (!all(is.finite(FF))) stop ("Non-finite values in the design matrix")
   p <- NCOL(FF)
-  yy <- model.response(mf)
+  yy <- unclass(model.response(mf))
   if (!is.vector(yy)) {
     stop ("The response must be a vector")
   }
+  yy <- as.double(yy)
   ll <- model.weights(mf)
 
   ## All locations
@@ -674,15 +725,17 @@ mcstrga <- function (formula,
   if (any(!is.finite(l))) stop ("Non-finite values in the weights")
   if (any(l <= 0)) stop ("Non-positive weights not allowed")
   ybar <- y/l
-  F <- FF[ii, ]
-  dm <- sp::spDists(loc[ii, ], longlat = longlat)
+  F <- FF[ii, , drop = FALSE]
+  dm <- sp::spDists(loc[ii, , drop = FALSE], longlat = longlat)
   k0 <- sum(!ii)
   if (k0 > 0) {
-    F0 <- FF[!ii, ]
-    dmdm0 <- sp::spDists(loc[ii, ], loc[!ii, ], longlat = longlat)
+    F0 <- FF[!ii, , drop = FALSE]
+    dmdm0 <- sp::spDists(loc[ii, , drop = FALSE], loc[!ii, , drop = FALSE],
+                         longlat = longlat)
   } else {
-    F0 <- numeric(p)
-    dmdm0 <- numeric(k)
+    F0 <- dmdm0 <- numeric(0)
+    dim(F0) <- c(0, p)
+    dim(dmdm0) <- c(k, 0)
   }
 
   ## Priors
@@ -691,16 +744,20 @@ mcstrga <- function (formula,
       ## Uniform prior
       betQ0 <- matrix(0, p, p)
       betm0 <- rep(0, p)
+    } else if (length(betQ0) == 1 || length(betQ0) == p) {
+      if (any(betQ0 <= 0)) stop ('betQ0 not > 0')
+      betQ0 <- diag(betQ0, p, p)
+      betm0 <- rep(as.double(betm0), length.out = p)
+      modeldf <- as.double(k + ssqdf)
     } else if (length(betQ0) == p*p) {
       betQ0 <- matrix(as.double(betQ0), p, p)
       betQ0[lower.tri(betQ0)] <- 0
       betQ0eig <- eigen(t(betQ0), 1, 1)$values
       if (any (betQ0eig < sqrt(.Machine$double.eps))) {
         stop ('betQ0 not > 0 within tolerance')
-      } else {
-        betm0 <- rep(as.double(betm0), length.out = p)
-        modeldf <- as.double(k + ssqdf)
       }
+      betm0 <- rep(as.double(betm0), length.out = p)
+      modeldf <- as.double(k + ssqdf)
     } else stop ('Bad betQ0')
   } else stop ('Non-finite betQ0')
   ssqdf <- as.double(ssqdf)
@@ -724,7 +781,7 @@ mcstrga <- function (formula,
       stop ("Argument phipars must be a vector of length 4")
     }
     if (!all(is.finite(phipars))) stop ("Non-finite values in phipars")
-    if (any(phipars[1:3] <= 0) || phipars[4] < 0) {
+    if (phipars[1] <= 0 || phipars[4] < 0 || phipars[2]*phipars[3] <= 0) {
       stop ("Invalid values in phipars")
     }
   } else {
@@ -777,14 +834,19 @@ grater than 3.")
   if (missing(zstart)) {
     zstart <- y/l
     zstart <- linkfcn(zstart, linkp, "gaussian")
-    zstart <- pmax(zstart, -1e8) + rnorm(k, 0, sqrt(ssqsc))
+    ## zstart <- pmax(zstart, -1e8) + rnorm(k, 0, sqrt(ssqsc))
   }
   z[, 1] <- zstart
   if (missing(phistart)) {
     if (phisc == 0) {
       stop ("Argument phistart needed for fixed phi")
     } else {
-      phistart <- phipars[4] + phipars[1]*gamma((phipars[2]+1)/phipars[3])/
+      if(phipars[2] == -1) {
+        tmp <- .1/abs(phipars[3])
+      } else {
+        tmp <- abs((phipars[2]+1)/phipars[3])
+      }
+      phistart <- phipars[4] + phipars[1]*gamma(tmp)/
         gamma(phipars[2]/phipars[3])
     }
   } else {
@@ -795,7 +857,12 @@ grater than 3.")
     if (omgsc == 0) {
       stop ("Argument omgstart needed for fixed omg")
     } else {
-      omgstart <- omgpars[4] + omgpars[1]*gamma((omgpars[2]+1)/omgpars[3])/
+      if(omgpars[2] == -1) {
+        tmp <- .1/abs(omgpars[3])
+      } else {
+        tmp <- abs((omgpars[2]+1)/omgpars[3])
+      }
+      omgstart <- omgpars[4] + omgpars[1]*gamma(tmp)/
         gamma(omgpars[2]/omgpars[3])
     }
   } else {
@@ -809,10 +876,15 @@ grater than 3.")
     test <- as.integer(test)
     tm <- system.time({
       RUN <- .Fortran("trgasamtry", ll = lglk, z = z, phi = phi, omg = omg,
-                      acc = acc, ybar, l, F, 
-                      betm0, betQ0, ssqdf, ssqsc, tsqdf, tsqsc, phipars,
-                      phisc, omgpars, omgsc, kappa, icf, 
-                      nu, dm, Nout, test, k, p)
+                      acc = acc,
+                      as.double(ybar), as.double(l), as.double(F), 
+                      as.double(betm0), as.double(betQ0), as.double(ssqdf),
+                      as.double(ssqsc), as.double(tsqdf), as.double(tsqsc),
+                      as.double(phipars),
+                      as.double(phisc), as.double(omgpars), as.double(omgsc),
+                      as.double(kappa), as.integer(icf), 
+                      as.double(nu), as.double(dm), as.integer(Nout),
+                      as.integer(test), as.integer(k), as.integer(p))
     })
     ## Store samples
     ll <- RUN$ll
@@ -832,23 +904,32 @@ grater than 3.")
                 response = y, weights = l, modelmatrix = F, family = family,
                 betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
                 corrfcn = corrfcn, kappa = kappa, 
-                tsqdf = tsqdf, tsqsc = tsqsc, locations = loc[ii, ],
+                tsqdf = tsqdf, tsqsc = tsqsc,
+                locations = loc[ii, , drop = FALSE],
                 whichobs = ii)
   } else {
     tm <- system.time({
-      RUN <- .Fortran("trgasample", ll = lglk, z = z, z0 = z0, beta = beta,
-                      ssq = ssq,
-                      tsq = tsq, phi = phi, omg = omg, acc = acc, ybar,
-                      l, F, F0,
-                      betm0, betQ0, ssqdf, ssqsc, tsqdf, tsqsc, phipars, phisc,
-                      omgpars, omgsc, kappa, icf, 
-                      linkp, dm, dmdm0, Nout, Nbi, Nthin, k, k0, p)
+      RUN <- .Fortran("trgasample", ll = lglk, z = z, z0 = z0,
+                      mu = z, mu0 = z0, beta = beta, ssq = ssq,
+                      tsq = tsq, phi = phi, omg = omg, acc = acc,
+                      as.double(ybar),
+                      as.double(l), as.double(F), as.double(F0),
+                      as.double(betm0), as.double(betQ0), as.double(ssqdf),
+                      as.double(ssqsc), as.double(tsqdf), as.double(tsqsc),
+                      as.double(phipars), as.double(phisc),
+                      as.double(omgpars), as.double(omgsc), as.double(kappa),
+                      as.integer(icf), 
+                      as.double(linkp), as.double(dm), as.double(dmdm0),
+                      as.integer(Nout), as.integer(Nbi), as.integer(Nthin),
+                      as.integer(k), as.integer(k0), as.integer(p))
     })
     ## Store samples
     ll <- RUN$ll
-    zz0 <- matrix(NA, NROW(yy), Nout)
+    zz0 <- mm0 <- matrix(NA, NROW(yy), Nout)
     zz0[ii, ] <- RUN$z
     zz0[!ii, ] <- RUN$z0
+    mm0[ii, ] <- RUN$mu
+    mm0[!ii, ] <- RUN$mu0
     beta <- RUN$beta
     ssq <- RUN$ssq
     tsq <- RUN$tsq
@@ -858,14 +939,15 @@ grater than 3.")
     attr(omg, 'fixed') <- omgsc == 0
     attr(nu, 'fixed') <- TRUE
     acc_ratio <- RUN$acc/(Nout*Nthin + max(Nthin, Nbi))
-    out <- list(z = zz0, beta = beta, ssq = ssq, tsq = tsq, phi = phi,
-                omg = omg, nu = nu,
+    out <- list(z = zz0, mu = mm0, beta = beta, ssq = ssq, tsq = tsq,
+                phi = phi, omg = omg, nu = nu,
                 logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
                 Nout = Nout, Nbi = Nbi, Nthin = Nthin,
-                response = y, weights = l, modelmatrix = F, family = family,
+                response = ybar, weights = l, modelmatrix = F, family = family,
                 betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
                 corrfcn = corrfcn, kappa = kappa, 
-                tsqdf = tsqdf, tsqsc = tsqsc, locations = loc[ii, ],
+                tsqdf = tsqdf, tsqsc = tsqsc,
+                locations = loc[ii, , drop = FALSE],
                 whichobs = ii)
   }
   class(out) <- "geomcmc"

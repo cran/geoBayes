@@ -2,18 +2,19 @@
 !! 
 !! Author: Evangelos Evangelou
 !! Created: Tue, 15 Jul, 2014 16:59 (BST)
-!! Last-Updated: Wed, 20 Aug, 2014 19:06 (BST)
-!!     Update #: 186
+!! Last-Updated: Wed, 25 Feb, 2015 17:15 (GMT)
+!!     Update #: 213
 !! 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 module mcmcfcns
   use linkfcn
+  use pdfy
   implicit none
   private
   logical lnewcov
   logical, pointer :: lup(:,:)
-  double precision, pointer :: p0(:), xi(:), betQm0(:), zmxi(:)
+  double precision, pointer :: xi(:), betQm0(:), zmxi(:)
   double precision, pointer :: FTF(:,:), TFFT(:,:), Ups(:,:), Upsz(:)
   double precision, pointer :: T(:,:), TiF(:,:)
   double precision :: zUz, ldh_Ups, modeldf, ssqdfsc, respdf, &
@@ -22,11 +23,10 @@ module mcmcfcns
   double precision, parameter :: bigpos = huge(1d0), bigneg = -bigpos
   public ini_mcmc, end_mcmc, sample_ssq, sample_tsq, sample_beta, &
      sample_cov, sample_z0, samplez_bi, samplez_po, samplez_gm, &
-     samplez_ga, samplez_gt
+     samplez_ga, samplez_gt, samplez_ba, samplez_bd
 
 contains
-  subroutine ini_mcmc (lglk, z, phi, nsq, y1, y2, F, kappa, icf, &
-     dm, &
+  subroutine ini_mcmc (lglk, z, p0, phi, nsq, y1, y2, F, kappa, icf, dm, &
      betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, dft, n, n0, p, ifam)
     ! tsq is either tsq or tsqsc
     use interfaces
@@ -36,10 +36,10 @@ contains
     double precision, intent(in) :: y1(n), y2(n), dm(n,n), &
        F(n,p), kappa, betm0(p), betQ0(p,p), ssqdf, ssqsc, &
        tsqdf, tsq, z(n), phi, nsq, dft
-    double precision, intent(out) :: lglk
+    double precision, intent(out) :: lglk, p0(n)
     integer i, j
 
-    allocate ( lup(n,n), p0(n), xi(n), betQm0(p), zmxi(n) )
+    allocate ( lup(n,n), xi(n), betQm0(p), zmxi(n) )
     allocate ( T(n,n), TiF(n,p), FTF(p,p), TFFT(n,p), Ups(n,n), Upsz(n) )
     allocate ( TC(n,n0), FCTF(n0,p), Z0_ups(n0) )
 
@@ -62,9 +62,9 @@ contains
       zmxi = z - xi
     end if
 
-    lup = .false.
-    do i = 2, n
+    do i = 1, n
       lup(:i-1,i) = .true.
+      lup(i:,i) = .false. 
     end do
 
     call calc_cov (phi,nsq,dm,F,betQ0, &
@@ -84,31 +84,53 @@ contains
       tsqyy = tsqdfsc
       do i = 1, n
         p0(i) = invlink_ga(z(i),dft)
-        p0(i) = y1(i) - p0(i)
-        p0(i) = p0(i)*p0(i)
-        tsqyy = tsqyy + y2(i)*p0(i)
+        tsqyy = tsqyy + logpdfy_gt(y1(i), y2(i), p0(i))
       end do
       lglk = lglk - .5d0*respdf*log(tsqyy)
     case (1) ! Gaussian
+      tsqyy = 0d0
       do i = 1, n
         p0(i) = invlink_ga(z(i),dft)
-        lglk = lglk + (y1(i)*p0(i) - y2(i)*.5d0*p0(i)*p0(i))/tsq
+        tsqyy = tsqyy + logpdfy_ga(y1(i), y2(i), p0(i))
       end do
+      lglk = lglk + tsqyy/tsq
     case (2) ! Binomial
+      tsqyy = 0d0
       do i = 1, n
         p0(i) = invlink_bi(z(i),dft)
-        lglk = lglk + (y1(i)*p0(i) + y2(i)*flog1mexp(p0(i)))/tsq
+        tsqyy = tsqyy + logpdfy_bi(y1(i), y2(i), p0(i))
       end do
+      lglk = lglk + tsqyy/tsq
     case (3) ! Poisson
+      tsqyy = 0d0
       do i = 1, n
         p0(i) = invlink_po(z(i),dft)
-        lglk = lglk + (y1(i)*p0(i) - y2(i)*exp(p0(i)))/tsq
+        tsqyy = tsqyy + logpdfy_po(y1(i), y2(i), p0(i))
       end do
+      lglk = lglk + tsqyy/tsq
     case (4) ! Gamma
+      tsqyy = 0d0
       do i = 1, n
         p0(i) = invlink_gm(z(i),dft)
-        lglk = lglk + (y1(i)*p0(i) - y2(i)*log(-p0(i)))/tsq
+        tsqyy = tsqyy + logpdfy_gm(y1(i), y2(i), p0(i))
       end do
+      lglk = lglk + tsqyy/tsq
+    case (5) ! Binomial Asymmetric
+      tsqyy = 0d0
+      do i = 1, n
+        p0(i) = invlink_ba(z(i),dft)
+        tsqyy = tsqyy + logpdfy_bi(y2(i), y1(i), p0(i))
+      end do
+      lglk = lglk + tsqyy/tsq
+    case (6) ! Binomial Asymmetric Decreasing
+      tsqyy = 0d0
+      do i = 1, n
+        p0(i) = invlink_bd(z(i),dft)
+        tsqyy = tsqyy + logpdfy_bi(y2(i), y1(i), p0(i))
+      end do
+      lglk = lglk + tsqyy/tsq
+    case default
+      call rexit ("Unrecognised family")
     end select
 
     call rngini
@@ -116,7 +138,7 @@ contains
 
   subroutine end_mcmc
     use interfaces, only: rngend
-    deallocate ( lup, p0, xi, betQm0, zmxi )
+    deallocate ( lup, xi, betQm0, zmxi )
     deallocate ( T, TiF, FTF, TFFT, Ups, Upsz )
     deallocate ( TC, FCTF, Z0_ups )
     call rngend
@@ -166,7 +188,7 @@ contains
        kappa, betQ0(p,p)
     double precision, intent(in) :: phipars(4), nsqpars(4), phisc, nsqsc
     double precision, intent(inout) :: phi, nsq, lglk
-    double precision tr, ll, u, phi2, nsq2
+    double precision tr, ll, u, phi2, nsq2, up3
     double precision FTF2(p,p), TFFT2(n,p), Ups2(n,n), Upsz2(n), &
        zUz2, ldh_Ups2, T2(n,n), TiF2(n,p)
 
@@ -180,12 +202,13 @@ contains
       u = randnorm()*phisc ! u ~ N(0,phisc^2)
       phi2 = ll*exp(u) + phipars(4) ! log(phi2-p4) ~ N(log(phi-p4), phisc^2)
       ! Add logratio of priors
-      if (u .lt. 0d0) then
+      up3 = u*phipars(3)
+      if (up3 .lt. 0d0) then
         tr = tr + phipars(2)*u + exp(phipars(3)*log(ll/phipars(1)) &
-           + flog1mexp(u*phipars(3)))
+           + flog1mexp(up3))
       else
         tr = tr + phipars(2)*u - exp(phipars(3)*log(ll/phipars(1)) &
-           + flogexpm1(u*phipars(3)))
+           + flogexpm1(up3))
       end if
     else
       phi2 = phi
@@ -197,12 +220,13 @@ contains
       u = randnorm()*nsqsc ! u ~ N(0,nsqsc^2)
       nsq2 = ll*exp(u) + nsqpars(4) ! log(nsq2-p4) ~ N(log(nsq-p4), nsqsc^2)
       ! Add logratio of priors
-      if (u .lt. 0d0) then
+      up3 = u*nsqpars(3)
+      if (up3 .lt. 0d0) then
         tr = tr + nsqpars(2)*u + exp(nsqpars(3)*log(ll/nsqpars(1)) &
-           + flog1mexp(u*nsqpars(3)))
+           + flog1mexp(up3))
       else
         tr = tr + nsqpars(2)*u - exp(nsqpars(3)*log(ll/nsqpars(1)) &
-           + flogexpm1(u*nsqpars(3)))
+           + flogexpm1(up3))
       end if
     else
       nsq2 = nsq
@@ -250,7 +274,6 @@ contains
     double precision, intent(out) :: z0(n0)
     integer j
     double precision z0_sd(n0), z0_mean(n0)
-    if (n0 .eq. 0) return
     if (lnewcov) then
       call calc_cov_pred(z0_ups, TC, FCTF, phi, nsq, dmdm0, F, &
          F0, kappa, icf, T, n, n0, p)
@@ -274,12 +297,12 @@ contains
 !!! @param ssq  Variance parameter
 !!! @param tsq  Dispersion parameter
 !!! @param n	Number of locations
-  subroutine samplez_bi (lglk,z,ys,yf,dft,ssq,tsq,n)
+  subroutine samplez_bi (lglk,z,p0,ys,yf,dft,ssq,tsq,n)
     use interfaces
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: ys(n), yf(n), dft, ssq, tsq
-    double precision, intent(inout) :: z(n), lglk
+    double precision, intent(inout) :: z(n), lglk, p0(n)
     integer j
     double precision uj(n), z_mean, u, zz, pp, ll
 
@@ -289,7 +312,7 @@ contains
       u = randnorm()
       zz = u*sqrt(ssq/uj(j)) + z_mean
       pp = invlink_bi(zz,dft)
-      ll = ys(j)*(pp-p0(j)) + yf(j)*(flog1mexp(pp)-flog1mexp(p0(j)))
+      ll = logdffy_bi(ys(j), yf(j), pp, p0(j))
       ll = ll/tsq
       if (ll .le. bigneg .or. ll .ne. ll) return
       u = randunif()
@@ -307,6 +330,90 @@ contains
     end do
   end subroutine samplez_bi
 
+!!! Sample GRF with Binomial response and asymmetric link fcn
+!!! 
+!!! @param z    The GRF sample
+!!! @param ys   Number of successes at each location
+!!! @param yf   Number of failures
+!!! @param dft  Link parameter
+!!! @param ssq  Variance parameter
+!!! @param tsq  Dispersion parameter
+!!! @param n	Number of locations
+  subroutine samplez_ba (lglk,z,p0,ys,yf,dft,ssq,tsq,n)
+    use interfaces
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: ys(n), yf(n), dft, ssq, tsq
+    double precision, intent(inout) :: z(n), lglk, p0(n)
+    integer j
+    double precision uj(n), z_mean, u, zz, pp, ll
+
+    do j = 1, n
+      uj = (/Ups(1:j,j),Ups(j,j+1:n)/) ! jth column of Ups
+      z_mean = z(j) - Upsz(j)/uj(j)
+      u = randnorm()
+      zz = u*sqrt(ssq/uj(j)) + z_mean
+      pp = invlink_ba(zz,dft)
+      ll = logdffy_bi(yf(j), ys(j), pp, p0(j))
+      ll = ll/tsq
+      if (ll .le. bigneg .or. ll .ne. ll) return
+      u = randunif()
+      u = log(u)
+      if (u .lt. ll) then ! Update z(j)
+        u = zz - z(j)
+        z(j) = zz
+        p0(j) = pp
+        zmxi(j) = zmxi(j) + u
+        Upsz = Upsz + uj*u
+        zz = zUz
+        zUz = zUz + 2d0*u*Upsz(j) - uj(j)*u*u
+        lglk = lglk + ll - (.5d0*modeldf)*(log(zUz) - log(zz))
+      end if
+    end do
+  end subroutine samplez_ba
+
+!!! Sample GRF with Binomial response and asymmetric decreasing link fcn
+!!! 
+!!! @param z    The GRF sample
+!!! @param ys   Number of successes at each location
+!!! @param yf   Number of failures
+!!! @param dft  Link parameter
+!!! @param ssq  Variance parameter
+!!! @param tsq  Dispersion parameter
+!!! @param n	Number of locations
+  subroutine samplez_bd (lglk,z,p0,ys,yf,dft,ssq,tsq,n)
+    use interfaces
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: ys(n), yf(n), dft, ssq, tsq
+    double precision, intent(inout) :: z(n), lglk, p0(n)
+    integer j
+    double precision uj(n), z_mean, u, zz, pp, ll
+
+    do j = 1, n
+      uj = (/Ups(1:j,j),Ups(j,j+1:n)/) ! jth column of Ups
+      z_mean = z(j) - Upsz(j)/uj(j)
+      u = randnorm()
+      zz = u*sqrt(ssq/uj(j)) + z_mean
+      pp = invlink_bd(zz,dft)
+      ll = logdffy_bi(yf(j), ys(j), pp, p0(j))
+      ll = ll/tsq
+      if (ll .le. bigneg .or. ll .ne. ll) return
+      u = randunif()
+      u = log(u)
+      if (u .lt. ll) then ! Update z(j)
+        u = zz - z(j)
+        z(j) = zz
+        p0(j) = pp
+        zmxi(j) = zmxi(j) + u
+        Upsz = Upsz + uj*u
+        zz = zUz
+        zUz = zUz + 2d0*u*Upsz(j) - uj(j)*u*u
+        lglk = lglk + ll - (.5d0*modeldf)*(log(zUz) - log(zz))
+      end if
+    end do
+  end subroutine samplez_bd
+
 !!! Sample GRF with Poisson response
 !!! 
 !!! @param z    The GRF sample
@@ -316,12 +423,12 @@ contains
 !!! @param ssq  Variance parameter
 !!! @param tsq  Dispersion parameter
 !!! @param n	Number of locations
-  subroutine samplez_po (lglk,z,yo,yt,dft,ssq,tsq,n)
+  subroutine samplez_po (lglk,z,p0,yo,yt,dft,ssq,tsq,n)
     use interfaces
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: yo(n), yt(n), dft, ssq, tsq
-    double precision, intent(inout) :: z(n), lglk
+    double precision, intent(inout) :: z(n), lglk, p0(n)
     integer j
     double precision uj(n), z_mean, u, zz, pp, ll
 
@@ -331,7 +438,7 @@ contains
       u = randnorm()
       zz = u*sqrt(ssq/uj(j)) + z_mean
       pp = invlink_po(zz,dft)
-      ll = yo(j)*(pp-p0(j)) - yt(j)*(exp(pp)-exp(p0(j)))
+      ll = logdffy_po(yo(j), yt(j), pp, p0(j))
       ll = ll/tsq
       if (ll .le. bigneg .or. ll .ne. ll) return
       u = randunif()
@@ -358,12 +465,12 @@ contains
 !!! @param ssq  Variance parameter
 !!! @param tsq  Dispersion parameter
 !!! @param n	Number of locations
-  subroutine samplez_gm (lglk,z,ys,yn,dft,ssq,tsq,n)
+  subroutine samplez_gm (lglk,z,p0,ys,yn,dft,ssq,tsq,n)
     use interfaces
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: ys(n), yn(n), dft, ssq, tsq
-    double precision, intent(inout) :: z(n), lglk
+    double precision, intent(inout) :: z(n), lglk, p0(n)
     integer j
     double precision uj(n), z_mean, u, zz, pp, ll
 
@@ -373,7 +480,7 @@ contains
       u = randnorm()
       zz = u*sqrt(ssq/uj(j)) + z_mean
       pp = invlink_gm(zz,dft)
-      ll = ys(j)*(pp - p0(j)) + yn(j)*(log(-pp) - log(-p0(j)))
+      ll = logdffy_gm(ys(j), yn(j), pp, p0(j))
       ll = ll/tsq
       if (ll .le. bigneg .or. ll .ne. ll) return
       u = randunif()
@@ -400,23 +507,22 @@ contains
 !!! @param ssq  Variance parameter
 !!! @param tsq  Dispersion parameter
 !!! @param n	Number of locations
-  subroutine samplez_ga (lglk,z,ys,yl,dft,ssq,tsq,n)
+  subroutine samplez_ga (lglk,z,p0,ys,yl,dft,ssq,tsq,n)
     use interfaces
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: ys(n), yl(n), dft, ssq, tsq
-    double precision, intent(inout) :: z(n), lglk
+    double precision, intent(inout) :: z(n), lglk, p0(n)
     integer j
-    double precision uj(n), z_mean, u, zz, pp, ll, dfpp
+    double precision uj(n), z_mean, u, zz, pp, ll
 
     do j = 1, n
       uj = (/Ups(1:j,j),Ups(j,j+1:n)/) ! jth column of Ups
       z_mean = z(j) - Upsz(j)/uj(j)
       u = randnorm()
       zz = u*sqrt(ssq/uj(j)) + z_mean
-      pp = invlink_ga(zz,dft) ! Mean of y
-      dfpp = pp*pp - p0(j)*p0(j)
-      ll = ys(j)*(pp-p0(j)) - yl(j)*.5d0*dfpp
+      pp = invlink_ga(zz,dft)
+      ll = logdffy_ga(ys(j), yl(j), pp, p0(j))
       ll = ll/tsq
       if (ll .le. bigneg .or. ll .ne. ll) return
       u = randunif()
@@ -444,14 +550,14 @@ contains
 !!! @param ssq  Variance parameter
 !!! @param tsq  Dispersion parameter
 !!! @param n	Number of locations
-  subroutine samplez_gt (lglk,z,ym,l,dft,ssq,tsq,n)
+  subroutine samplez_gt (lglk,z,p0,ym,l,dft,ssq,tsq,n)
     use interfaces
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: ym(n), l(n), dft, ssq, tsq
-    double precision, intent(inout) :: z(n), lglk
+    double precision, intent(inout) :: z(n), lglk, p0(n)
     integer j
-    double precision uj(n), z_mean, u, zz, pp, ll, lli, tsqyy2
+    double precision uj(n), z_mean, u, zz, pp, ll, tsqyy2
 
     do j = 1, n
       uj = (/Ups(1:j,j),Ups(j,j+1:n)/) ! jth column of Ups
@@ -459,11 +565,8 @@ contains
       u = randnorm()
       zz = u*sqrt(ssq/uj(j)) + z_mean
       pp = invlink_ga(zz,dft) ! Mean of y
-      pp = ym(j) - pp
-      pp = pp*pp
-      tsqyy2 = tsqyy + l(j)*(pp - p0(j))
-      lli = -.5d0*respdf*(log(tsqyy2) - log(tsqyy))
-      ll = -.5d0/tsq*(pp - p0(j))
+      tsqyy2 = tsqyy + logdffy_gt(ym(j), l(j), pp, p0(j))
+      ll = -.5d0*respdf*(log(tsqyy2) - log(tsqyy))
       if (ll .le. bigneg .or. ll .ne. ll) return
       u = randunif()
       u = log(u)
@@ -476,7 +579,7 @@ contains
         Upsz = Upsz + uj*u
         zz = zUz
         zUz = zUz + 2d0*u*Upsz(j) - uj(j)*u*u
-        lglk = lglk + lli - (.5d0*modeldf)*(log(zUz) - log(zz))
+        lglk = lglk + ll - (.5d0*modeldf)*(log(zUz) - log(zz))
       end if
     end do
   end subroutine samplez_gt
@@ -484,11 +587,14 @@ end module mcmcfcns
 
 
 
-subroutine mcspsample (lglk, z, z0, beta, ssq, phi, nsq, acc, y, l, F, F0, &
+subroutine mcspsample (lglk, z, z0, gmu, gmu0, &
+   beta, ssq, phi, nsq, acc, y, l, F, F0, &
    betm0, betQ0, ssqdf, ssqsc, phipars, phisc, nsqpars, nsqsc, kappa, icf, &
    dft, tsq, dm, dmdm0, Nout, Nbi, Nthin, n, n0, p, ifam)
 
   use mcmcfcns
+  use linkfcn, only: invlink_ga, invlink_bi, invlink_po, invlink_gm, &
+     invlink_ba, invlink_bd
   implicit none 
   integer, intent(in) :: Nout, Nbi, Nthin, n, n0, p, ifam, icf
   double precision, intent(in) :: y(n), l(n), F(n,p), F0(n0,p), &
@@ -496,14 +602,14 @@ subroutine mcspsample (lglk, z, z0, beta, ssq, phi, nsq, acc, y, l, F, F0, &
      ssqsc, phipars(4), nsqpars(4), kappa, phisc, nsqsc
   double precision, intent(inout) :: z(n,Nout), phi(Nout), nsq(Nout)
   double precision, intent(out) :: z0(n0,Nout), beta(p,Nout), ssq(Nout), &
-     lglk(Nout)
+     lglk(Nout), gmu(n, Nout), gmu0(n0, Nout)
   integer, intent(out) :: acc
   integer i, j
   double precision, parameter :: tsqdf = 0d0
 
   acc = 0
   i = 1
-  call ini_mcmc(lglk(i),z(:,i),phi(i),nsq(i),y,l,F,kappa,icf,dm,&
+  call ini_mcmc(lglk(i),z(:,i),gmu(:,i),phi(i),nsq(i),y,l,F,kappa,icf,dm,&
      betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,dft,n,n0,p,ifam)
   call rchkusr
   select case (ifam) ! Which family?
@@ -512,26 +618,33 @@ subroutine mcspsample (lglk, z, z0, beta, ssq, phi, nsq, acc, y, l, F, F0, &
       call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
          dm,F,betQ0,n,p,kappa,icf,acc)
       call sample_ssq(ssq(i))
-      call samplez_ga(lglk(i),z(:,i),y,l,dft,ssq(i),tsq,n)
+      call samplez_ga(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
     end do
     call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
-    call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
-       n0,n,p,dmdm0,F,F0,kappa,icf)
+    if (n0 .gt. 0) then
+      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+         n0,n,p,dmdm0,F,F0,kappa,icf)
+      gmu0(:,i) = invlink_ga(z0(:,i), dft)
+    end if
     call rchkusr
     do i = 2, Nout
       lglk(i) = lglk(i-1)
       z(:,i) = z(:,i-1)
+      gmu(:,i) = gmu(:,i-1)
       phi(i) = phi(i-1)
       nsq(i) = nsq(i-1)
       do j = 1, Nthin
         call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
            dm,F,betQ0,n,p,kappa,icf,acc)
         call sample_ssq(ssq(i))
-        call samplez_ga(lglk(i),z(:,i),y,l,dft,ssq(i),tsq,n)
+        call samplez_ga(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
       end do
       call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
-      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
-         n0,n,p,dmdm0,F,F0,kappa,icf)
+      if (n0 .gt. 0) then
+        call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+           n0,n,p,dmdm0,F,F0,kappa,icf)
+        gmu0(:,i) = invlink_ga(z0(:,i), dft)
+      end if
       call rchkusr
     end do
   case (2) ! Binomial
@@ -539,26 +652,33 @@ subroutine mcspsample (lglk, z, z0, beta, ssq, phi, nsq, acc, y, l, F, F0, &
       call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
          dm,F,betQ0,n,p,kappa,icf,acc)
       call sample_ssq(ssq(i))
-      call samplez_bi(lglk(i),z(:,i),y,l,dft,ssq(i),tsq,n)
+      call samplez_bi(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
     end do
     call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
-    call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
-       n0,n,p,dmdm0,F,F0,kappa,icf)
+    if (n0 .gt. 0) then
+      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+         n0,n,p,dmdm0,F,F0,kappa,icf)
+      gmu0(:,i) = invlink_bi(z0(:,i), dft)
+    end if
     call rchkusr
     do i = 2, Nout
       lglk(i) = lglk(i-1)
       z(:,i) = z(:,i-1)
+      gmu(:,i) = gmu(:,i-1)
       phi(i) = phi(i-1)
       nsq(i) = nsq(i-1)
       do j = 1, Nthin
         call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
            dm,F,betQ0,n,p,kappa,icf,acc)
         call sample_ssq(ssq(i))
-        call samplez_bi(lglk(i),z(:,i),y,l,dft,ssq(i),tsq,n)
+        call samplez_bi(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
       end do
       call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
-      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
-         n0,n,p,dmdm0,F,F0,kappa,icf)
+      if (n0 .gt. 0) then
+        call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+           n0,n,p,dmdm0,F,F0,kappa,icf)
+        gmu0(:,i) = invlink_bi(z0(:,i), dft)
+      end if
       call rchkusr
     end do
   case (3) ! Poisson
@@ -566,26 +686,33 @@ subroutine mcspsample (lglk, z, z0, beta, ssq, phi, nsq, acc, y, l, F, F0, &
       call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
          dm,F,betQ0,n,p,kappa,icf,acc)
       call sample_ssq(ssq(i))
-      call samplez_po(lglk(i),z(:,i),y,l,dft,ssq(i),tsq,n)
+      call samplez_po(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
     end do
     call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
-    call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
-       n0,n,p,dmdm0,F,F0,kappa,icf)
+    if (n0 .gt. 0) then
+      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+         n0,n,p,dmdm0,F,F0,kappa,icf)
+      gmu0(:,i) = invlink_po(z0(:,i), dft)
+    end if
     call rchkusr
     do i = 2, Nout
       lglk(i) = lglk(i-1)
       z(:,i) = z(:,i-1)
+      gmu(:,i) = gmu(:,i-1)
       phi(i) = phi(i-1)
       nsq(i) = nsq(i-1)
       do j = 1, Nthin
         call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
            dm,F,betQ0,n,p,kappa,icf,acc)
         call sample_ssq(ssq(i))
-        call samplez_po(lglk(i),z(:,i),y,l,dft,ssq(i),tsq,n)
+        call samplez_po(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
       end do
       call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
-      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
-         n0,n,p,dmdm0,F,F0,kappa,icf)
+      if (n0 .gt. 0) then
+        call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+           n0,n,p,dmdm0,F,F0,kappa,icf)
+        gmu0(:,i) = invlink_po(z0(:,i), dft)
+      end if
       call rchkusr
     end do
   case (4) ! Gamma
@@ -593,34 +720,111 @@ subroutine mcspsample (lglk, z, z0, beta, ssq, phi, nsq, acc, y, l, F, F0, &
       call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
          dm,F,betQ0,n,p,kappa,icf,acc)
       call sample_ssq(ssq(i))
-      call samplez_gm(lglk(i),z(:,i),y,l,dft,ssq(i),tsq,n)
+      call samplez_gm(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
     end do
     call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
-    call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
-       n0,n,p,dmdm0,F,F0,kappa,icf)
+    if (n0 .gt. 0) then
+      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+         n0,n,p,dmdm0,F,F0,kappa,icf)
+      gmu0(:,i) = invlink_gm(z0(:,i), dft)
+    end if
     call rchkusr
     do i = 2, Nout
       lglk(i) = lglk(i-1)
       z(:,i) = z(:,i-1)
+      gmu(:,i) = gmu(:,i-1)
       phi(i) = phi(i-1)
       nsq(i) = nsq(i-1)
       do j = 1, Nthin
         call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
            dm,F,betQ0,n,p,kappa,icf,acc)
         call sample_ssq(ssq(i))
-        call samplez_gm(lglk(i),z(:,i),y,l,dft,ssq(i),tsq,n)
+        call samplez_gm(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
       end do
       call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
-      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
-         n0,n,p,dmdm0,F,F0,kappa,icf)
+      if (n0 .gt. 0) then
+        call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+           n0,n,p,dmdm0,F,F0,kappa,icf)
+        gmu0(:,i) = invlink_gm(z0(:,i), dft)
+      end if
       call rchkusr
     end do
+  case (5) ! Binomial Asymmetric
+    do j = 1, max(Nbi,Nthin)
+      call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
+         dm,F,betQ0,n,p,kappa,icf,acc)
+      call sample_ssq(ssq(i))
+      call samplez_ba(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
+    end do
+    call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
+    if (n0 .gt. 0) then
+      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+         n0,n,p,dmdm0,F,F0,kappa,icf)
+      gmu0(:,i) = invlink_ba(z0(:,i), dft)
+    end if
+    call rchkusr
+    do i = 2, Nout
+      lglk(i) = lglk(i-1)
+      z(:,i) = z(:,i-1)
+      gmu(:,i) = gmu(:,i-1)
+      phi(i) = phi(i-1)
+      nsq(i) = nsq(i-1)
+      do j = 1, Nthin
+        call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
+           dm,F,betQ0,n,p,kappa,icf,acc)
+        call sample_ssq(ssq(i))
+        call samplez_ba(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
+      end do
+      call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
+      if (n0 .gt. 0) then
+        call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+           n0,n,p,dmdm0,F,F0,kappa,icf)
+        gmu0(:,i) = invlink_ba(z0(:,i), dft)
+      end if
+      call rchkusr
+    end do
+  case (6) ! Binomial Asymmetric Decreasing
+    do j = 1, max(Nbi,Nthin)
+      call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
+         dm,F,betQ0,n,p,kappa,icf,acc)
+      call sample_ssq(ssq(i))
+      call samplez_bd(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
+    end do
+    call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
+    if (n0 .gt. 0) then
+      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+         n0,n,p,dmdm0,F,F0,kappa,icf)
+      gmu0(:,i) = invlink_bd(z0(:,i), dft)
+    end if
+    call rchkusr
+    do i = 2, Nout
+      lglk(i) = lglk(i-1)
+      z(:,i) = z(:,i-1)
+      gmu(:,i) = gmu(:,i-1)
+      phi(i) = phi(i-1)
+      nsq(i) = nsq(i-1)
+      do j = 1, Nthin
+        call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
+           dm,F,betQ0,n,p,kappa,icf,acc)
+        call sample_ssq(ssq(i))
+        call samplez_bd(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,n)
+      end do
+      call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
+      if (n0 .gt. 0) then
+        call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+           n0,n,p,dmdm0,F,F0,kappa,icf)
+        gmu0(:,i) = invlink_bd(z0(:,i), dft)
+      end if
+      call rchkusr
+    end do
+  case default
+    call rexit ("Unrecognised family")
   end select
   call end_mcmc
 end subroutine mcspsample
 
 
-subroutine samplemulti (lglk, z, phi, nsq, y, l, F, &
+subroutine samplemulti (lglk, z, gmu, phi, nsq, y, l, F, &
    betm0, betQ0, ssqdf, ssqsc, kappa, icf, &
    nu, tsqdf, tsqin, dm, Ntot, Nout, Nbi, Nthin, n, p, kg, ifam)
 
@@ -632,7 +836,7 @@ subroutine samplemulti (lglk, z, phi, nsq, y, l, F, &
      nu(kg), tsqdf, tsqin, dm(n,n), betm0(p), betQ0(p,p), ssqdf, &
      ssqsc, phi(kg), nsq(kg), kappa(kg)
   double precision, intent(inout) :: z(n, Ntot)
-  double precision, intent(out) :: lglk(Ntot)
+  double precision, intent(out) :: lglk(Ntot), gmu(n, Ntot)
   double precision :: ssq, tsq
   integer i, ii, j, k
   integer, parameter :: n0 = 0
@@ -642,24 +846,24 @@ subroutine samplemulti (lglk, z, phi, nsq, y, l, F, &
   case (0) ! Gaussian
     do k = 1, kg
       i = i + 1
-      call ini_mcmc(lglk(i),z(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
-         dm,&
-         betm0,betQ0,ssqdf,ssqsc,tsqdf,tsqin,nu(k),n,n0,p,ifam)
+      call ini_mcmc(lglk(i),z(:,i),gmu(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
+         dm,betm0,betQ0,ssqdf,ssqsc,tsqdf,tsqin,nu(k),n,n0,p,ifam)
       call rchkusr
       do j = 1, max(Nbi(k),Nthin(k))
         call sample_ssq(ssq)
         call sample_tsq(tsq)
-        call samplez_gt(lglk(i),z(:,i),y,l,nu(k),ssq,tsq,n)
+        call samplez_gt(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
       end do
       call rchkusr
       do ii = 2, Nout(k)
         i = i + 1
         lglk(i) = lglk(i-1)
         z(:,i) = z(:,i-1)
+        gmu(:,i) = gmu(:,i-1)
         do j = 1, Nthin(k)
           call sample_ssq(ssq)
           call sample_tsq(tsq)
-          call samplez_gt(lglk(i),z(:,i),y,l,nu(k),ssq,tsq,n)
+          call samplez_gt(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
         end do
         call rchkusr
       end do
@@ -669,22 +873,22 @@ subroutine samplemulti (lglk, z, phi, nsq, y, l, F, &
     tsq = tsqin
     do k = 1, kg
       i = i + 1
-      call ini_mcmc(lglk(i),z(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
-         dm,&
-         betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,nu(k),n,n0,p,ifam)
+      call ini_mcmc(lglk(i),z(:,i),gmu(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
+         dm,betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,nu(k),n,n0,p,ifam)
       call rchkusr
       do j = 1, max(Nbi(k),Nthin(k))
         call sample_ssq(ssq)
-        call samplez_ga(lglk(i),z(:,i),y,l,nu(k),ssq,tsq,n)
+        call samplez_ga(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
       end do
       call rchkusr
       do ii = 2, Nout(k)
         i = i + 1
         lglk(i) = lglk(i-1)
         z(:,i) = z(:,i-1)
+        gmu(:,i) = gmu(:,i-1)
         do j = 1, Nthin(k)
           call sample_ssq(ssq)
-          call samplez_ga(lglk(i),z(:,i),y,l,nu(k),ssq,tsq,n)
+          call samplez_ga(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
         end do
         call rchkusr
       end do
@@ -694,77 +898,134 @@ subroutine samplemulti (lglk, z, phi, nsq, y, l, F, &
     tsq = tsqin
     do k = 1, kg
       i = i + 1
-      call ini_mcmc(lglk(i),z(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
-         dm,&
-         betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,nu(k),n,n0,p,ifam)
+      call ini_mcmc(lglk(i),z(:,i),gmu(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
+         dm,betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,nu(k),n,n0,p,ifam)
       call rchkusr
       do j = 1, max(Nbi(k),Nthin(k))
         call sample_ssq(ssq)
-        call samplez_bi(lglk(i),z(:,i),y,l,nu(k),ssq,tsq,n)
+        call samplez_bi(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
       end do
       call rchkusr
       do ii = 2, Nout(k)
         i = i + 1
         lglk(i) = lglk(i-1)
         z(:,i) = z(:,i-1)
+        gmu(:,i) = gmu(:,i-1)
         do j = 1, Nthin(k)
           call sample_ssq(ssq)
-          call samplez_bi(lglk(i),z(:,i),y,l,nu(k),ssq,tsq,n)
+          call samplez_bi(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
         end do
         call rchkusr
       end do
       call end_mcmc
     end do
+    gmu = exp(gmu)
   case (3) ! Poisson
     tsq = tsqin
     do k = 1, kg
       i = i + 1
-      call ini_mcmc(lglk(i),z(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
-         dm,&
-         betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,nu(k),n,n0,p,ifam)
+      call ini_mcmc(lglk(i),z(:,i),gmu(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
+         dm,betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,nu(k),n,n0,p,ifam)
       call rchkusr
       do j = 1, max(Nbi(k),Nthin(k))
         call sample_ssq(ssq)
-        call samplez_po(lglk(i),z(:,i),y,l,nu(k),ssq,tsq,n)
+        call samplez_po(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
       end do
       call rchkusr
       do ii = 2, Nout(k)
         i = i + 1
         lglk(i) = lglk(i-1)
         z(:,i) = z(:,i-1)
+        gmu(:,i) = gmu(:,i-1)
         do j = 1, Nthin(k)
           call sample_ssq(ssq)
-          call samplez_po(lglk(i),z(:,i),y,l,nu(k),ssq,tsq,n)
+          call samplez_po(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
         end do
         call rchkusr
       end do
       call end_mcmc
     end do
+    gmu = exp(gmu)
   case (4) ! Gamma
     tsq = tsqin
     do k = 1, kg
       i = i + 1
-      call ini_mcmc(lglk(i),z(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
-         dm,&
-         betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,nu(k),n,n0,p,ifam)
+      call ini_mcmc(lglk(i),z(:,i),gmu(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
+         dm,betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,nu(k),n,n0,p,ifam)
       call rchkusr
       do j = 1, max(Nbi(k),Nthin(k))
         call sample_ssq(ssq)
-        call samplez_gm(lglk(i),z(:,i),y,l,nu(k),ssq,tsq,n)
+        call samplez_gm(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
       end do
       call rchkusr
       do ii = 2, Nout(k)
         i = i + 1
         lglk(i) = lglk(i-1)
         z(:,i) = z(:,i-1)
+        gmu(:,i) = gmu(:,i-1)
         do j = 1, Nthin(k)
           call sample_ssq(ssq)
-          call samplez_gm(lglk(i),z(:,i),y,l,nu(k),ssq,tsq,n)
+          call samplez_gm(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
         end do
         call rchkusr
       end do
       call end_mcmc
     end do
+    gmu = exp(gmu)
+  case (5) ! Binomial Asymmetric
+    tsq = tsqin
+    do k = 1, kg
+      i = i + 1
+      call ini_mcmc(lglk(i),z(:,i),gmu(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
+         dm,betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,nu(k),n,n0,p,ifam)
+      call rchkusr
+      do j = 1, max(Nbi(k),Nthin(k))
+        call sample_ssq(ssq)
+        call samplez_ba(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
+      end do
+      call rchkusr
+      do ii = 2, Nout(k)
+        i = i + 1
+        lglk(i) = lglk(i-1)
+        z(:,i) = z(:,i-1)
+        gmu(:,i) = gmu(:,i-1)
+        do j = 1, Nthin(k)
+          call sample_ssq(ssq)
+          call samplez_ba(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
+        end do
+        call rchkusr
+      end do
+      call end_mcmc
+    end do
+    gmu = 1d0 - exp(gmu)
+  case (6) ! Binomial Asymmetric Decreasing
+    tsq = tsqin
+    do k = 1, kg
+      i = i + 1
+      call ini_mcmc(lglk(i),z(:,i),gmu(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
+         dm,betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,nu(k),n,n0,p,ifam)
+      call rchkusr
+      do j = 1, max(Nbi(k),Nthin(k))
+        call sample_ssq(ssq)
+        call samplez_bd(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
+      end do
+      call rchkusr
+      do ii = 2, Nout(k)
+        i = i + 1
+        lglk(i) = lglk(i-1)
+        z(:,i) = z(:,i-1)
+        gmu(:,i) = gmu(:,i-1)
+        do j = 1, Nthin(k)
+          call sample_ssq(ssq)
+          call samplez_bd(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,n)
+        end do
+        call rchkusr
+      end do
+      call end_mcmc
+    end do
+    gmu = 1d0 - exp(gmu)
+  case default
+    call rexit ("Unrecognised family")
   end select
 end subroutine samplemulti
 
@@ -784,7 +1045,7 @@ subroutine mcspsamtry (lglk, z, phi, nsq, acc, y, l, F, &
   double precision, intent(out) :: lglk(Nout)
   integer, intent(out) :: acc
   integer i, ia
-  double precision lglk1, ssq, phi1, nsq1, z1(n)
+  double precision lglk1, ssq, phi1, nsq1, z1(n), gmu(n)
 !   integer, parameter :: nl = 19
 !   character(len=nl) :: label
   integer iap
@@ -804,7 +1065,7 @@ subroutine mcspsamtry (lglk, z, phi, nsq, acc, y, l, F, &
   z1 = z(:,1)
   phi1 = phi(1)
   nsq1 = nsq(1)
-  call ini_mcmc(lglk1,z1,phi1,nsq1,y,l,F,kappa,icf,dm,&
+  call ini_mcmc(lglk1,z1,gmu,phi1,nsq1,y,l,F,kappa,icf,dm,&
      betm0,betQ0,ssqdf,ssqsc,tsqdf,tsq,dft,n,n0,p,ifam)
   call rchkusr
   select case (ifam)
@@ -813,7 +1074,7 @@ subroutine mcspsamtry (lglk, z, phi, nsq, acc, y, l, F, &
       call sample_cov(lglk1,phi1,nsq1,phipars,nsqpars,phisc,nsqsc,dm,&
          F,betQ0,n,p,kappa,icf,ia)
       call sample_ssq(ssq)
-      call samplez_ga(lglk1,z1,y,l,dft,ssq,tsq,n)
+      call samplez_ga(lglk1,z1,gmu,y,l,dft,ssq,tsq,n)
       lglk(i) = lglk1
       z(:,i) = z1
       phi(i) = phi1
@@ -833,7 +1094,7 @@ subroutine mcspsamtry (lglk, z, phi, nsq, acc, y, l, F, &
       call sample_cov(lglk1,phi1,nsq1,phipars,nsqpars,phisc,nsqsc,dm,&
          F,betQ0,n,p,kappa,icf,ia)
       call sample_ssq(ssq)
-      call samplez_bi(lglk1,z1,y,l,dft,ssq,tsq,n)
+      call samplez_bi(lglk1,z1,gmu,y,l,dft,ssq,tsq,n)
       lglk(i) = lglk1
       z(:,i) = z1
       phi(i) = phi1
@@ -853,7 +1114,7 @@ subroutine mcspsamtry (lglk, z, phi, nsq, acc, y, l, F, &
       call sample_cov(lglk1,phi1,nsq1,phipars,nsqpars,phisc,nsqsc,dm,&
          F,betQ0,n,p,kappa,icf,ia)
       call sample_ssq(ssq)
-      call samplez_po(lglk1,z1,y,l,dft,ssq,tsq,n)
+      call samplez_po(lglk1,z1,gmu,y,l,dft,ssq,tsq,n)
       lglk(i) = lglk1
       z(:,i) = z1
       phi(i) = phi1
@@ -873,7 +1134,7 @@ subroutine mcspsamtry (lglk, z, phi, nsq, acc, y, l, F, &
       call sample_cov(lglk1,phi1,nsq1,phipars,nsqpars,phisc,nsqsc,dm,&
          F,betQ0,n,p,kappa,icf,ia)
       call sample_ssq(ssq)
-      call samplez_gm(lglk1,z1,y,l,dft,ssq,tsq,n)
+      call samplez_gm(lglk1,z1,gmu,y,l,dft,ssq,tsq,n)
       lglk(i) = lglk1
       z(:,i) = z1
       phi(i) = phi1
@@ -888,6 +1149,48 @@ subroutine mcspsamtry (lglk, z, phi, nsq, acc, y, l, F, &
         call rchkusr
       end if
     end do
+  case (5) ! Binomial asymmetric
+    do i = 1, Nout
+      call sample_cov(lglk1,phi1,nsq1,phipars,nsqpars,phisc,nsqsc,dm,&
+         F,betQ0,n,p,kappa,icf,ia)
+      call sample_ssq(ssq)
+      call samplez_ba(lglk1,z1,gmu,y,l,dft,ssq,tsq,n)
+      lglk(i) = lglk1
+      z(:,i) = z1
+      phi(i) = phi1
+      nsq(i) = nsq1
+      if (Npr .gt. 0 .and. mod(i,Npr) .eq. 0) then
+        iap = 100*ia/Npr
+!         write (label,'(i9,2x,i8)') i, iap
+!         call intpr (label,nl,0,0)
+        call msgmci (i, iap)
+        acc = acc + ia
+        ia = 0
+        call rchkusr
+      end if
+    end do
+  case (6) ! Binomial asymmetric decreasing
+    do i = 1, Nout
+      call sample_cov(lglk1,phi1,nsq1,phipars,nsqpars,phisc,nsqsc,dm,&
+         F,betQ0,n,p,kappa,icf,ia)
+      call sample_ssq(ssq)
+      call samplez_bd(lglk1,z1,gmu,y,l,dft,ssq,tsq,n)
+      lglk(i) = lglk1
+      z(:,i) = z1
+      phi(i) = phi1
+      nsq(i) = nsq1
+      if (Npr .gt. 0 .and. mod(i,Npr) .eq. 0) then
+        iap = 100*ia/Npr
+!         write (label,'(i9,2x,i8)') i, iap
+!         call intpr (label,nl,0,0)
+        call msgmci (i, iap)
+        acc = acc + ia
+        ia = 0
+        call rchkusr
+      end if
+    end do
+  case default
+    call rexit ("Unrecognised family")
   end select
   acc = acc + ia
   call end_mcmc
@@ -902,11 +1205,13 @@ subroutine mcspsamtry (lglk, z, phi, nsq, acc, y, l, F, &
 end subroutine mcspsamtry
 
 
-subroutine trgasample (lglk, z, z0, beta, ssq, tsq, phi, nsq, acc, y, l, F,&
+subroutine trgasample (lglk, z, z0, gmu, gmu0, &
+   beta, ssq, tsq, phi, nsq, acc, y, l, F,&
    F0, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsqsc, phipars, phisc, nsqpars, &
    nsqsc, kappa, icf, dft, dm, dmdm0, Nout, Nbi, Nthin, n, n0, p)
   
   use mcmcfcns
+  use linkfcn, only: invlink_ga
   implicit none 
   integer, intent(in) :: Nout, Nbi, Nthin, n, n0, p, icf
   double precision, intent(in) :: y(n), l(n), F(n,p), F0(n0,p), &
@@ -914,14 +1219,14 @@ subroutine trgasample (lglk, z, z0, beta, ssq, tsq, phi, nsq, acc, y, l, F,&
      ssqsc, tsqdf, tsqsc, phipars(4), nsqpars(4), kappa, phisc, nsqsc
   double precision, intent(inout) :: z(n,Nout), phi(Nout), nsq(Nout)
   double precision, intent(out) :: z0(n0,Nout), beta(p,Nout), ssq(Nout), &
-     tsq(Nout), lglk(Nout)
+     tsq(Nout), lglk(Nout), gmu(n,Nout), gmu0(n0,Nout)
   integer, intent(out) :: acc
   integer i, j
   integer, parameter :: ifam = 0
 
   acc = 0
   i = 1
-  call ini_mcmc(lglk(i),z(:,i),phi(i),nsq(i),y,y,F,kappa,icf,dm,&
+  call ini_mcmc(lglk(i),z(:,i),gmu(:,i),phi(i),nsq(i),y,y,F,kappa,icf,dm,&
      betm0,betQ0,ssqdf,ssqsc,tsqdf,tsqsc,dft,n,n0,p,ifam)
   call rchkusr
 
@@ -930,15 +1235,19 @@ subroutine trgasample (lglk, z, z0, beta, ssq, tsq, phi, nsq, acc, y, l, F,&
        dm,F,betQ0,n,p,kappa,icf,acc)
     call sample_ssq(ssq(i))
     call sample_tsq(tsq(i))
-    call samplez_gt(lglk(i),z(:,i),y,l,dft,ssq(i),tsq(i),n)
+    call samplez_gt(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq(i),n)
   end do
   call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
-  call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+  if (n0 .gt. 0) then
+    call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
        n0,n,p,dmdm0,F,F0,kappa,icf)
+    gmu0(:,i) = invlink_ga(z0(:,i), dft)
+  end if
   call rchkusr
   do i = 2, Nout
     lglk(i) = lglk(i-1)
     z(:,i) = z(:,i-1)
+    gmu(:,i) = gmu(:,i-1)
     phi(i) = phi(i-1)
     nsq(i) = nsq(i-1)
     do j = 1, Nthin
@@ -946,11 +1255,14 @@ subroutine trgasample (lglk, z, z0, beta, ssq, tsq, phi, nsq, acc, y, l, F,&
          dm,F,betQ0,n,p,kappa,icf,acc)
       call sample_ssq(ssq(i))
       call sample_tsq(tsq(i))
-      call samplez_gt(lglk(i),z(:,i),y,l,dft,ssq(i),tsq(i),n)
+      call samplez_gt(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq(i),n)
     end do
     call sample_beta(beta(:,i),z(:,i),ssq(i),n,p)
-    call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
-       n0,n,p,dmdm0,F,F0,kappa,icf)
+    if (n0 .gt. 0) then
+      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+         n0,n,p,dmdm0,F,F0,kappa,icf)
+      gmu0(:,i) = invlink_ga(z0(:,i), dft)
+    end if
     call rchkusr
   end do
 
@@ -973,15 +1285,11 @@ subroutine trgasamtry (lglk, z, phi, nsq, acc, y, l, F, &
   double precision, intent(out) :: lglk(Nout)
   integer, intent(out) :: acc
   integer i, ia
-  double precision ssq, tsq, phi1, nsq1, z1(n), lglk1
+  double precision ssq, tsq, phi1, nsq1, z1(n), lglk1, gmu(n)
 !   integer, parameter :: nl = 19
 !   character(len=nl) :: label
   integer iap
   integer, parameter :: n0 = 0, ifam = 0
-  double precision :: dmdm0(n,n0), F0(n0,p)
-
-  dmdm0 = 0d0
-  F0 = 0d0
   
 !   write (label,'("Iteration",2x,"Acc% cov")')
 !   call intpr (label,nl,0,0)
@@ -994,7 +1302,7 @@ subroutine trgasamtry (lglk, z, phi, nsq, acc, y, l, F, &
   z1 = z(:,1)
   phi1 = phi(1)
   nsq1 = nsq(1)
-  call ini_mcmc(lglk1,z1,phi1,nsq1,y,y,F,kappa,icf,dm,&
+  call ini_mcmc(lglk1,z1,gmu,phi1,nsq1,y,y,F,kappa,icf,dm,&
      betm0,betQ0,ssqdf,ssqsc,tsqdf,tsqsc,dft,n,n0,p,ifam)
   call rchkusr
 
@@ -1003,7 +1311,7 @@ subroutine trgasamtry (lglk, z, phi, nsq, acc, y, l, F, &
        F,betQ0,n,p,kappa,icf,ia)
     call sample_ssq(ssq)
     call sample_tsq(tsq)
-    call samplez_gt(lglk1,z1,y,l,dft,ssq,tsq,n)
+    call samplez_gt(lglk1,z1,gmu,y,l,dft,ssq,tsq,n)
     lglk(i) = lglk1
     z(:,i) = z1
     phi(i) = phi1

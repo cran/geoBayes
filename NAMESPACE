@@ -3,6 +3,7 @@
 export(bf1skel)
 export(bf2new)
 export(bf2optim)
+export(bfse)
 export(comparebinlinks)
 export(ebsglmm)
 export(ebstrga)
