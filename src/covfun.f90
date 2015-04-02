@@ -16,16 +16,16 @@ module covfun
 
 contains
   subroutine calc_cov (phi,nsq,dm,F,betQ0, &
-     lup,kappa,icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+     lup,kappa,icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
     implicit none
-    logical, intent(in) :: lup(n,n)
     integer, intent(in) :: n, p, icf
+    logical, intent(in) :: lup(n,n)
     double precision, intent(in) :: phi, nsq, dm(n,n), &
        F(n,p), betQ0(p,p), kappa
-    double precision, intent(out) :: T(n,n), FTF(p,p), TFFT(n,p), Ups(n,n), &
+    double precision, intent(out) :: T(n,n), FTF(p,p), Ups(n,n), &
        ldh_Ups, TiF(n,p)
     integer i, j
-    double precision nsqp1, Tih(n,n), ldh_T, ldh_FTF
+    double precision nsqp1, Tih(n,n), TFFT(n,p), ldh_T, ldh_FTF
 
     nsqp1 = nsq + 1d0
     T = dm
@@ -86,7 +86,7 @@ contains
        F(n,p), dm(n,n), kappa
     double precision, intent(out) :: ldh_Ulist(kg), Ulist(n,n,kg)
     integer i
-    double precision FTF(p,p), TFFT(n,p), T(n,n), TiF(n,p)
+    double precision FTF(p,p), T(n,n), TiF(n,p)
     logical lup(n,n)
 
     do i = 1, n
@@ -96,7 +96,7 @@ contains
 
     do i = 1, kg
       call calc_cov(philist(i),nsqlist(i),dm,F,betQ0,&
-         lup,kappa,icf,n,p,T,TiF,FTF,TFFT,Ulist(:,:,i),ldh_Ulist(i))
+         lup,kappa,icf,n,p,T,TiF,FTF,Ulist(:,:,i),ldh_Ulist(i))
     end do
   end subroutine covlist
 

@@ -25,7 +25,7 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
   double precision, intent(out) :: logbf(kg), lglk1(Ntot1, kg), &
      lglk2(Ntot2, kg), weights(Ntot2), zcv(Ntot2, kg)
   logical lup(n, n), lmxi
-  double precision T(n, n), TiF(n, p), FTF(p, p), TFFT(n, p), Ups(n, n), &
+  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
      ldh_Ups, ssqdfsc, modeldfh, &
      tsqdfsc, respdfh, xi(n), eta(kg), mxlglk, lglketa(Ntot2, kg), nu
   integer i, ii, j
@@ -59,7 +59,7 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointyz_gt(n, zsample1(:,j), y, l, Ups, ldh_Ups, &
@@ -75,7 +75,7 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointyz_ga(n, zsample1(:,j), &
@@ -91,7 +91,7 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointyz_bi(n, zsample1(:,j), &
@@ -107,7 +107,7 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointyz_po(n, zsample1(:,j), &
@@ -123,7 +123,7 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointyz_gm(n, zsample1(:,j), &
@@ -139,7 +139,7 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointyz_ba(n, zsample1(:,j), &
@@ -155,7 +155,7 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointyz_bd(n, zsample1(:,j), &
@@ -271,7 +271,7 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointymu_gt(n, musample1(:, j), y, l, Ups, ldh_Ups, &
@@ -287,7 +287,7 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointymu_ga(n, musample1(:, j), y, l, Ups, ldh_Ups, &
@@ -303,7 +303,7 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointymu_bi(n, musample1(:, j), y, l, Ups, ldh_Ups, &
@@ -319,7 +319,7 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointymu_po(n, musample1(:, j), y, l, Ups, ldh_Ups, &
@@ -335,7 +335,7 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointymu_gm(n, musample1(:, j), y, l, Ups, ldh_Ups, &
@@ -351,7 +351,7 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointymu_ba(n, musample1(:, j), y, l, Ups, ldh_Ups, &
@@ -367,7 +367,7 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
     do ii = 1, kg
       nu = nulist(ii)
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
         lglk1(j,ii) = jointymu_bd(n, musample1(:, j), y, l, Ups, ldh_Ups, &

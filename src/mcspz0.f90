@@ -13,7 +13,7 @@ subroutine mcspz0mc (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
   double precision, intent(out) :: z0(n0, Ns, Nout)
   integer i, j, k
   logical lup(n,n)
-  double precision T(n,n), TiF(n,p), FTF(p,p), TFFT(n,p), Ups(n,n), &
+  double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
      TC(n,n0), FCTF(n0,p), z0_ups(n0), ldh_Ups, z0_mean(n0), z0_sd(n0)
 
   do i = 1, n
@@ -26,7 +26,7 @@ subroutine mcspz0mc (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
     call rchkusr
     ! Compute covariance
     call calc_cov (phi(i),nsq(i),dm,F,betQ0, &
-       lup,kappa,icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+       lup,kappa,icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
     call calc_cov_pred(z0_ups, TC, FCTF, phi(i), nsq(i), dmdm0, F, &
        F0, kappa, icf, T, n, n0, p)
     call dgemv ('t',n,n0,1d0,TC,n,z,1,0d0,z0_mean,1) ! z0_mean = C'*T^{-1}*z
@@ -55,7 +55,7 @@ subroutine mcspz0eb (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
   double precision, intent(out) :: z0(n0, Ns, Nout)
   integer i, j, k
   logical lup(n,n)
-  double precision T(n,n), TiF(n,p), FTF(p,p), TFFT(n,p), Ups(n,n), &
+  double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
      TC(n,n0), FCTF(n0,p), z0_ups(n0), ldh_Ups, z0_mean(n0), z0_sd(n0), &
      z0_mfix(n0)
 
@@ -67,7 +67,7 @@ subroutine mcspz0eb (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
   call rngini
   ! Compute covariance
   call calc_cov (phi,nsq,dm,F,betQ0, &
-     lup,kappa,icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+     lup,kappa,icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
   call calc_cov_pred(z0_ups, TC, FCTF, phi, nsq, dmdm0, F, &
      F0, kappa, icf, T, n, n0, p)
   call dgemv ('t',n,n0,1d0,TC,n,z,1,0d0,z0_mfix,1) ! z0_mean = C'*T^{-1}*z

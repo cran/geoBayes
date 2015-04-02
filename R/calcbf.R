@@ -276,6 +276,7 @@ plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
   pars <- match.arg(pars, several.ok = TRUE)
   ipar <- match(pars, eval(formals()$pars))
   npars <- length(pars)
+  if (npars == 0) stop ("No parameters to plot.")
   dots <- list(...)
   nmdots <- names(dots)
 
@@ -321,7 +322,7 @@ plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
            (bf2obj[[pars[2]]])[maxid[ipar[2]]])
   } else if (ptype == "profile") {
     ii <- as.list(rep(TRUE, N))
-    if (npars > 1) par(mfrow = c(1, npars))
+    oldpar <- par(mfrow = c(1, npars))
     for (i in 1:npars) {
       bf <- apply(bf2obj[["logbf"]], ipar[i], max)
       pdata <- data.frame(bf2obj[pars[i]], logbf = bf)
@@ -337,6 +338,7 @@ plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
                 kappa = expression(kappa)))
       }
     }
+    par(oldpar)
   }
   invisible()
 }

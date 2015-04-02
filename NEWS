@@ -1,3 +1,7 @@
+0.2.150402
+* Fixed a bug for the transformed gaussian model.
+* Update of the fortran code.
+
 0.2.150308
 * Added a GEVbinomial and GEVDbinomial link functions.
 * Updated code.

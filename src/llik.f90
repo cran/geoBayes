@@ -12,7 +12,7 @@ subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
   logical lup(n, n), lmxi
-  double precision T(n, n), TiF(n, p), FTF(p, p), TFFT(n, p), Ups(n, n), &
+  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
      ldh_Ups, ssqdfsc, modeldfh, &
      tsqdfsc, respdfh, xi(n)
   integer i, ii, j
@@ -44,7 +44,7 @@ subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
   case (0) ! Transformed Gaussian
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointyz_gt(n, zsample(:, j), y, l, Ups, ldh_Ups, &
@@ -54,7 +54,7 @@ subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
   case (1) ! Gaussian
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointyz_ga(n, zsample(:, j), y, l, Ups, ldh_Ups, &
@@ -64,7 +64,7 @@ subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
   case (2) ! Binomial
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointyz_bi(n, zsample(:, j), y, l, Ups, ldh_Ups, &
@@ -74,7 +74,7 @@ subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
   case (3) ! Poisson
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointyz_po(n, zsample(:, j), y, l, Ups, ldh_Ups, &
@@ -84,7 +84,7 @@ subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
   case (4) ! Gamma
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointyz_gm(n, zsample(:, j), y, l, Ups, ldh_Ups, &
@@ -94,7 +94,7 @@ subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
   case (5) ! Binomial Asymmetric
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointyz_ba(n, zsample(:, j), y, l, Ups, ldh_Ups, &
@@ -104,7 +104,7 @@ subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
   case (6) ! Binomial Asymmetric Decreasing
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointyz_bd(n, zsample(:, j), y, l, Ups, ldh_Ups, &
@@ -133,7 +133,7 @@ subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
   logical lup(n, n), lmxi
-  double precision T(n, n), TiF(n, p), FTF(p, p), TFFT(n, p), Ups(n, n), &
+  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
      ldh_Ups, ssqdfsc, modeldfh, &
      tsqdfsc, respdfh, xi(n)
   integer i, ii, j
@@ -165,7 +165,7 @@ subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
   case (0) ! Transformed Gaussian
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointymu_gt(n, musample(:, j), y, l, Ups, ldh_Ups, &
@@ -175,7 +175,7 @@ subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
   case (1) ! Gaussian
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointymu_ga(n, musample(:, j), y, l, Ups, ldh_Ups, &
@@ -185,7 +185,7 @@ subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
   case (2) ! Binomial
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointymu_bi(n, musample(:, j), y, l, Ups, ldh_Ups, &
@@ -195,7 +195,7 @@ subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
   case (3) ! Poisson
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointymu_po(n, musample(:, j), y, l, Ups, ldh_Ups, &
@@ -205,7 +205,7 @@ subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
   case (4) ! Gamma
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointymu_gm(n, musample(:, j), y, l, Ups, ldh_Ups, &
@@ -215,7 +215,7 @@ subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
   case (5) ! Binomial Asymmetric
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointymu_ba(n, musample(:, j), y, l, Ups, ldh_Ups, &
@@ -225,7 +225,7 @@ subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
   case (6) ! Binomial Asymmetric Decreasing
     do ii = 1, kg
       call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
         lglk(j,ii) = jointymu_bd(n, musample(:, j), y, l, Ups, ldh_Ups, &

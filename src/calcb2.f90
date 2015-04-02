@@ -25,7 +25,7 @@ subroutine calcbz_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
   integer i, j, k
   double precision logfy(n_nu, Ntot), lfz
-  double precision T(n, n), TiF(n, p), FTF(p, p), TFFT(n, p), Ups(n, n), &
+  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
      ldh_Ups, llikw(n_nu, Ntot), xi(n)
 
   ssqdfsc = ssqdf*ssqsc
@@ -111,7 +111,7 @@ subroutine calcbz_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
 
   do k = 1, n_cov
     call calc_cov (phi(k),nsq(k),dm,F,betQ0,&
-       lup,kappa(k),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+       lup,kappa(k),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
     do j = 1, Ntot
       ! Calculate unnormalised log-likelihood at sampled points
       lfz = logpdfz(n, zsample(:, j), Ups, ldh_Ups, xi, lmxi, &
@@ -147,7 +147,7 @@ subroutine calcbz_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   double precision, allocatable :: tmp(:)
   integer ltmp
   double precision qrtau(kg), zcvqr(Ntot, kg), logfy(n_nu, Ntot), lfz, dNtot
-  double precision T(n, n), TiF(n, p), FTF(p, p), TFFT(n, p), Ups(n, n), &
+  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
      ldh_Ups, ycv(n_nu, Ntot), llikw, xi(n)
 
   ssqdfsc = ssqdf*ssqsc
@@ -250,7 +250,7 @@ subroutine calcbz_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
 
   do k = 1, n_cov
     call calc_cov (phi(k),nsq(k),dm,F,betQ0,&
-       lup,kappa(k),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+       lup,kappa(k),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
     do j = 1, Ntot
       ! Calculate unnormalised log-likelihood at sampled points
       lfz = logpdfz(n, zsample(:, j), Ups, ldh_Ups, xi, lmxi, &
@@ -298,7 +298,7 @@ subroutine calcbmu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
   integer i, j, k
   double precision logfy(Ntot), lfmu
-  double precision T(n, n), TiF(n, p), FTF(p, p), TFFT(n, p), Ups(n, n), &
+  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
      ldh_Ups, llikw(n_nu, Ntot), xi(n)
 
   ssqdfsc = ssqdf*ssqsc
@@ -334,7 +334,7 @@ subroutine calcbmu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_ga(n, musample(:, j), Ups, ldh_Ups, &
@@ -351,7 +351,7 @@ subroutine calcbmu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_ga(n, musample(:, j), Ups, ldh_Ups, &
@@ -368,7 +368,7 @@ subroutine calcbmu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_bi(n, musample(:, j), Ups, ldh_Ups, &
@@ -385,7 +385,7 @@ subroutine calcbmu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_po(n, musample(:, j), Ups, ldh_Ups, &
@@ -402,7 +402,7 @@ subroutine calcbmu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_gm(n, musample(:, j), Ups, ldh_Ups, &
@@ -419,7 +419,7 @@ subroutine calcbmu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_ba(n, musample(:, j), Ups, ldh_Ups, &
@@ -436,7 +436,7 @@ subroutine calcbmu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_bd(n, musample(:, j), Ups, ldh_Ups, &
@@ -474,7 +474,7 @@ subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   double precision, allocatable :: tmp(:)
   integer ltmp
   double precision qrtau(kg), zcvqr(Ntot, kg), logfy(Ntot), lfmu, dNtot
-  double precision T(n, n), TiF(n, p), FTF(p, p), TFFT(n, p), Ups(n, n), &
+  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
      ldh_Ups, ycv(n_nu, Ntot), llikw, xi(n)
 
   ssqdfsc = ssqdf*ssqsc
@@ -527,7 +527,7 @@ subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_ga(n, musample(:, j), Ups, ldh_Ups, &
@@ -555,7 +555,7 @@ subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_ga(n, musample(:, j), Ups, ldh_Ups, &
@@ -583,7 +583,7 @@ subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_bi(n, musample(:, j), Ups, ldh_Ups, &
@@ -611,7 +611,7 @@ subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_po(n, musample(:, j), Ups, ldh_Ups, &
@@ -639,7 +639,7 @@ subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_gm(n, musample(:, j), Ups, ldh_Ups, &
@@ -667,7 +667,7 @@ subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_ba(n, musample(:, j), Ups, ldh_Ups, &
@@ -695,7 +695,7 @@ subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,TFFT,Ups,ldh_Ups)
+         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_bd(n, musample(:, j), Ups, ldh_Ups, &
