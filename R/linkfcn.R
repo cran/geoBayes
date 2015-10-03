@@ -22,6 +22,13 @@
 ##' 1 - exp[-max(0, 1 + nu z)^(1/nu)]} for any real \eqn{\nu}{nu}. At
 ##' \eqn{\nu = 0}{nu = 0} it reduces to the complementary log-log
 ##' link.
+##'
+##' The Wallace binomial family is a fast approximation to the robit
+##' family. It is defined as \deqn{\mu = 
+##' \Phi(\mbox{sign}(z) c(\nu) \sqrt{\nu \log(1 + z^2/\nu)})}{mu = 
+##' Phi(sign(z) c(nu) sqrt{nu log(1 + z^2/nu)})}
+##' where \eqn{c(\nu) = (8\nu+1)/(8\nu+3)}{c(nu) = (8*nu+1)/(8*nu+3)}
+##'
 ##' @title Calculate the link function for exponential families
 ##' @param mu Numeric. The mean of the response variable. 
 ##' @param z Numeric. The linear predictor. 
@@ -45,10 +52,12 @@
 ##' @family linkfcn
 ##' @name linkfcn
 ##' @rdname linkfcn
+##' @importFrom stats qlogis qnorm qt qf plogis pnorm pt 
 ##' @export 
 linkfcn <- function (mu, linkp,
                      family = c("gaussian", "binomial", "poisson", "Gamma",
-                                "GEVbinomial", "GEVDbinomial")) {
+                       "GEV.binomial", "GEVD.binomial",
+                                "Wallace.binomial")) {
   family <- match.arg(family)
   if (length(linkp) != 1) stop ("The linkp argument must be scalar")
   if (is.character(linkp) | is.factor(linkp)) {
@@ -77,6 +86,8 @@ the binomial can also be the character \"logit\" or \"probit\"")
     } else if (family == "binomial") {
       if(nu <= 0) {
         stop ("The robit link parameter must be positive")
+      } else if (nu < 1) {
+        z <- sign(mu-.5)*sqrt(qf(abs(2*mu-1), 1, nu))
       } else {
         z <- qt(mu, nu)
       }
@@ -86,20 +97,26 @@ the binomial can also be the character \"logit\" or \"probit\"")
       } else {
         z <- ifelse(mu > 0, (mu^nu - 1)/nu, -Inf)
       }
-    } else if (family == "GEVbinomial") {
-      z <- -log(1 - mu)
+    } else if (family == "GEV.binomial") {
+      z <- -log1p(-mu)
       if (nu == 0) {
         z <- ifelse(mu > 0, ifelse(mu < 1, log(z), Inf), -Inf)
       } else {
         z <- ifelse(mu > 0, ifelse(mu < 1, (-1 + z^nu)/nu, Inf), -Inf)
       }
-    } else if (family == "GEVDbinomial") {
-      z <- -log(1 - mu)
+    } else if (family == "GEVD.binomial") {
+      z <- -log1p(-mu)
       if (nu == 0) {
         z <- ifelse(mu > 0, ifelse(mu < 1, -log(z), -Inf), Inf)
       } else {
         z <- ifelse(mu > 0, ifelse(mu < 1, (-1 + z^(-nu))/nu, -Inf), Inf)
       }
+    } else if (family == "Wallace.binomial") {
+      if (nu <= 0)
+        stop ("The link parameter for Wallace.binomial must be positive.")
+      z <- 8*nu
+      z <- qnorm(mu)*(z+3)/(z+1)
+      z <- sign(mu-.5)*sqrt(nu*expm1(z*z/nu))
     } else {
       stop ("Unrecognised family")
     }
@@ -112,7 +129,8 @@ the binomial can also be the character \"logit\" or \"probit\"")
 ##' @export 
 linkinv <- function (z, linkp, 
                      family = c("gaussian", "binomial", "poisson", "Gamma",
-                                "GEVbinomial", "GEVDbinomial")) {
+                       "GEV.binomial", "GEVD.binomial",
+                       "Wallace.binomial")) {
   family <- match.arg(family)
   if (length(linkp) != 1) stop ("The linkp argument must be scalar")
   if (is.character(linkp) | is.factor(linkp)) {
@@ -153,20 +171,26 @@ the binomial can also be the character \"logit\" or \"probit\"")
         mu <- nu*z
         mu <- ifelse(mu > -1, exp(log1p(mu)/nu), 0)
       }
-    } else if (family == "GEVbinomial") {
+    } else if (family == "GEV.binomial") {
       if (nu == 0) {
         mu <- 1 - exp(-exp(z))
       } else {
         mu <- 1 + nu*z
-        mu <- ifelse(mu > 0, 1 - exp(-mu^(1/nu)), as.double(nu < 0))
+        mu <- ifelse(mu > 0, -expm1(-mu^(1/nu)), as.double(nu < 0))
       }
-    } else if (family == "GEVDbinomial") {
+    } else if (family == "GEVD.binomial") {
       if (nu == 0) {
         mu <- 1 - exp(-exp(-z))
       } else {
         mu <- 1 + nu*z
-        mu <- ifelse(mu > 0, 1 - exp(-mu^(-1/nu)), as.double(nu > 0))
+        mu <- ifelse(mu > 0, -expm1(-mu^(-1/nu)), as.double(nu > 0))
       }
+    } else if (family == "Wallace.binomial") {
+      if (nu <= 0)
+        stop ("The link parameter for Wallace.binomial must be positive.")
+      mu <- 8*nu
+      mu <- (mu+1)/(mu+3)*sqrt(nu*log1p(z*z/nu))
+      mu <- ifelse(z > 0, pnorm(mu), pnorm(mu, lower.tail = FALSE))
     } else {
       stop ("Unrecognised family")
     }

@@ -390,8 +390,39 @@ contains
       end if
     end if
   end function invlink_ga
-end module linkfcn
+  
+  
+!!!!!!!!!!!!!!!!!!! Wallace transformation for binomial !!!!!!!!!!!!!!!!!!!
+!!! See function u4 in
+!!!  Wallace, D. L. (1959). Bounds on normal approximations to Student's
+!!!  and the chi-square distributions. The Annals of Mathematical
+!!!  Statistics, 1121-1130. 
+!! Link fcn
+  elemental function flink_bw (mu, d) result(z)
+    use interfaces, only: quantnorm, fexpm1
+    implicit none
+    double precision, intent(in) :: mu, d
+    double precision :: z
+    double precision t, e
+    t = 8d0*d
+    e = quantnorm(mu)*(t + 3d0)/(t + 1d0)
+    t = sqrt(d*fexpm1(e*e/d))
+    z = sign(t, e)
+  end function flink_bw
 
+!! Inverse link fcn (log scale)
+  elemental function invlink_bw (z,d) result (y)
+    use interfaces, only: logprobnorm, flog1p
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision y
+    double precision x, t
+    t = 8d0*d
+    x = sqrt(d*flog1p(z*z/d))*(t + 1d0)/(t + 3d0)
+    t = sign(x, z)
+    y = logprobnorm(t)
+  end function invlink_bw
+end module linkfcn
 
 
 ! Local Variables:

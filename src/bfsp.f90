@@ -16,6 +16,7 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
   use covfun
   use pdfy
   use jointyz
+  use transfbinomial, only: jointyw_bi
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf
@@ -102,6 +103,36 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
         lglk2(j,ii) = jointyz_bi(n, zsample2(:,j), &
            y, l, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
       end do
+    end do
+  case (-2) ! Binomial with different transformation (workaround)
+    do ii = 1, kg
+      nu = nulist(ii)
+      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
+      if (nu .gt. 0d0) then
+        ! Use the Wallace transformation
+        do j = 1, Ntot1
+          call rchkusr
+          lglk1(j,ii) = jointyw_bi(n, zsample1(:, j), y, l, Ups, ldh_Ups, &
+             nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        end do
+        do j = 1, Ntot2
+          call rchkusr
+          lglk2(j,ii) = jointyw_bi(n, zsample2(:, j), y, l, Ups, ldh_Ups, &
+             nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        end do
+      else
+        do j = 1, Ntot1
+          call rchkusr
+          lglk1(j,ii) = jointyz_bi(n, zsample1(:, j), y, l, Ups, ldh_Ups, &
+             nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        end do
+        do j = 1, Ntot2
+          call rchkusr
+          lglk2(j,ii) = jointyz_bi(n, zsample2(:, j), y, l, Ups, ldh_Ups, &
+             nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        end do
+      end if
     end do
   case (3) ! Poisson
     do ii = 1, kg
@@ -227,7 +258,7 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
   use flogsumexp
   use bmargin
   use covfun
-  use jointymu
+  use pdfmu
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf
@@ -274,13 +305,13 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
          lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
-        lglk1(j,ii) = jointymu_gt(n, musample1(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsqdfsc, modeldfh, respdfh)
+        lglk1(j,ii) = logpdfmu_ga(n, musample1(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
       do j = 1, Ntot2
         call rchkusr
-        lglk2(j,ii) = jointymu_gt(n, musample2(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsqdfsc, modeldfh, respdfh)
+        lglk2(j,ii) = logpdfmu_ga(n, musample2(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
     end do
   case (1) ! Gaussian
@@ -290,13 +321,13 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
          lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
-        lglk1(j,ii) = jointymu_ga(n, musample1(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk1(j,ii) = logpdfmu_ga(n, musample1(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
       do j = 1, Ntot2
         call rchkusr
-        lglk2(j,ii) = jointymu_ga(n, musample2(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk2(j,ii) = logpdfmu_ga(n, musample2(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
     end do
   case (2) ! Binomial
@@ -306,13 +337,13 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
          lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
-        lglk1(j,ii) = jointymu_bi(n, musample1(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk1(j,ii) = logpdfmu_bi(n, musample1(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
       do j = 1, Ntot2
         call rchkusr
-        lglk2(j,ii) = jointymu_bi(n, musample2(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk2(j,ii) = logpdfmu_bi(n, musample2(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
     end do
   case (3) ! Poisson
@@ -322,13 +353,13 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
          lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
-        lglk1(j,ii) = jointymu_po(n, musample1(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk1(j,ii) = logpdfmu_po(n, musample1(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
       do j = 1, Ntot2
         call rchkusr
-        lglk2(j,ii) = jointymu_po(n, musample2(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk2(j,ii) = logpdfmu_po(n, musample2(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
     end do
   case (4) ! Gamma
@@ -338,13 +369,13 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
          lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
-        lglk1(j,ii) = jointymu_gm(n, musample1(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk1(j,ii) = logpdfmu_gm(n, musample1(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
       do j = 1, Ntot2
         call rchkusr
-        lglk2(j,ii) = jointymu_gm(n, musample2(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk2(j,ii) = logpdfmu_gm(n, musample2(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
     end do
   case (5) ! Binomial Asymmetric
@@ -354,13 +385,13 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
          lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
-        lglk1(j,ii) = jointymu_ba(n, musample1(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk1(j,ii) = logpdfmu_ba(n, musample1(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
       do j = 1, Ntot2
         call rchkusr
-        lglk2(j,ii) = jointymu_ba(n, musample2(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk2(j,ii) = logpdfmu_ba(n, musample2(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
     end do
   case (6) ! Binomial Asymmetric Decreasing
@@ -370,13 +401,29 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
          lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot1
         call rchkusr
-        lglk1(j,ii) = jointymu_bd(n, musample1(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk1(j,ii) = logpdfmu_bd(n, musample1(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
       do j = 1, Ntot2
         call rchkusr
-        lglk2(j,ii) = jointymu_bd(n, musample2(:, j), y, l, Ups, ldh_Ups, &
-           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk2(j,ii) = logpdfmu_bd(n, musample2(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
+      end do
+    end do
+  case (7) ! Binomial Walllace
+    do ii = 1, kg
+      nu = nulist(ii)
+      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
+         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
+      do j = 1, Ntot1
+        call rchkusr
+        lglk1(j,ii) = logpdfmu_bw(n, musample1(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
+      end do
+      do j = 1, Ntot2
+        call rchkusr
+        lglk2(j,ii) = logpdfmu_bw(n, musample2(:, j), Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, modeldfh)
       end do
     end do
   case default
@@ -418,3 +465,5 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
   end where
   zcv(:,1) = 1d0
 end subroutine bfspmu
+
+

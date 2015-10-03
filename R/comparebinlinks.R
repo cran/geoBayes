@@ -35,6 +35,8 @@
 ##' comparebinlinks("logit", 7) # The robit(7) approximates logit
 ##' comparebinlinks("probit", 1, prob1 = c(.5, .6, .7, .8, .9))
 ##' }
+##' @importFrom stats plogis pnorm pt qlogis qnorm qt optimize
+##' @importFrom graphics curve par
 ##' @export 
 comparebinlinks <- function (d1,d2,a=-8,b=8,n=2001,prob1=NULL,plot=TRUE) {
   ## d1, d2 - Degrees of freedom

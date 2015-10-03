@@ -16,6 +16,8 @@
 ##' @param reference Which model goes in the denominator.
 ##' @param transf Whether to use the transformed sample mu for the
 ##' computations. Otherwise it uses z.
+##' @param binwo For the binomial family, if use workaround when the
+##' untransformed sample is used.
 ##' @return A list with components
 ##' \itemize{
 ##' \item \code{logbf} A vector containing logarithm of the Bayes factors.
@@ -91,7 +93,7 @@
 ##' @importFrom sp spDists
 ##' @export 
 bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
-                    reference = 1, transf = FALSE){
+                    reference = 1, transf = FALSE, binwo = TRUE){
   method <- match.arg(method)
   imeth <- match(method, eval(formals()$method))
   classes <- sapply(runs, class)
@@ -122,40 +124,8 @@ the extra elements will be discarded")
   } else {
     stop ("Argument bfsize1 is a mix of proportions and sizes")
   }
-  
-  ## Choose sample
-  transf <- as.logical(transf)
-  if (transf) {
-    bfroutine <- "bfspmu"
-    sample <- lapply(runs, function(r) r[["mu"]][r[["whichobs"]], ])
-  } else {
-    bfroutine <- "bfspz"
-    sample <- lapply(runs, function(r) r[["z"]][r[["whichobs"]], ])
-  }
-  
-  Ntot1 <- sum(Nout1)
-  Nout2 <- Nout - Nout1
-  Ntot2 <- sum(Nout2)
-  if (nruns == 1) {
-    runs <- runs[[1]]
-    out <- list(logbf = 1, logLik1 = runs$logLik[1:Ntot1],
-                logLik2 = runs$logLik[-(1:Ntot1)],
-                isweights = rep.int(0, Ntot2),
-                controlvar = matrix(1, Ntot2, 1),
-                z = sample[[1]][, -(1:Ntot1), drop = FALSE],
-                N1 = Nout1, N2 = Nout2, 
-                betm0 = runs$betm0, betQ0 = runs$betQ0, ssqdf = runs$ssqdf,
-                ssqsc = runs$ssqsc, tsqdf = runs$tsqdf, tsqsc = runs$tsqsc,
-                dispersion = runs$dispersion, response = runs$response,
-                weights = runs$weights, modelmatrix = runs$modelmatrix,
-                locations = runs$locations,
-                distmat = sp::spDists(runs$locations), 
-                family = runs$family,
-                referencebf = 0, corrfcn = runs$corrfcn,
-                pnts = list(nu = runs$nu, phi = runs$phi, omg = runs$omg,
-                  kappa = runs$kappa))
-    return(out)
-  }
+
+  ## Extract model
   modelvars <- c("response", "weights", "modelmatrix", "family",
                  "betm0", "betQ0", "ssqdf", "ssqsc",
                  "dispersion", "tsqdf", "tsqsc", "locations", "corrfcn")
@@ -179,6 +149,55 @@ the extra elements will be discarded")
   tsqdf <- model$tsqdf
   tsqsc <- model$tsqsc
   corrfcn <- model$corrfcn
+  
+  ## Choose sample
+  transf <- as.logical(transf)
+  if (transf) {
+    bfroutine <- "bfspmu"
+    sample <- lapply(runs, function(r) r[["mu"]][r[["whichobs"]], ])
+  } else {
+    bfroutine <- "bfspz"
+    if (family == "binomial" && binwo) {
+      ifam <- -ifam
+      foo <- function (r) {
+        z <- r[["z"]][r[["whichobs"]], ]
+        nu <- r[["nu"]]
+        if (nu > 0) {
+          cnu <- 1 - 2/(8*nu+3)
+          return (sign(z)*cnu*sqrt(nu*log1p(z*z/nu)))
+        } else {
+          return (z)
+        }
+      }
+      sample <- lapply(runs, foo)
+    } else {
+      sample <- lapply(runs, function(r) r[["z"]][r[["whichobs"]], ])
+    }
+  }
+  Ntot1 <- sum(Nout1)
+  Nout2 <- Nout - Nout1
+  Ntot2 <- sum(Nout2)
+  if (nruns == 1) {
+    runs <- runs[[1]]
+    out <- list(logbf = 1, logLik1 = runs$logLik[1:Ntot1],
+                logLik2 = runs$logLik[-(1:Ntot1)],
+                isweights = rep.int(0, Ntot2),
+                controlvar = matrix(1, Ntot2, 1),
+                z = sample[[1]][, -(1:Ntot1), drop = FALSE],
+                N1 = Nout1, N2 = Nout2, 
+                betm0 = runs$betm0, betQ0 = runs$betQ0, ssqdf = runs$ssqdf,
+                ssqsc = runs$ssqsc, tsqdf = runs$tsqdf, tsqsc = runs$tsqsc,
+                dispersion = runs$dispersion, response = runs$response,
+                weights = runs$weights, modelmatrix = runs$modelmatrix,
+                locations = runs$locations,
+                distmat = sp::spDists(runs$locations), 
+                family = runs$family,
+                referencebf = 0, corrfcn = runs$corrfcn, transf = transf,
+                binwo = binwo, 
+                pnts = list(nu = runs$nu, phi = runs$phi, omg = runs$omg,
+                  kappa = runs$kappa))
+    return(out)
+  }
   needkappa <- corrfcn %in% c("matern", "powerexponential")
   icf <- match(corrfcn, c("matern", "spherical", "powerexponential"))
   loc <- model$locations
@@ -280,7 +299,7 @@ the extra elements will be discarded")
               betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc, tsqdf = tsqdf,
               tsqsc = tsqsc, dispersion = dispersion, response = y, weights = l,
               modelmatrix = F, locations = loc, distmat = dm, family = family,
-              corrfcn = corrfcn, transf = transf, 
+              corrfcn = corrfcn, transf = transf, binwo = binwo, 
               pnts = list(nu = nu_pnts, phi = phi_pnts, omg = omg_pnts,
                 kappa = kappa_pnts))
   out

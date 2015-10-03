@@ -1,3 +1,8 @@
+0.3.151002
+* Please update to this version as a number of bugs have been corrected. 
+* Implement a fast workaround for for the untransformed binomial-robit model.
+* New binomial link family Wallace.binomial.
+
 0.2.150402
 * Fixed a bug for the transformed gaussian model.
 * Update of the fortran code.

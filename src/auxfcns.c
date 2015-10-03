@@ -61,7 +61,17 @@ double F77_SUB(logborpt)(double *q, double *d)
 
 double F77_SUB(quantt)(double *p, double *d)
 {
-  return qt((*p),(*d),1,1);
+  if (*d < 1.0) {
+    double p2m1 = 2*expm1(*p) + 1.0; // as p is log(p) p2m1 = 2*p - 1
+    if (p2m1 > 0.0) 
+      return sqrt(qf(p2m1,1.0,*d,1,0));
+    else if (p2m1 < 0.0)
+      return -sqrt(qf(-p2m1,1.0,*d,1,0));
+    else
+      return 0.0;
+  }
+  else
+    return qt((*p),(*d),1,1); // This is slow for d < 1
 }
 
 double F77_SUB(logpdft)(double *x, double *d)

@@ -2,8 +2,8 @@
 !! 
 !! Author: Evangelos Evangelou
 !! Created: Tue, 15 Jul, 2014 16:59 (BST)
-!! Last-Updated: Fri, 27 Mar, 2015 11:07 (GMT)
-!!     Update #: 233
+!! Last-Updated: Thu, 9 Apr, 2015 12:14 (BST)
+!!     Update #: 241
 !! 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -15,7 +15,7 @@ module mcmcfcns
   double precision, parameter :: bigpos = huge(1d0), bigneg = -bigpos
   public ini_mcmc, end_mcmc, sample_ssq, sample_tsq, sample_beta, &
      sample_cov, sample_z0, samplez_bi, samplez_po, samplez_gm, &
-     samplez_ga, samplez_gt, samplez_ba, samplez_bd
+     samplez_ga, samplez_gt, samplez_ba, samplez_bd, samplez_bw
 
 contains
   subroutine ini_mcmc (lglk, z, p0, phi, nsq, y1, y2, F, kappa, icf, dm, &
@@ -120,6 +120,13 @@ contains
       do i = 1, n
         p0(i) = invlink_bd(z(i),dft)
         tsqyy = tsqyy + logpdfy_bi(y2(i), y1(i), p0(i))
+      end do
+      lglk = lglk + tsqyy/tsq
+    case (7) ! Binomial Wallace
+      tsqyy = 0d0
+      do i = 1, n
+        p0(i) = invlink_bw(z(i),dft)
+        tsqyy = tsqyy + logpdfy_bi(y1(i), y2(i), p0(i))
       end do
       lglk = lglk + tsqyy/tsq
     case default
@@ -331,6 +338,52 @@ contains
       end if
     end do
   end subroutine samplez_bi
+
+
+!!! Sample GRF with Binomial response
+!!! 
+!!! @param z    The GRF sample
+!!! @param ys   Number of successes at each location
+!!! @param yf   Number of failures
+!!! @param dft  Link parameter
+!!! @param ssq  Variance parameter
+!!! @param tsq  Dispersion parameter
+!!! @param n	Number of locations
+  subroutine samplez_bw (lglk,z,p0,ys,yf,dft,ssq,tsq,zmxi,Ups,Upsz,zUz, &
+     modeldf,n)
+    use interfaces
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: ys(n), yf(n), dft, ssq, tsq, Ups(n,n), &
+       modeldf
+    double precision, intent(inout) :: z(n), lglk, p0(n), zmxi(n), Upsz(n),&
+       zUz
+    integer j
+    double precision uj(n), z_mean, u, zz, pp, ll
+
+    do j = 1, n
+      uj = (/Ups(1:j,j),Ups(j,j+1:n)/) ! jth column of Ups
+      z_mean = z(j) - Upsz(j)/uj(j)
+      u = randnorm()
+      zz = u*sqrt(ssq/uj(j)) + z_mean
+      pp = invlink_bw(zz,dft)
+      ll = logdffy_bi(ys(j), yf(j), pp, p0(j))
+      ll = ll/tsq
+      if (ll .le. bigneg .or. ll .ne. ll) return
+      u = randunif()
+      u = log(u)
+      if (u .lt. ll) then ! Update z(j)
+        u = zz - z(j)
+        z(j) = zz
+        p0(j) = pp
+        zmxi(j) = zmxi(j) + u
+        Upsz = Upsz + uj*u
+        zz = zUz
+        zUz = zUz + 2d0*u*Upsz(j) - uj(j)*u*u
+        lglk = lglk + ll - (.5d0*modeldf)*(log(zUz) - log(zz))
+      end if
+    end do
+  end subroutine samplez_bw
 
 !!! Sample GRF with Binomial response and asymmetric link fcn
 !!! 
@@ -614,7 +667,7 @@ subroutine mcspsample (lglk, z, z0, gmu, gmu0, &
 
   use mcmcfcns
   use linkfcn, only: invlink_ga, invlink_bi, invlink_po, invlink_gm, &
-     invlink_ba, invlink_bd
+     invlink_ba, invlink_bd, invlink_bw
   implicit none 
   integer, intent(in) :: Nout, Nbi, Nthin, n, n0, p, ifam, icf
   double precision, intent(in) :: y(n), l(n), F(n,p), F0(n0,p), &
@@ -867,6 +920,44 @@ subroutine mcspsample (lglk, z, z0, gmu, gmu0, &
       end if
       call rchkusr
     end do
+  case (7) ! Binomial Wallace
+    do j = 1, max(Nbi,Nthin)
+      call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
+         dm,F,betQ0,n,p,kappa,icf,acc,lup,zmxi,T,TiF,FTF,Ups, &
+         Upsz,lnewcov,zUz,ldh_Ups,modeldf,ssqdfsc)
+      call sample_ssq(ssq(i),modeldf,zUz)
+      call samplez_bw(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,zmxi,Ups,&
+         Upsz,zUz,modeldf,n)
+    end do
+    call sample_beta(beta(:,i),z(:,i),ssq(i),n,p,betQm0,TiF,FTF)
+    if (n0 .gt. 0) then
+      call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+         n0,n,p,dmdm0,F,F0,kappa,icf,T,z0_ups,TC,FCTF,lnewcov)
+      gmu0(:,i) = invlink_bw(z0(:,i), dft)
+    end if
+    call rchkusr
+    do i = 2, Nout
+      lglk(i) = lglk(i-1)
+      z(:,i) = z(:,i-1)
+      gmu(:,i) = gmu(:,i-1)
+      phi(i) = phi(i-1)
+      nsq(i) = nsq(i-1)
+      do j = 1, Nthin
+        call sample_cov(lglk(i),phi(i),nsq(i),phipars,nsqpars,phisc,nsqsc,&
+           dm,F,betQ0,n,p,kappa,icf,acc,lup,zmxi,T,TiF,FTF,Ups, &
+         Upsz,lnewcov,zUz,ldh_Ups,modeldf,ssqdfsc)
+        call sample_ssq(ssq(i),modeldf,zUz)
+        call samplez_bw(lglk(i),z(:,i),gmu(:,i),y,l,dft,ssq(i),tsq,zmxi,&
+           Ups,Upsz,zUz,modeldf,n)
+      end do
+      call sample_beta(beta(:,i),z(:,i),ssq(i),n,p,betQm0,TiF,FTF)
+      if (n0 .gt. 0) then
+        call sample_z0(z0(:,i),z(:,i),beta(:,i),ssq(i),phi(i),nsq(i),&
+           n0,n,p,dmdm0,F,F0,kappa,icf,T,z0_ups,TC,FCTF,lnewcov)
+        gmu0(:,i) = invlink_bw(z0(:,i), dft)
+      end if
+      call rchkusr
+    end do
   case default
     call rexit ("Unrecognised family")
   end select
@@ -1105,6 +1196,36 @@ subroutine samplemulti (lglk, z, gmu, phi, nsq, y, l, F, &
       call end_mcmc
     end do
     gmu = 1d0 - exp(gmu)
+  case (7) ! Binomial Wallace
+    tsq = tsqin
+    do k = 1, kg
+      i = i + 1
+      call ini_mcmc(lglk(i),z(:,i),gmu(:,i),phi(k),nsq(k),y,l,F,kappa(k),icf,&
+         dm,betm0,betQ0,ssqdf,ssqsc,tsqdf,tsqin,nu(k),n,p,ifam,lup,&
+         betQm0,zmxi,T,TiF,FTF,Ups,Upsz,zUz,ldh_Ups,modeldf,ssqdfsc,respdf,&
+         tsqdfsc,tsqyy,lnewcov) 
+      call rchkusr
+      do j = 1, max(Nbi(k),Nthin(k))
+        call sample_ssq(ssq,modeldf,zUz)
+        call samplez_bw(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,zmxi,Ups,&
+           Upsz,zUz,modeldf,n)
+      end do
+      call rchkusr
+      do ii = 2, Nout(k)
+        i = i + 1
+        lglk(i) = lglk(i-1)
+        z(:,i) = z(:,i-1)
+        gmu(:,i) = gmu(:,i-1)
+        do j = 1, Nthin(k)
+          call sample_ssq(ssq,modeldf,zUz)
+          call samplez_bw(lglk(i),z(:,i),gmu(:,i),y,l,nu(k),ssq,tsq,zmxi,&
+             Ups,Upsz,zUz,modeldf,n)
+        end do
+        call rchkusr
+      end do
+      call end_mcmc
+    end do
+    gmu = exp(gmu)
   case default
     call rexit ("Unrecognised family")
   end select
@@ -1267,6 +1388,27 @@ subroutine mcspsamtry (lglk, z, phi, nsq, acc, y, l, F, &
          Upsz,lnewcov,zUz,ldh_Ups,modeldf,ssqdfsc)
       call sample_ssq(ssq,modeldf,zUz)
       call samplez_bd(lglk1,z1,gmu,y,l,dft,ssq,tsq,zmxi,Ups,Upsz,zUz,modeldf,n)
+      lglk(i) = lglk1
+      z(:,i) = z1
+      phi(i) = phi1
+      nsq(i) = nsq1
+      if (Npr .gt. 0 .and. mod(i,Npr) .eq. 0) then
+        iap = 100*ia/Npr
+!         write (label,'(i9,2x,i8)') i, iap
+!         call intpr (label,nl,0,0)
+        call msgmci (i, iap)
+        acc = acc + ia
+        ia = 0
+        call rchkusr
+      end if
+    end do
+  case (7) ! Binomial Wallace
+    do i = 1, Nout
+      call sample_cov(lglk1,phi1,nsq1,phipars,nsqpars,phisc,nsqsc,dm,&
+         F,betQ0,n,p,kappa,icf,ia,lup,zmxi,T,TiF,FTF,Ups, &
+         Upsz,lnewcov,zUz,ldh_Ups,modeldf,ssqdfsc)
+      call sample_ssq(ssq,modeldf,zUz)
+      call samplez_bw(lglk1,z1,gmu,y,l,dft,ssq,tsq,zmxi,Ups,Upsz,zUz,modeldf,n)
       lglk(i) = lglk1
       z(:,i) = z1
       phi(i) = phi1

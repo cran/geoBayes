@@ -214,6 +214,23 @@ contains
     condyz_bi = lfy/tsq
   end function condyz_bi
 
+  function condyz_bw (n, y1, y2, z, nu, tsq) ! Bin Wallace
+    use pdfy, only: logpdfy_bi
+    use linkfcn, only: invlink_bw
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
+    double precision condyz_bw
+    integer i
+    double precision mu, lfy
+    lfy = 0d0
+    do i = 1, n
+      mu = invlink_bw(z(i),nu)
+      lfy = lfy + logpdfy_bi(y1(i), y2(i), mu)
+    end do
+    condyz_bw = lfy/tsq
+  end function condyz_bw
+
   function condyz_po (n, y1, y2, z, nu, tsq)
     use pdfy, only: logpdfy_po
     use linkfcn, only: invlink_po
@@ -343,6 +360,22 @@ contains
     jointyz_bi = lfz + lfy
   end function jointyz_bi
 
+  function jointyz_bw (n, z, y, l, Ups, ldh_Ups, &
+     nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+    use condyz, only: condyz_bw
+    use pdfz
+    implicit none
+    logical, intent(in) :: lmxi
+    integer, intent(in) :: n
+    double precision, intent(in) :: z(n), y(n), l(n), Ups(n, n), &
+       ldh_Ups, ssqdfsc, tsq, nu, modeldfh, xi(n)
+    double precision jointyz_bw
+    double precision lfz, lfy
+    lfz = logpdfz(n, z, Ups, ldh_Ups, xi, lmxi, ssqdfsc, modeldfh)
+    lfy = condyz_bw(n, y, l, z, nu, tsq)
+    jointyz_bw = lfz + lfy
+  end function jointyz_bw
+
   function jointyz_po (n, z, y, l, Ups, ldh_Ups, &
      nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
     use condyz, only: condyz_po
@@ -463,7 +496,7 @@ contains
 
   function logpdfmu_bi (n, mu, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, modeldfh)
     use linkfcn, only: flink_bi
-    use interfaces, only: flog1pexp, flog1p ! logpdft, logpdfnorm, logpdflogis
+    use interfaces, only: flog1pexp, flog1p, logpdft!, logpdfnorm, logpdflogis
     use pdfz
     implicit none
     logical, intent(in) :: lmxi
@@ -482,10 +515,8 @@ contains
     logjac = 0d0
     if (nu .gt. 0d0) then ! pdf t
       do i = 1, n
-        tmp = z(i)*z(i)/nu
-        logjac = logjac + flog1p(tmp)
+        logjac = logjac - logpdft(z(i), nu)
       end do
-      logjac = .5d0*logjac*(nu + 1d0)
     else if (nu .lt. 0d0) then ! pdf logistic 
       do i = 1, n
         tmp = -z(i)/lgits
@@ -622,6 +653,40 @@ contains
     ! Put all together
     logpdfmu_bd = lfz + logjac
   end function logpdfmu_bd
+
+  function logpdfmu_bw (n, mu, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, modeldfh)
+    use linkfcn, only: flink_bw
+    use interfaces, only: flog1p
+    use pdfz
+    implicit none
+    logical, intent(in) :: lmxi
+    integer, intent(in) :: n
+    double precision, intent(in) :: mu(n), Ups(n, n), &
+       ldh_Ups, nu, xi(n), ssqdfsc, modeldfh
+    double precision logpdfmu_bw
+    integer i
+    double precision z(n), logjac, logjac1, logjac2, lfz, cnu, log1pzsq 
+    ! Linear predictor
+    do i = 1, n
+      z(i) = flink_bw(mu(i), nu)
+    end do
+    ! Jacobian
+    cnu = (8d0*nu + 1d0)/(8d0*nu + 3d0)
+    logjac1 = 0d0
+    logjac2 = 0d0
+    do i = 1, n
+      if (z(i) .ne. 0d0) then
+        log1pzsq = flog1p(z(i)*z(i)/nu)
+        logjac1 = logjac1 + log(abs(z(i))) - .5d0*log(log1pzsq) - log1pzsq
+        logjac2 = logjac2 - log1pzsq
+      end if
+    end do
+    logjac = .5d0*n*log(nu) - n*log(cnu) - logjac1 - .5d0*cnu*cnu*nu*logjac2 
+    ! log-likelihood for z
+    lfz = logpdfz(n, z, Ups, ldh_Ups, xi, lmxi, ssqdfsc, modeldfh)
+    ! Put all together
+    logpdfmu_bw = lfz + logjac
+  end function logpdfmu_bw
 end module pdfmu
 
 
@@ -743,6 +808,21 @@ contains
     end do
     condymu_bd = lfy/tsq
   end function condymu_bd
+
+  function condymu_bw (n, y1, y2, mu, tsq)
+    use pdfy, only: logpdfy_bi
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: y1(n), y2(n), mu(n), tsq
+    double precision condymu_bw
+    integer i
+    double precision lfy
+    lfy = 0d0
+    do i = 1, n
+      lfy = lfy + logpdfy_bi(y1(i), y2(i), mu(i))
+    end do
+    condymu_bw = lfy/tsq
+  end function condymu_bw
 end module condymu
 
 
@@ -874,4 +954,20 @@ contains
     lfy = condymu_bd(n, y, l, mu, tsq)
     jointymu_bd = lfmu + lfy
   end function jointymu_bd
+
+  function jointymu_bw (n, mu, y, l, Ups, ldh_Ups, &
+     nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+    use condymu, only: condymu_bw
+    use pdfmu, only: logpdfmu_bw
+    implicit none
+    logical, intent(in) :: lmxi
+    integer, intent(in) :: n
+    double precision, intent(in) :: mu(n), y(n), l(n), Ups(n, n), &
+       ldh_Ups, nu, xi(n), ssqdfsc, tsq, modeldfh
+    double precision jointymu_bw
+    double precision lfmu, lfy
+    lfmu = logpdfmu_bw(n, mu, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, modeldfh)
+    lfy = condymu_bw(n, y, l, mu, tsq)
+    jointymu_bw = lfmu + lfy
+  end function jointymu_bw
 end module jointymu

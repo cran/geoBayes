@@ -178,10 +178,12 @@
 ##' linear mixed model with flexible link functions. Technical report,
 ##' Iowa State University.
 ##' @importFrom sp spDists
+##' @importFrom stats model.matrix model.response model.weights as.formula
 ##' @export 
 ebsglmm <- function (formula,
                      family = c("gaussian", "binomial", "poisson", "Gamma",
-                                "GEVbinomial", "GEVDbinomial"),
+                       "GEV.binomial", "GEVD.binomial",
+                       "Wallace.binomial"),
                      data, weights, subset, atsample, parskel, paroptim,
                      corrfcn = c("matern", "spherical", "powerexponential"), 
                      Nout, Nthin = 1, Nbi = 0, Npro, Nprt = 1, Nprb = 0, 
@@ -251,7 +253,8 @@ grater than 3.")
   l <- if (is.null(l)) rep.int(1.0, n) else as.double(l)
   if (any(!is.finite(l))) stop ("Non-finite values in the weights")
   if (any(l <= 0)) stop ("Non-positive weights not allowed")
-  if (family %in% c("binomial", "GEVbinomial", "GEVDbinomial")) {
+  if (family %in% c("binomial", "GEV.binomial", "GEVD.binomial",
+                    "Wallace.binomial")) {
     l <- l - y # Number of failures
   }
   F <- FF[ii, , drop = FALSE]
@@ -418,8 +421,9 @@ components"))
   ## Starting value for z
   if (missing(zstart)) {
     zstart <- switch(family,
-                     binomial = (y+.5)/(y+l+1),
-                     GEVbinomial =, GEVDbinomial = (l+.5)/(y+l+1), 
+                     binomial =, Wallace.binomial =,
+                     GEV.binomial = (y+.5)/(y+l+1),
+                     GEVD.binomial = (l+.5)/(y+l+1), 
                      poisson = (y+.5)/(l+1), gaussian = y/l)
     zstart <- sapply(1:nruns,
                      function (i) linkfcn(zstart, linkp[i], family))
@@ -803,6 +807,7 @@ overflow. Control variates corrections will not be used.")
 ##' Bayesian Methodology with Applications}, Boca Raton, FL, USA, CRC
 ##' Press.
 ##' @importFrom sp spDists
+##' @importFrom stats model.matrix model.response model.weights as.formula
 ##' @export 
 ebstrga <- function (formula,
                      data, weights, subset, atsample, parskel, paroptim,
@@ -1306,8 +1311,8 @@ overflow. Control variates corrections will not be used.")
 the binomial can also be the character \"logit\" or \"probit\"")
   } else {
     nu <- as.double(linkp)
-    if (family == "binomial" && any(nu <= 0)) {
-      stop ("The robit link parameter must be positive")
+    if ((family %in% c("binomial", "Wallace.binomial")) && any(nu <= 0)) {
+      stop ("The link parameter must be positive")
     }
   }
 

@@ -177,6 +177,8 @@ overflow. Control variates corrections will not be used.")
 
   if (transf) {
     froutine <- "calcbmu"
+  } else if ((family == "binomial") && bf1obj$binwo) {
+    froutine <- "calcbw"
   } else {
     froutine <- "calcbz"
   }
@@ -268,6 +270,7 @@ overflow. Control variates corrections will not be used.")
 ##' plotbf2(bfall, c("phi", "omg"))
 ##' plotbf2(bfall, c("phi", "omg"), profile = TRUE, type = "b", ylab="log(BF)")
 ##' }
+##' @importFrom graphics plot points par title
 ##' @export 
 plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
                      profile = length(pars) > 2, ...) {

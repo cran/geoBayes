@@ -187,10 +187,11 @@
 ##' summary(emcmc[, c("phi", "omg", "beta", "ssq")])
 ##' }
 ##' @importFrom sp spDists
+##' @importFrom stats model.matrix model.response model.weights as.formula
 ##' @export 
 mcsglmm <- function (formula,
                      family = c("gaussian", "binomial", "poisson", "Gamma",
-                                "GEVbinomial", "GEVDbinomial"),
+                       "GEV.binomial", "GEVD.binomial", "Wallace.binomial"),
                      data, weights, subset, atsample,
                      Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc,
                      phipars, omgpars,
@@ -247,7 +248,8 @@ mcsglmm <- function (formula,
   l <- if (is.null(l)) rep.int(1.0, k) else as.double(l)
   if (any(!is.finite(l))) stop ("Non-finite values in the weights")
   if (any(l <= 0)) stop ("Non-positive weights not allowed")
-  if (family %in% c("binomial", "GEVbinomial", "GEVDbinomial")) {
+  if (family %in% c("binomial", "GEV.binomial", "GEVD.binomial",
+                    "Wallace.binomial")) {
     l <- l - y # Number of failures
   }
   F <- FF[ii, , drop = FALSE]
@@ -350,8 +352,8 @@ grater than 3.")
 the binomial can also be the character \"logit\" or \"probit\"")
   } else {
     nu <- as.double(linkp)
-    if (family == "binomial" && any(nu <= 0)) {
-      stop ("The robit link parameter must be positive")
+    if ((family %in% c("binomial", "Wallace.binomial")) && any(nu <= 0)) {
+      stop ("The link parameter must be positive")
     }
   }
 
@@ -371,8 +373,9 @@ the binomial can also be the character \"logit\" or \"probit\"")
   ## Starting values
   if (missing(zstart)) {
     zstart <- switch(family,
-                     binomial =, GEVbinomial = (y+.5)/(y+l+1),
-                     GEVDbinomial = (l+.5)/(y+l+1),
+                     binomial =, Wallace.binomial =,
+                     GEV.binomial = (y+.5)/(y+l+1),
+                     GEVD.binomial = (l+.5)/(y+l+1),
                      poisson = (y+.5)/(l+1), Gamma =, gaussian = y/l)
     zstart <- linkfcn(zstart, linkp, family)
     ## zstart <- pmax(zstart, -1e8) + rnorm(k, 0, sqrt(ssqsc))
@@ -667,6 +670,7 @@ the binomial can also be the character \"logit\" or \"probit\"")
 ##'                   phisc = phisc, omgsc = omgsc, test=FALSE)
 ##' }
 ##' @importFrom sp spDists
+##' @importFrom stats model.matrix model.response model.weights as.formula
 ##' @export 
 mcstrga <- function (formula,
                      data, weights, subset, atsample,
