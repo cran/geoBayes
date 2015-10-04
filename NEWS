@@ -1,4 +1,7 @@
-0.3.151002
+0.3.1
+* This version compiles with parallel make.
+
+0.3.0
 * Please update to this version as a number of bugs have been corrected. 
 * Implement a fast workaround for for the untransformed binomial-robit model.
 * New binomial link family Wallace.binomial.

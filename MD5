@@ -1,6 +1,6 @@
-f3d980affae61b02bcf0d8d76675df08 *DESCRIPTION
+a27d8045c7d0bb04c072fcdf62247e8f *DESCRIPTION
 f63079297f04a4d98e872250dc17c011 *NAMESPACE
-ae63de0715fddfee6cdcceecc48afd72 *NEWS
+8d05522f8f6e2e4b8f07f8f606ff0b47 *NEWS
 2cf9eeea84a7a253af0a47058ad6fa46 *R/bf.R
 b6fc626a87282897336bd0515cfbc262 *R/bfse.R
 6ab890979d7d52ab60e1fb8bd3bf8d43 *R/calcbf.R
@@ -36,7 +36,7 @@ b7348299d3478e4fbcb509ad442b4c08 *man/mcstrga.Rd
 26a7b153fdeb24cac4d47f8ba6481db5 *man/plotbf2.Rd
 6e926fe87a659adf1afc8dea2373dd9c *man/rhizoctonia.Rd
 33cea86597b49d4e19c9caeff735d3a0 *man/stackdata.Rd
-788647ac34352c8791560c4be29964e0 *src/Makevars
+b5078ec9b20d275180de95c0d842225a *src/Makevars
 06f55e7c5d79be5313b8d3d6d1201413 *src/auxfcns.c
 5890096128d3173ffaae4238eb841134 *src/bfsp.f90
 7341dee398ae539c96c63746a403de45 *src/bmargin.f90

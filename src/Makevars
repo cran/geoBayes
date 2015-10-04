@@ -5,8 +5,8 @@ PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 
 CSRC = auxfcns.c msg.c
 FMODSRC = interfaces.f90 msgmc.f90 flogsumexp.f90 lbfgsbmod.f90 pdfy.f90 \
-  pdfw.f90
-FSRC = bmargin.f90 covfun.f90 linkfcn.f90 mcsp2.f90 bfsp.f90 calcb2.f90 \
+  covfun.f90 pdfw.f90
+FSRC = bmargin.f90 linkfcn.f90 mcsp2.f90 bfsp.f90 calcb2.f90 \
   llik.f90 mcspz0.f90
 
 # Define the order of compilation
@@ -17,10 +17,11 @@ $(SHLIB): $(OBJECTS)
 # Setup dependencies for parallel make
 bfsp.o: interfaces.o linkfcn.o flogsumexp.o bmargin.o covfun.o pdfy.o pdfw.o
 bmargin.o: lbfgsbmod.o flogsumexp.o
-calcb2.o: interfaces.o flogsumexp.o covfun.o linkfcn.o pdfy.o pdfw.o
+calcb2.o: interfaces.o flogsumexp.o covfun.o pdfy.o pdfw.o
 covfun.o: interfaces.o
 linkfcn.o: interfaces.o
-pdfy.o: linkfcn.o
+pdfy.o: interfaces.o linkfcn.o
 mcsp2.o: linkfcn.o interfaces.o covfun.o msgmc.o pdfy.o
-llik.o: interfaces.o linkfcn.o covfun.o pdfy.o
-mcspz0.o: interfaces.o covfun.o
+llik.o: covfun.o pdfy.o pdfw.o
+mcspz0.o: interfaces.o covfun.o pdfy.o
+pdfw.o: interfaces.o pdfy.o
