@@ -59,10 +59,10 @@
 ##' factors from Markov chain output. \emph{Statistica Sinica}, 20(2),
 ##' 537. 
 ##'
-##' Roy, V., Evangelou, E., and Zhu, Z. (2014). Efficient estimation
+##' Roy, V., Evangelou, E., and Zhu, Z. (2015). Efficient estimation
 ##' and prediction for the Bayesian spatial generalized linear mixed
-##' model with flexible link functions. Technical report, Iowa State
-##' University.
+##' model with flexible link functions. \emph{Biometrics}.
+##' \url{http://dx.doi.org/10.1111/biom.12371}
 ##' @export 
 bf2new <- function (bf1obj, linkp, phi, omg, kappa, useCV = TRUE) {
 
@@ -141,12 +141,12 @@ bf2new <- function (bf1obj, linkp, phi, omg, kappa, useCV = TRUE) {
   }
   phi <- as.double(phi)
   if (any(phi < 0)) stop ("Argument phi must be non-negative")
+  n_phi <- length(phi)
   if (missing(omg) || is.null(omg)) {
     omg <- unique(bf1obj$pnts$omg)
   } else if (!is.numeric(omg)) {
     stop ("Argument omg must be numeric or NULL")
   }
-  n_phi <- length(phi)
   omg <- as.double(omg)
   if (any(omg < 0)) stop ("Argument omg must be non-negative")
   n_omg <- length(omg)
@@ -156,10 +156,10 @@ bf2new <- function (bf1obj, linkp, phi, omg, kappa, useCV = TRUE) {
     stop ("Argument kappa must be numeric or NULL")
   }
   kappa <- as.double(kappa)
-  if (any(kappa < 0) & corrfcn %in% c("matern", "powerexponential")) {
+  if (corrfcn %in% c("matern", "powerexponential") && any(kappa < 0)) {
     stop ("Argument kappa cannot be negative")
   }
-  if (any(kappa > 2) & corrfcn == "powerexponential") {
+  if (corrfcn == "powerexponential" && any(kappa > 2)) {
     stop ("Argument kappa cannot be more than 2")
   }
   n_kappa <- length(kappa)
@@ -326,6 +326,7 @@ plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
   } else if (ptype == "profile") {
     ii <- as.list(rep(TRUE, N))
     oldpar <- par(mfrow = c(1, npars))
+    on.exit(par(oldpar), add = TRUE)
     for (i in 1:npars) {
       bf <- apply(bf2obj[["logbf"]], ipar[i], max)
       pdata <- data.frame(bf2obj[pars[i]], logbf = bf)
@@ -341,7 +342,6 @@ plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
                 kappa = expression(kappa)))
       }
     }
-    par(oldpar)
   }
   invisible()
 }
@@ -557,6 +557,8 @@ overflow. Control variates corrections will not be used.")
   if (useCV) {
     if (transf) {
       froutine <- "calcbmu_cv"
+    } else if ((family == "binomial") && bf1obj$binwo) {
+      froutine <- "calcbw_cv"
     } else {
       froutine <- "calcbz_cv"
     }
@@ -577,6 +579,8 @@ overflow. Control variates corrections will not be used.")
   } else {
     if (transf) {
       froutine <- "calcbmu_st"
+    } else if ((family == "binomial") && bf1obj$binwo) {
+      froutine <- "calcbw_st"
     } else {
       froutine <- "calcbz_st"
     }

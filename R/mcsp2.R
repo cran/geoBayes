@@ -326,26 +326,34 @@ mcsglmm <- function (formula,
 
   ## Other fixed parameters
   kappa <- if (needkappa) as.double(kappa) else 0
-  if (kappa < 0 & corrfcn %in% c("matern", "powerexponential")) {
+  if (kappa < 0 && corrfcn %in% c("matern", "powerexponential")) {
     stop ("Argument kappa cannot be negative")
   }
-  if (kappa > 2 & corrfcn == "powerexponential") {
+  if (kappa > 2 && corrfcn == "powerexponential") {
     stop ("Argument kappa cannot be more than 2")
   }
-  if (corrfcn == "spherical" & NCOL(loc) > 3) {
+  if (corrfcn == "spherical" && NCOL(loc) > 3) {
     stop ("Cannot use the spherical correlation for dimensions
 grater than 3.")
   }
   dispersion <- as.double(dispersion)
   if (dispersion <= 0) stop ("Invalid argument dispersion")
 
-  if (is.character(linkp) | is.factor(linkp)) {
+  if (is.character(linkp) || is.factor(linkp)) {
+    linkp <- as.character(linkp)
     if (family == "binomial") {
       if (all(linkp == "logit")) {
         nu <- -1
       } else if (all(linkp == "probit")) {
         nu <- 0
-      } else stop ("Cannot recognise character link for binomial")
+      } else {
+        nu <- as.numeric(linkp)
+        if (any(is.na(nu))) {
+          stop ("Cannot recognise character link for binomial")
+        } else if (any(nu <= 0)) {
+          stop ("The robit link parameter must be positive")
+        }
+      }
     } else stop ("Character link is only allowed for binomial")
   } else if (!is.numeric(linkp)) {
     stop ("Element linkp in parameters must be numeric, or in the case of
@@ -807,13 +815,13 @@ mcstrga <- function (formula,
 
   ## Other fixed parameters
   kappa <- if (needkappa) as.double(kappa) else 0
-  if (kappa < 0 & corrfcn %in% c("matern", "powerexponential")) {
+  if (kappa < 0 && corrfcn %in% c("matern", "powerexponential")) {
     stop ("Argument kappa cannot be negative")
   }
-  if (kappa > 2 & corrfcn == "powerexponential") {
+  if (kappa > 2 && corrfcn == "powerexponential") {
     stop ("Argument kappa cannot be more than 2")
   }
-  if (corrfcn == "spherical" & NCOL(loc) > 3) {
+  if (corrfcn == "spherical" && NCOL(loc) > 3) {
     stop ("Cannot use the spherical correlation for dimensions
 grater than 3.")
   }

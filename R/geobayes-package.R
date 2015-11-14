@@ -27,9 +27,9 @@
 ##' Bayesian Methodology with Applications}, Boca Raton, FL, USA, CRC
 ##' Press.
 ##'
-##' Roy, V., Evangelou, E., and Zhu, Z. (2014). Efficient estimation
+##' Roy, V., Evangelou, E., and Zhu, Z. (2015). Efficient estimation
 ##' and prediction for the Bayesian spatial generalized linear mixed
-##' model with flexible link functions. Technical report, Iowa State
-##' University.
+##' model with flexible link functions. \emph{Biometrics}.
+##' \url{http://dx.doi.org/10.1111/biom.12371}
 ##' @keywords package
 NULL

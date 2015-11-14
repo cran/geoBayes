@@ -173,10 +173,10 @@
 ##'                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
 ##'                dispersion = 1, useCV=TRUE)
 ##'}
-##' @references Roy, V., Evangelou, E., and Zhu, Z. (2014). Efficient
-##' estimation and prediction for the Bayesian spatial generalized
-##' linear mixed model with flexible link functions. Technical report,
-##' Iowa State University.
+##' @references Roy, V., Evangelou, E., and Zhu, Z. (2015). Efficient estimation
+##' and prediction for the Bayesian spatial generalized linear mixed
+##' model with flexible link functions. \emph{Biometrics}.
+##' \url{http://dx.doi.org/10.1111/biom.12371}
 ##' @importFrom sp spDists
 ##' @importFrom stats model.matrix model.response model.weights as.formula
 ##' @export 
@@ -594,10 +594,10 @@ overflow. Control variates corrections will not be used.")
     Nprt <- as.integer(Nprt)
     Nprb <- as.integer(Nprb)
     lglks <- numeric(Npro)
-    zs <- matrix(0, n, Npro)
+    zs <- gmus <- matrix(0, n, Npro)
     zs[, 1] <- rowMeans(z[, seq(1 + c(0, Nout[-nruns])[imaxlogbf],
                                 Nout[imaxlogbf])])
-    z0s <- matrix(0, n0, Npro)
+    z0s <- gmu0s <- matrix(0, n0, Npro)
     beta <- matrix(0, p, Npro)
     ssq <- numeric(Npro)
     acc <- 0L
@@ -606,7 +606,7 @@ overflow. Control variates corrections will not be used.")
     tmppars <- rep.int(0, 4)
     tm4 <- system.time({
       RUN4 <- .Fortran("mcspsample", ll = lglks, z = zs, z0 = z0s,
-                       mu = zs, mu0 = z0s, 
+                       mu = gmus, mu0 = gmu0s, 
                        beta = beta, ssq = ssq, as.double(phis), as.double(omgs),
                        acc = acc,
                        as.double(y), as.double(l), as.double(F), as.double(F0),
@@ -1214,10 +1214,10 @@ overflow. Control variates corrections will not be used.")
     Nprt <- as.integer(Nprt)
     Nprb <- as.integer(Nprb)
     lglks <- numeric(Npro)
-    zs <- matrix(0, n, Npro)
+    zs <- gmus <- matrix(0, n, Npro)
     zs[, 1] <- rowMeans(z[, seq(1 + c(0, Nout[-nruns])[imaxlogbf],
                                 Nout[imaxlogbf])])
-    z0s <- matrix(0, n0, Npro)
+    z0s <- gmu0s <- matrix(0, n0, Npro)
     beta <- matrix(0, p, Npro)
     ssq <- numeric(Npro)
     tsqs <- numeric(Npro)
@@ -1227,6 +1227,7 @@ overflow. Control variates corrections will not be used.")
     tmppars <- rep.int(0, 4)
     tm4 <- system.time({
       RUN4 <- .Fortran("trgasample", ll = lglks, z = zs, z0 = z0s,
+                       mu = gmus, mu0 = gmu0s, 
                        beta = beta, ssq = ssq, tsq = tsqs,
                        as.double(phis), as.double(omgs), acc = acc,
                        as.double(y), as.double(l), as.double(F), as.double(F0),
@@ -1242,14 +1243,16 @@ overflow. Control variates corrections will not be used.")
       message ("Performed Gibbs sampling: ", round(tm4[1]), " sec")
     }
     ll <- RUN4$ll
-    zz0 <- matrix(NA, NROW(yy), Nout)
+    zz0 <- mm0 <- matrix(NA, NROW(yy), Nout)
     zz0[ii, ] <- RUN4$z
     zz0[!ii, ] <- RUN4$z0
+    mm0[ii, ] <- RUN4$mu
+    mm0[!ii, ] <- RUN4$mu0
     beta <- RUN4$beta
     ssq <- RUN4$ssq
     tsq <- RUN4$tsq
     acc_ratio <- RUN4$acc/Npro
-    sample <- list(z = zz0, beta = beta, ssq = ssq, tsq = tsq,
+    sample <- list(z = zz0, mu = mm0, beta = beta, ssq = ssq, tsq = tsq,
                    acc_ratio = acc_ratio,
                    whichobs = ii)
   } else {

@@ -37,13 +37,13 @@ Nbi <- Nprb <- 3000
 
 
 est <- ebstrga(Yield ~ IR, rhiz, 
-               atsample = ~ Xcoord + Ycoord, parameters = parlist,
-               estimate = estimate, corrfcn = corrf, 
+               atsample = ~ Xcoord + Ycoord, parskel = parlist,
+               paroptim = estimate, corrfcn = corrf, 
                Nout = Nout, Nthin = Nthin, Nbi = Nbi,
                Npro = Npro, Nprt = Nprt, Nprb = Nprb, 
                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
                tsqdf = tsqdf, tsqsc = tsqsc,
-               useCV=TRUE)
+               useCV = TRUE)
 
 est$parest
 

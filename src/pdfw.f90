@@ -92,7 +92,7 @@ contains
     nulgmc = nulogh - cnulog
     logjac = 0d0
     do i = 1, n
-      qw = w(i) ! quantnorm(w(i))
+      qw = w(i) 
       qwsq = qw*qw
       if (qw .eq. 0d0) then
         z(i) = 0d0
@@ -100,9 +100,9 @@ contains
       else
         ccqqn = cnusqnu*qwsq
         z(i) = sign(sqrt(nu*fexpm1(ccqqn)), qw)
-        tmp = ccqqn - .5*flogexpm1(ccqqn) !+ log(abs(qw))
+        tmp = ccqqn - .5*flogexpm1(ccqqn)
       end if
-      logjac = logjac + tmp !+ .5d0*qwsq
+      logjac = logjac + tmp
     end do
     logjac = logjac + n*(cnulog - nulgmc)
     lfw = logpdfz(n, z, Ups, ldh_Ups, xi, lmxi, ssqdfsc, modeldfh)

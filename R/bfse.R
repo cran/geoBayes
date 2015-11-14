@@ -35,6 +35,7 @@
 ##' @references Roy, V., Tan, A. and Flegal, J. (2015). Estimating
 ##' standard errors for importance sampling estimators with multiple
 ##' Markov chains. Technical report, Iowa State University.
+##' \url{http://lib.dr.iastate.edu/stat_las_preprints/34}
 ##' @export 
 bfse <- function(pargrid, runs, nbatches, bfsize1 = 0.80,
                  method = c("RL", "MW"), reference = 1, transf = FALSE, 

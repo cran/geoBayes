@@ -84,7 +84,8 @@ of lenght 1')
     out$maxdiff <- 0
     out$prob2 <- prob1
     if (plot) {
-      par(mfrow=c(1,2))
+      oldpar <- par(mfrow=c(1,2))
+      on.exit(par(oldpar), add = TRUE)
       curve(link(x,1,d1),a,b,n,col=2,xlab='Linear predictor',ylab='',main='Link')
       curve(0*x,a,b,n=2,col=2,xlab='Linear predictor',ylab='',main='Difference')
     }
@@ -93,7 +94,8 @@ of lenght 1')
     f <- function(s) max(abs(link(x,1,d2)-link(x,s,d1)))
     fop <- optimize(f,c(1e-4,1e4))
     if (plot) {
-      par(mfrow=c(1,2))
+      oldpar <- par(mfrow=c(1,2))
+      on.exit(par(oldpar), add = TRUE)
       curve(link(x,fop$minimum,d1),a,b,n,
             xlab='Linear predictor',ylab='',main='Links')
       curve(link(x,1,d2),n=n,add=TRUE,col=2)

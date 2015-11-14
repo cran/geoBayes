@@ -1,3 +1,9 @@
+0.3.2
+* Fixed some bugs related to the binomial workaround.
+* Updated references.
+* Fixed an error when using ebsglmm with transf = TRUE.
+* Some demos were not running, now they do.
+
 0.3.1
 * This version compiles with parallel make.
 

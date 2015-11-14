@@ -17,6 +17,7 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
   use pdfy
   use jointyz
   use transfbinomial, only: jointyw_bi
+  use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf
@@ -36,19 +37,7 @@ subroutine bfspz (weights, zcv, logbf, lglk1, lglk2, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  j=0
-  do i = 1, p
-    if (betQ0(i,i) /= 0d0) j = j + 1
-  end do
-  if (j == 0) then ! Flat prior
-    modeldfh = .5d0*(n - p + ssqdf)
-    xi = 0d0
-    lmxi = .false. 
-  else ! Normal prior
-    modeldfh = .5d0*(n + ssqdf)
-    xi = matmul(F,betm0)
-    lmxi = any(xi .ne. 0d0)
-  end if
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, n
     lup(:i-1,i) = .true.
@@ -259,6 +248,7 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
   use bmargin
   use covfun
   use pdfmu
+  use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf
@@ -279,18 +269,7 @@ subroutine bfspmu (weights, zcv, logbf, lglk1, lglk2, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  j=0
-  do i = 1, p
-    if (betQ0(i,i) /= 0d0) j = j + 1
-  end do
-  if (j == 0) then ! Flat prior
-    modeldfh = .5d0*(n - p + ssqdf)
-    lmxi = .false.
-  else ! Normal prior
-    modeldfh = .5d0*(n + ssqdf)
-    xi = matmul(F,betm0)
-    lmxi = any(xi .ne. 0d0)
-  end if
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, n
     lup(:i-1,i) = .true.

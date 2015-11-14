@@ -4,7 +4,7 @@ subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
   
   use covfun
   use jointyz
-  
+  use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf
   double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
@@ -22,18 +22,7 @@ subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  j=0
-  do i = 1, p
-    if (betQ0(i,i) /= 0d0) j = j + 1
-  end do
-  if (j == 0) then ! Flat prior
-    modeldfh = .5d0*(n - p + ssqdf)
-    lmxi = .false. 
-  else ! Normal prior
-    modeldfh = .5d0*(n + ssqdf)
-    xi = matmul(F,betm0)
-    lmxi = any(xi .ne. 0d0)
-  end if
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, n
     lup(:i-1,i) = .true.
@@ -135,7 +124,7 @@ subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
   
   use covfun
   use jointymu
-  
+  use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf
   double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
@@ -153,18 +142,7 @@ subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  j=0
-  do i = 1, p
-    if (betQ0(i,i) /= 0d0) j = j + 1
-  end do
-  if (j == 0) then ! Flat prior
-    modeldfh = .5d0*(n - p + ssqdf)
-    lmxi = .false. 
-  else ! Normal prior
-    modeldfh = .5d0*(n + ssqdf)
-    xi = matmul(F,betm0)
-    lmxi = any(xi .ne. 0d0)
-  end if
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, n
     lup(:i-1,i) = .true.
@@ -265,7 +243,7 @@ subroutine llikfcnrb (lglk, philist, nsqlist, nulist, kappalist, &
   use covfun
   use transfbinomial, only: jointyw_bi
   use jointyz, only: jointyz_bi
-  
+  use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf
   double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
@@ -283,18 +261,7 @@ subroutine llikfcnrb (lglk, philist, nsqlist, nulist, kappalist, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  j=0
-  do i = 1, p
-    if (betQ0(i,i) /= 0d0) j = j + 1
-  end do
-  if (j == 0) then ! Flat prior
-    modeldfh = .5d0*(n - p + ssqdf)
-    lmxi = .false. 
-  else ! Normal prior
-    modeldfh = .5d0*(n + ssqdf)
-    xi = matmul(F,betm0)
-    lmxi = any(xi .ne. 0d0)
-  end if
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, n
     lup(:i-1,i) = .true.

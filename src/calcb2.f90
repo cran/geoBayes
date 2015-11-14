@@ -14,6 +14,7 @@ subroutine calcbz_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   use covfun
   use condyz
   use pdfz
+  use betaprior
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf
   double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
@@ -33,18 +34,7 @@ subroutine calcbz_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  j=0
-  do i = 1, p
-    if (betQ0(i,i) /= 0d0) j = j + 1
-  end do
-  if (j == 0) then ! Flat prior
-    modeldfh = .5d0*(n - p + ssqdf)
-    lmxi = .false.
-  else ! Normal prior
-    modeldfh = .5d0*(n + ssqdf)
-    xi = matmul(F,betm0)
-    lmxi = any(xi .ne. 0d0)
-  end if
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, n
     lup(:i-1,i) = .true.
@@ -136,12 +126,11 @@ subroutine calcbw_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
    Ntot, wsample, weights, n, p, betm0, betQ0, ssqdf, &
    ssqsc, tsqdf, tsq, y, l, F, dm, ifam)
 
-  !use interfaces
   use flogsumexp
   use covfun
-  !use pdfz
-  !use condyz, only: condyz_bi
+  use jointyz, only: jointyz_bi
   use transfbinomial
+  use betaprior
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf
   double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
@@ -160,18 +149,7 @@ subroutine calcbw_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  j=0
-  do i = 1, p
-    if (betQ0(i,i) /= 0d0) j = j + 1
-  end do
-  if (j == 0) then ! Flat prior
-    modeldfh = .5d0*(n - p + ssqdf)
-    lmxi = .false.
-  else ! Normal prior
-    modeldfh = .5d0*(n + ssqdf)
-    xi = matmul(F,betm0)
-    lmxi = any(xi .ne. 0d0)
-  end if
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, n
     lup(:i-1,i) = .true.
@@ -189,8 +167,13 @@ subroutine calcbw_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
          lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
-          lfw = jointyw_bi(n, wsample(:, j), y, l, Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
+          if (nu(k) .gt. 0d0) then
+            lfw = jointyw_bi(n, wsample(:,j), y, l, Ups, ldh_Ups, &
+               nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
+          else
+            lfw = jointyz_bi(n, wsample(:,j), y, l, Ups, ldh_Ups, &
+               nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
+          end if
           llikw(k, j) = lfw - weights(j)
         end do
       end do
@@ -211,6 +194,7 @@ subroutine calcbz_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   use covfun
   use condyz
   use pdfz
+  use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, Ntot, n_cov, n_nu, ifam, icf
   double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
@@ -233,18 +217,7 @@ subroutine calcbz_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   dNtot = log(dble(Ntot))
 
   ! Determine flat or normal prior
-  j=0
-  do i = 1, p
-    if (betQ0(i,i) /= 0d0) j = j + 1
-  end do
-  if (j == 0) then ! Flat prior
-    modeldfh = .5d0*(n - p + ssqdf)
-    lmxi = .false.
-  else ! Normal prior
-    modeldfh = .5d0*(n + ssqdf)
-    xi = matmul(F,betm0)
-    lmxi = any(xi .ne. 0d0)
-  end if
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, n
     lup(:i-1,i) = .true.
@@ -325,15 +298,16 @@ subroutine calcbz_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   end if
 
   do k = 1, n_cov
+    call rchkusr
     call calc_cov (phi(k),nsq(k),dm,F,betQ0,&
        lup,kappa(k),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
     do j = 1, Ntot
       ! Calculate unnormalised log-likelihood at sampled points
-      lfz = logpdfz(n, zsample(:, j), Ups, ldh_Ups, xi, lmxi, &
+      lfz = logpdfz(n, zsample(:,j), Ups, ldh_Ups, xi, lmxi, &
          ssqdfsc, modeldfh)
       do i = 1, n_nu
-        llikw = logfy(i, j) + lfz - weights(j)
-        ycv(i, j) = exp(llikw + dNtot)
+        llikw = logfy(i,j) + lfz - weights(j)
+        ycv(i,j) = exp(llikw + dNtot)
       end do
     end do
     call calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact(:,k))
@@ -349,7 +323,9 @@ subroutine calcbw_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
 
   use flogsumexp
   use covfun
+  use jointyz, only: jointyz_bi
   use transfbinomial
+  use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, Ntot, n_cov, n_nu, ifam, icf
   double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
@@ -371,18 +347,7 @@ subroutine calcbw_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   dNtot = log(dble(Ntot))
 
   ! Determine flat or normal prior
-  j=0
-  do i = 1, p
-    if (betQ0(i,i) /= 0d0) j = j + 1
-  end do
-  if (j == 0) then ! Flat prior
-    modeldfh = .5d0*(n - p + ssqdf)
-    lmxi = .false.
-  else ! Normal prior
-    modeldfh = .5d0*(n + ssqdf)
-    xi = matmul(F,betm0)
-    lmxi = any(xi .ne. 0d0)
-  end if
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, n
     lup(:i-1,i) = .true.
@@ -407,8 +372,13 @@ subroutine calcbw_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
          lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
-          lfw = jointyw_bi(n, wsample(:, j), y, l, Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
+          if (nu(k) .gt. 0d0) then
+            lfw = jointyw_bi(n, wsample(:,j), y, l, Ups, ldh_Ups, &
+               nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
+          else
+            lfw = jointyz_bi(n, wsample(:,j), y, l, Ups, ldh_Ups, &
+               nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
+          end if
           llikw = lfw - weights(j)
           ycv(k,j) = exp(llikw + dNtot)
         end do
@@ -432,6 +402,7 @@ subroutine calcbmu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   use condymu
   use pdfmu
   use transfbinomial
+  use betaprior
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf
   double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
@@ -451,18 +422,7 @@ subroutine calcbmu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  j=0
-  do i = 1, p
-    if (betQ0(i,i) /= 0d0) j = j + 1
-  end do
-  if (j == 0) then ! Flat prior
-    modeldfh = .5d0*(n - p + ssqdf)
-    lmxi = .false.
-  else ! Normal prior
-    modeldfh = .5d0*(n + ssqdf)
-    xi = matmul(F,betm0)
-    lmxi = any(xi .ne. 0d0)
-  end if
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, n
     lup(:i-1,i) = .true.
@@ -599,6 +559,7 @@ subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   use covfun
   use condymu
   use pdfmu
+  use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, Ntot, n_cov, n_nu, ifam, icf
   double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
@@ -621,18 +582,7 @@ subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   dNtot = log(dble(Ntot))
 
   ! Determine flat or normal prior
-  j=0
-  do i = 1, p
-    if (betQ0(i,i) /= 0d0) j = j + 1
-  end do
-  if (j == 0) then ! Flat prior
-    modeldfh = .5d0*(n - p + ssqdf)
-    lmxi = .false.
-  else ! Normal prior
-    modeldfh = .5d0*(n + ssqdf)
-    xi = matmul(F,betm0)
-    lmxi = any(xi .ne. 0d0)
-  end if
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, n
     lup(:i-1,i) = .true.

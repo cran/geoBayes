@@ -53,10 +53,10 @@
 ##' normalizing constants via a simple identity: A theoretical
 ##' exploration. \emph{Statistica Sinica}, 6, 831-860.
 ##'
-##' Roy, V., Evangelou, E., and Zhu, Z. (2014). Efficient estimation
+##' Roy, V., Evangelou, E., and Zhu, Z. (2015). Efficient estimation
 ##' and prediction for the Bayesian spatial generalized linear mixed
-##' model with flexible link functions. Technical report, Iowa State
-##' University.
+##' model with flexible link functions. \emph{Biometrics}.
+##' \url{http://dx.doi.org/10.1111/biom.12371}
 ##' @examples \dontrun{
 ##' data(rhizoctonia)
 ##' ### Define the model
@@ -159,7 +159,7 @@ the extra elements will be discarded")
     bfroutine <- "bfspz"
     if (family == "binomial" && binwo) {
       ifam <- -ifam
-      foo <- function (r) {
+      ftrw <- function (r) {
         z <- r[["z"]][r[["whichobs"]], ]
         nu <- r[["nu"]]
         if (nu > 0) {
@@ -169,7 +169,7 @@ the extra elements will be discarded")
           return (z)
         }
       }
-      sample <- lapply(runs, foo)
+      sample <- lapply(runs, ftrw)
     } else {
       sample <- lapply(runs, function(r) r[["z"]][r[["whichobs"]], ])
     }
