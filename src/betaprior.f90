@@ -16,10 +16,7 @@ contains
     integer i
 
     lmxi = .false.
-    do i = 1, p
-      lmxi = betQ0(i,i) .gt. 0d0
-      if (lmxi) exit
-    end do
+    lmxi = betQ0(1,1) .gt. 0d0
     if (lmxi) then
       modeldfh = .5d0*(n + ssqdf)
       xi = matmul(F,betm0)

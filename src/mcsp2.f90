@@ -2,8 +2,8 @@
 !! 
 !! Author: Evangelos Evangelou
 !! Created: Tue, 15 Jul, 2014 16:59 (BST)
-!! Last-Updated: Thu, 8 Oct, 2015 15:40 (BST)
-!!     Update #: 248
+!! Last-Updated: Sun, 15 Nov, 2015 15:56 (GMT)
+!!     Update #: 250
 !! 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -42,11 +42,17 @@ contains
     ssqdfsc = ssqdf*ssqsc
 
     ! Determine flat or normal prior
-    call betapriorz (modeldfh, zmxi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+    call betapriorz (modeldfh, zmxi, lmxi, betm0, betQ0, F, n, p, ssqdf) 
     if (lmxi) then
       zmxi = z - zmxi
     else
       zmxi = z
+    end if
+
+    if (betQ0(1,1) .gt. 0d0) then
+      call dsymv ('u',p,1d0,betQ0,p,betm0,1,0d0,betQm0,1) ! betQm0 = Q0*m0
+    else
+      betQm0 = 0d0
     end if
 
     do i = 1, n

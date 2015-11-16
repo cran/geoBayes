@@ -1,6 +1,6 @@
-be53656b4ee957c102a8010b87bb9873 *DESCRIPTION
+2f86b770ca5dedc70b75b1e69db07da0 *DESCRIPTION
 86d7789c96435b036783607388d5838a *NAMESPACE
-526617aee38521821b469011b959a894 *NEWS
+def0e5d56c049dd9b84fea2de8fa3798 *NEWS
 4f6d4b8836311fcc244aad3f8523273d *R/bf.R
 8c2eee65df31334e5ffb363183f7a803 *R/bfse.R
 70b65bf5e39ea2839ac05cf7425367c2 *R/calcbf.R
@@ -38,7 +38,7 @@ c39ab3f7a77a2061acdee65432ff2f96 *man/rhizoctonia.Rd
 9af5c92105e02b70269bebc1ec5c7c8b *man/stackdata.Rd
 d6ec51579aacdf6aad7cb7d1d1756193 *src/Makevars
 06f55e7c5d79be5313b8d3d6d1201413 *src/auxfcns.c
-188f0ccce13f9833ae6cf0ff2bbe1e91 *src/betaprior.f90
+964f4f2ba99233aebe1a30a5b6403574 *src/betaprior.f90
 dd8261f9b0450da3768ec7d80a9b04d3 *src/bfsp.f90
 7341dee398ae539c96c63746a403de45 *src/bmargin.f90
 5cb237b090a7e6fe777a2107caf767d4 *src/calcb2.f90
@@ -48,7 +48,7 @@ dd8261f9b0450da3768ec7d80a9b04d3 *src/bfsp.f90
 fcc6c887a014153b2e83d271130ed1c9 *src/lbfgsbmod.f90
 97d9a24363c7e0043cc5cbc94a4c8897 *src/linkfcn.f90
 e4005455f60fdb2c6f792c10fbf899e9 *src/llik.f90
-938ca16f8c19c16424c4c32ba12b9b7c *src/mcsp2.f90
+83d9858828acc1480daf4aa05ef373cd *src/mcsp2.f90
 7a9bf6db162d01c3780451c4f10de52d *src/mcspz0.f90
 50fcca41f3ed5296ba3097f20c36b731 *src/msg.c
 b3fbc86564ac39b23297edb69ac0fb7b *src/msgmc.f90
