@@ -2,7 +2,7 @@
 ##'
 ##' \code{linkfcn} maps the mean of the response variable \code{mu} to
 ##' the linear predictor \code{z}. \code{linkinv} is its inverse.
-##' 
+##'
 ##' Note that the logit link for the
 ##' binomial family is defined as the quantile of the logistic
 ##' distribution with scale 0.6458.
@@ -10,12 +10,17 @@
 ##' For the Gaussian family, if the link parameter is positive, then
 ##' the extended link is used, defined by \deqn{z =
 ##' \frac{sign(\mu)|\mu|^\nu - 1}{\nu}}{z = (sign(mu)*abs(mu)^nu -
-##' 1)/nu} In the other case, the link function is the same as for the
-##' Poisson and gamma families.
-##'  
-##' For the Poisson and gamma families, the Box-Cox transformation is
-##' used, defined by \deqn{z = \frac{\mu^\nu - 1}{\nu}}{z = (mu^nu -
-##' 1)/nu}
+##' 1)/nu} In the other case, the usual Box-Cox link is used.
+##'
+## For the Poisson and gamma families, the Box-Cox transformation is
+## used, defined by \deqn{z = \frac{\mu^\nu - 1}{\nu}}{z = (mu^nu -
+## 1)/nu}
+##'
+##' For the Poisson and gamma families, if the link parameter is
+##' positive, then the link is defined by \deqn{z = \frac{sign(w)
+##' (e^{\nu |w|}-1)}{\nu}}{z = sign(w)*expm1(nu*w)/nu} where
+##' \eqn{w = \log(\mu)}{w = log(mu)}. In the other case, the usual
+##' Box-Cox link is used.
 ##'
 ##' For the GEV binomial family, the link function is defined by
 ##' \deqn{\mu = 1 - \exp\{-\max(0, 1 + \nu z)^{\frac{1}{\nu}}\}}{mu =
@@ -24,14 +29,14 @@
 ##' link.
 ##'
 ##' The Wallace binomial family is a fast approximation to the robit
-##' family. It is defined as \deqn{\mu = 
-##' \Phi(\mbox{sign}(z) c(\nu) \sqrt{\nu \log(1 + z^2/\nu)})}{mu = 
+##' family. It is defined as \deqn{\mu =
+##' \Phi(\mbox{sign}(z) c(\nu) \sqrt{\nu \log(1 + z^2/\nu)})}{mu =
 ##' Phi(sign(z) c(nu) sqrt{nu log(1 + z^2/nu)})}
 ##' where \eqn{c(\nu) = (8\nu+1)/(8\nu+3)}{c(nu) = (8*nu+1)/(8*nu+3)}
 ##'
 ##' @title Calculate the link function for exponential families
-##' @param mu Numeric. The mean of the response variable. 
-##' @param z Numeric. The linear predictor. 
+##' @param mu Numeric. The mean of the response variable.
+##' @param z Numeric. The linear predictor.
 ##' @param linkp The link function parameter. A scalar but for the
 ##' binomial family is also allowed to have the character values
 ##' "logit" or "probit".
@@ -52,148 +57,49 @@
 ##' @family linkfcn
 ##' @name linkfcn
 ##' @rdname linkfcn
-##' @importFrom stats qlogis qnorm qt qf plogis pnorm pt 
-##' @export 
-linkfcn <- function (mu, linkp,
-                     family = c("gaussian", "binomial", "poisson", "Gamma",
-                       "GEV.binomial", "GEVD.binomial",
-                                "Wallace.binomial")) {
-  family <- match.arg(family)
-  if (length(linkp) != 1) stop ("The linkp argument must be scalar")
-  if (is.character(linkp) | is.factor(linkp)) {
-    if (family == "binomial") {
-      if (linkp == "logit") {
-        z <- qlogis(mu, scale = 0.6458)
-      } else if (linkp == "probit") {
-        z <- qnorm(mu)
-      } else {
-        stop ("Cannot recognise character link for binomial")
-      }
-    } else stop ("Character link is only allowed for binomial")
-  } else if (!is.numeric(linkp)) {
-    stop ("Argument linkp must be numeric, or in the case of
-the binomial can also be the character \"logit\" or \"probit\"")
-  } else { # Numeric link parameter
-    nu <- as.double(linkp)
-    if (family == "gaussian") {
-      if (nu == 0) {
-        z <- ifelse(mu > 0, log(mu), -Inf)
-      } else if (nu > 0) {
-        z <- (sign(mu)*abs(mu)^nu - 1)/nu
-      } else if (nu < 0) {
-        z <- ifelse(mu > 0, (mu^nu - 1)/nu, -Inf)
-      }
-    } else if (family == "binomial") {
-      if(nu <= 0) {
-        stop ("The robit link parameter must be positive")
-      } else if (nu < 1) {
-        z <- sign(mu-.5)*sqrt(qf(abs(2*mu-1), 1, nu))
-      } else {
-        z <- qt(mu, nu)
-      }
-    } else if (family == "poisson" | family == "Gamma") {
-      if (nu == 0) {
-        z <- ifelse(mu > 0, log(mu), -Inf)
-      } else {
-        z <- ifelse(mu > 0, (mu^nu - 1)/nu, -Inf)
-      }
-    } else if (family == "GEV.binomial") {
-      z <- -log1p(-mu)
-      if (nu == 0) {
-        z <- ifelse(mu > 0, ifelse(mu < 1, log(z), Inf), -Inf)
-      } else {
-        z <- ifelse(mu > 0, ifelse(mu < 1, (-1 + z^nu)/nu, Inf), -Inf)
-      }
-    } else if (family == "GEVD.binomial") {
-      z <- -log1p(-mu)
-      if (nu == 0) {
-        z <- ifelse(mu > 0, ifelse(mu < 1, -log(z), -Inf), Inf)
-      } else {
-        z <- ifelse(mu > 0, ifelse(mu < 1, (-1 + z^(-nu))/nu, -Inf), Inf)
-      }
-    } else if (family == "Wallace.binomial") {
-      if (nu <= 0)
-        stop ("The link parameter for Wallace.binomial must be positive.")
-      z <- 8*nu
-      z <- qnorm(mu)*(z+3)/(z+1)
-      z <- sign(mu-.5)*sqrt(nu*expm1(z*z/nu))
-    } else {
-      stop ("Unrecognised family")
+##' @importFrom stats qlogis qnorm qt qf plogis pnorm pt
+##' @useDynLib geoBayes flinkfcn
+##' @export
+linkfcn <- function (mu, linkp, family = "gaussian") {
+  if (is.numeric(family)) {
+    ifam <- as.integer(family)
+    if (ifam < 0 || ifam > NROW(.geoBayes_models)) {
+      stop ("Cannot deduce family")
     }
+  } else {
+    ifam <- .geoBayes_family(family)
   }
-  z
+  if (length(linkp) != 1) {
+    stop ("The linkp argument must be scalar.")
+  }
+  linkp <- .geoBayes_getlinkp(linkp, ifam)
+  x <- as.double(mu)
+  n <- length(x)
+  mu[] <- .Fortran("flinkfcn", x, n, x, linkp, ifam,
+                   PACKAGE = "geoBayes")[[1]]
+  mu
 }
 
 ##' @family linkfcn
 ##' @rdname linkfcn
-##' @export 
-linkinv <- function (z, linkp, 
-                     family = c("gaussian", "binomial", "poisson", "Gamma",
-                       "GEV.binomial", "GEVD.binomial",
-                       "Wallace.binomial")) {
-  family <- match.arg(family)
-  if (length(linkp) != 1) stop ("The linkp argument must be scalar")
-  if (is.character(linkp) | is.factor(linkp)) {
-    if (family == "binomial") {
-      if (linkp == "logit") {
-        mu <- plogis(z, scale = 0.6458)
-      } else if (linkp == "probit") {
-        mu <- pnorm(z)
-      } else {
-        stop ("Cannot recognise character link for binomial")
-      }
-    } else stop ("Character link is only allowed for binomial")
-  } else if (!is.numeric(linkp)) {
-    stop ("Argument linkp must be numeric, or in the case of
-the binomial can also be the character \"logit\" or \"probit\"")
-  } else { # Numeric link parameter
-    nu <- as.double(linkp)
-    if (family == "gaussian") {
-      if (nu == 0) {
-        mu <- exp(z)
-      } else if (nu > 0) {
-        mu <- nu*z + 1
-        mu <- sign(mu)*abs(mu)^(1/nu)
-      } else { # nu < 0
-        mu <- nu*z + 1
-        ifelse(mu > 0, mu^(1/nu), Inf)
-      }
-    } else if (family == "binomial") {
-      if(nu <= 0) {
-        stop ("The robit link parameter must be positive")
-      } else {
-        mu <- pt(z, nu)
-      }
-    } else if (family == "poisson" | family == "Gamma") {
-      if (nu == 0) {
-        mu <- exp(z)
-      } else {
-        mu <- nu*z
-        mu <- ifelse(mu > -1, exp(log1p(mu)/nu), 0)
-      }
-    } else if (family == "GEV.binomial") {
-      if (nu == 0) {
-        mu <- 1 - exp(-exp(z))
-      } else {
-        mu <- 1 + nu*z
-        mu <- ifelse(mu > 0, -expm1(-mu^(1/nu)), as.double(nu < 0))
-      }
-    } else if (family == "GEVD.binomial") {
-      if (nu == 0) {
-        mu <- 1 - exp(-exp(-z))
-      } else {
-        mu <- 1 + nu*z
-        mu <- ifelse(mu > 0, -expm1(-mu^(-1/nu)), as.double(nu > 0))
-      }
-    } else if (family == "Wallace.binomial") {
-      if (nu <= 0)
-        stop ("The link parameter for Wallace.binomial must be positive.")
-      mu <- 8*nu
-      mu <- (mu+1)/(mu+3)*sqrt(nu*log1p(z*z/nu))
-      mu <- ifelse(z > 0, pnorm(mu), pnorm(mu, lower.tail = FALSE))
-    } else {
-      stop ("Unrecognised family")
+##' @useDynLib geoBayes flinkinv
+##' @export
+linkinv <- function (z, linkp, family = "gaussian") {
+  if (is.numeric(family)) {
+    ifam <- as.integer(family)
+    if (ifam < 0 || ifam > NROW(.geoBayes_models)) {
+      stop ("Cannot deduce family")
     }
+  } else {
+    ifam <- .geoBayes_family(family)
   }
-  mu
+  if (length(linkp) != 1) {
+    stop ("The linkp argument must be scalar.")
+  }
+  linkp <- .geoBayes_getlinkp(linkp, ifam)
+  x <- as.double(z)
+  n <- length(x)
+  z[] <- .Fortran("flinkinv", x, n, x, linkp, ifam,
+                  PACKAGE = "geoBayes")[[1]]
+  z
 }

@@ -14,6 +14,19 @@
 
 module flogsumexp
 contains
+  pure function logsumexpv (x,n)
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: x(n)
+    double precision logsumexpv
+    double precision xmm(n), se
+    logsumexpv = maxval(x)
+    xmm = x - logsumexpv
+    xmm = exp(xmm)
+    se = sum(xmm)
+    logsumexpv = logsumexpv + log(se)
+  end function logsumexpv
+
   pure function logrsumexp (x,m,n)
     implicit none
     integer, intent(in) :: m, n

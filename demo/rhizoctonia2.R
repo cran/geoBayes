@@ -1,8 +1,8 @@
 ######################################################################
-## 
-### Commentary: EB analysis of the rhizoctonia data. Uses the 
+##
+### Commentary: EB analysis of the rhizoctonia data. Uses the
 ### functions mcsglmm, bf1skel, bf2new, bf2optim.
-## 
+##
 ######################################################################
 
 library(geoBayes)
@@ -25,7 +25,7 @@ ssqdf <- 1
 ssqsc <- 1
 betm0 <- 0
 betQ0 <- .01
-linkp <- "probit"
+linkp <- 20
 
 
 ### Skeleton points
@@ -50,7 +50,7 @@ for (i in 1:NROW(parlist)) {
                        Nout = Nout, Nthin = Nthin, Nbi = Nbi,
                        betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
                        phistart = parlist$phi[i], omgstart = parlist$omg[i],
-                       linkp = parlist$linkp[i], kappa = parlist$kappa[i], 
+                       linkp = parlist$linkp[i], kappa = parlist$kappa[i],
                        corrfcn = corrf, phisc = 0, omgsc = 0)
 }
 

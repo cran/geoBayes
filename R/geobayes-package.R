@@ -1,6 +1,6 @@
 ##' Analysis of geostatistical data using Bayes and Empirical Bayes
 ##' methods.
-##'  
+##'
 ##' This package provides functions to fit geostatistical data. The
 ##' data can be continuous, binary or count data and the models
 ##' implemented are flexible. Conjugate priors are assumed on some
@@ -12,7 +12,7 @@
 ##' @title The \code{geoBayes} package
 ##' @name geoBayes
 ##' @docType package
-##' @useDynLib geoBayes
+##' @useDynLib geoBayes, .registration = TRUE
 ##' @author Evangelos Evangelou <e.evangelou@@maths.bath.ac.uk> and
 ##' Vivekananda Roy <vroy@@iastate.edu>
 ##' @seealso \code{geoR}, \code{geoRglm}
@@ -29,7 +29,11 @@
 ##'
 ##' Roy, V., Evangelou, E., and Zhu, Z. (2015). Efficient estimation
 ##' and prediction for the Bayesian spatial generalized linear mixed
-##' model with flexible link functions. \emph{Biometrics}.
-##' \url{http://dx.doi.org/10.1111/biom.12371}
+##' model with flexible link functions. \emph{Biometrics}, 72(1), 289-298.
 ##' @keywords package
 NULL
+
+
+.onUnload <- function (libpath) {
+  library.dynam.unload("geoBayes", libpath)
+}

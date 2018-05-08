@@ -1,29 +1,36 @@
-!!! interfaces.f90 --- 
-!! 
+!!! interfaces.f90 ---
+!!
 !! Author: Evangelos Evangelou
 !! Created: Thu, 19 Jun, 2014 11:34 (BST)
-!! Last-Updated: Fri, 23 Jan, 2015 15:07 (GMT)
-!!     Update #: 11
-!! 
+!! Last-Updated: Sat, 28 Nov, 2015 16:13 (GMT)
+!!     Update #: 15
+!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! 
+!!
 !!! Commentary: Contains general-purpose functions
-!! 
+!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 module interfaces
-  implicit none 
+  implicit none
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!! Correlation functions !!!!!!!!!!!!!!!!!!!!!!!!!!!
-  interface
-    elemental double precision function matern (d, kappa)
-      double precision, intent(in) :: d, kappa
-    end function matern
-  end interface
+! !!!!!!!!!!!!!!!!!!!!!!!!!!! Correlation functions !!!!!!!!!!!!!!!!!!!!!!!!!!!
+!   interface
+!     elemental double precision function matern (d, kappa)
+!       double precision, intent(in) :: d, kappa
+!     end function matern
+!   end interface
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!! Auxliary functions !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  interface
+    elemental function isfinite (x)
+      double precision, intent(in) :: x
+      integer isfinite
+    end function isfinite
+  end interface
+
   interface
     elemental double precision function flog1pexp (x)
       double precision, intent(in) :: x
@@ -54,6 +61,48 @@ module interfaces
     end function fexpm1
   end interface
 
+  interface
+    elemental double precision function fgamma (x)
+      double precision, intent(in) :: x
+    end function fgamma
+  end interface
+
+  interface
+    elemental double precision function fdigamma (x)
+      double precision, intent(in) :: x
+    end function fdigamma
+  end interface
+
+  interface
+    elemental double precision function ftrigamma (x)
+      double precision, intent(in) :: x
+    end function ftrigamma
+  end interface
+
+  interface
+    elemental double precision function fbesselk (x, k)
+      double precision, intent(in) :: x, k
+    end function fbesselk
+  end interface
+
+  interface
+    elemental double precision function fbesselkexp (x, k)
+      double precision, intent(in) :: x, k
+    end function fbesselkexp
+  end interface
+
+  interface
+    elemental double precision function fbesselkratio (x, ktop, kbot)
+      double precision, intent(in) :: x, ktop, kbot
+    end function fbesselkratio
+  end interface
+
+  interface
+    elemental double precision function flogbesselkdk (x, kappa)
+      double precision, intent(in) :: x, kappa
+    end function flogbesselkdk
+  end interface
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! RNG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   interface
@@ -66,7 +115,7 @@ module interfaces
     end subroutine rngend
   end interface
 
-  
+
 !!!!!!!!!!!!!!!!!!!!!!!!!! Random sample functions !!!!!!!!!!!!!!!!!!!!!!!!!!
 
   interface
@@ -104,7 +153,7 @@ module interfaces
       double precision, intent(in) :: q, d
     end function logprobt
   end interface
-  
+
   interface
     elemental double precision function logborpt (q, d)
       double precision, intent(in) :: q, d
@@ -122,13 +171,13 @@ module interfaces
       double precision, intent(in) :: x, d
     end function logpdft
   end interface
-  
+
   interface
     elemental double precision function logprobnorm (q)
       double precision, intent(in) :: q
     end function logprobnorm
   end interface
-  
+
   interface
     elemental double precision function logborpnorm (q)
       double precision, intent(in) :: q
@@ -146,13 +195,13 @@ module interfaces
       double precision, intent(in) :: x
     end function logpdfnorm
   end interface
-  
+
   interface
     elemental double precision function logproblogis (q)
       double precision, intent(in) :: q
     end function logproblogis
   end interface
-  
+
   interface
     elemental double precision function logborplogis (q)
       double precision, intent(in) :: q

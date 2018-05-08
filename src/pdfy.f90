@@ -120,8 +120,6 @@ contains
 end module pdfy
 
 
-
-
   
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! 
@@ -165,7 +163,7 @@ module condyz
 contains
   function condyz_gt (n, y1, y2, z, nu, tsqdfsc, respdfh)
     use pdfy, only: logpdfy_gt
-    use linkfcn, only: invlink_ga
+    use linkfcns, only: invlink_ga
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsqdfsc, respdfh
@@ -182,7 +180,7 @@ contains
 
   function condyz_ga (n, y1, y2, z, nu, tsq)
     use pdfy, only: logpdfy_ga
-    use linkfcn, only: invlink_ga
+    use linkfcns, only: invlink_ga
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
@@ -199,7 +197,7 @@ contains
 
   function condyz_bi (n, y1, y2, z, nu, tsq)
     use pdfy, only: logpdfy_bi
-    use linkfcn, only: invlink_bi
+    use linkfcns, only: invlink_bi
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
@@ -216,7 +214,7 @@ contains
 
   function condyz_bw (n, y1, y2, z, nu, tsq) ! Bin Wallace
     use pdfy, only: logpdfy_bi
-    use linkfcn, only: invlink_bw
+    use linkfcns, only: invlink_bw
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
@@ -233,7 +231,7 @@ contains
 
   function condyz_po (n, y1, y2, z, nu, tsq)
     use pdfy, only: logpdfy_po
-    use linkfcn, only: invlink_po
+    use linkfcns, only: invlink_po
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
@@ -250,7 +248,7 @@ contains
 
   function condyz_gm (n, y1, y2, z, nu, tsq)
     use pdfy, only: logpdfy_gm
-    use linkfcn, only: invlink_gm
+    use linkfcns, only: invlink_gm
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
@@ -267,7 +265,7 @@ contains
 
   function condyz_ba (n, y1, y2, z, nu, tsq)
     use pdfy, only: logpdfy_bi
-    use linkfcn, only: invlink_ba
+    use linkfcns, only: invlink_ba
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
@@ -284,7 +282,7 @@ contains
 
   function condyz_bd (n, y1, y2, z, nu, tsq)
     use pdfy, only: logpdfy_bi
-    use linkfcn, only: invlink_bd
+    use linkfcns, only: invlink_bd
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
@@ -458,7 +456,7 @@ module pdfmu
   private bigneg
 contains
   function logpdfmu_ga (n, mu, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, modeldfh)
-    use linkfcn, only: flink_ga
+    use linkfcns, only: flink_ga
     use pdfz
     implicit none
     logical, intent(in) :: lmxi
@@ -495,7 +493,7 @@ contains
   end function logpdfmu_ga
 
   function logpdfmu_bi (n, mu, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, modeldfh)
-    use linkfcn, only: flink_bi
+    use linkfcns, only: flink_bi
     use interfaces, only: flog1pexp, flog1p, logpdft!, logpdfnorm, logpdflogis
     use pdfz
     implicit none
@@ -506,7 +504,6 @@ contains
     double precision logpdfmu_bi
     integer i
     double precision z(n), logjac, lfz, tmp
-    double precision, parameter :: lgits = 0.6458d0
     ! Linear predictor
     do i = 1, n
       z(i) = flink_bi(mu(i), nu)
@@ -519,7 +516,7 @@ contains
       end do
     else if (nu .lt. 0d0) then ! pdf logistic 
       do i = 1, n
-        tmp = -z(i)/lgits
+        tmp = -z(i)
         logjac = logjac - tmp + 2d0*flog1pexp(tmp)
         ! - logpdflogis(z(i))
       end do
@@ -537,7 +534,7 @@ contains
   function logpdfmu_po (n, tht, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, &
      modeldfh)
     ! tht is log(mean)
-    use linkfcn, only: flink_po
+    use linkfcns, only: flink_po
     use pdfz
     implicit none
     logical, intent(in) :: lmxi
@@ -553,11 +550,16 @@ contains
     end do
     ! Jacobian
     logjac = 0d0
-    if (nu .ne. 1d0) then
+    if (nu .gt. 0d0) then ! Using extended link 
+      do i = 1, n
+        logjac = logjac + abs(tht(i))
+      end do
+      logjac = nu*logjac
+    else if (nu .lt. 0d0) then
       do i = 1, n
         logjac = logjac + tht(i)
       end do
-      logjac = (nu - 1d0)*logjac
+      logjac = nu*logjac
     end if
     ! log-likelihood for z
     lfz = logpdfz(n, z, Ups, ldh_Ups, xi, lmxi, ssqdfsc, modeldfh)
@@ -568,7 +570,7 @@ contains
   function logpdfmu_gm (n, tht, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, &
      modeldfh)
     ! tht is log(mean)
-    use linkfcn, only: flink_gm
+    use linkfcns, only: flink_gm
     use pdfz
     implicit none
     logical, intent(in) :: lmxi
@@ -584,11 +586,16 @@ contains
     end do
     ! Jacobian
     logjac = 0d0
-    if (nu .ne. 1d0) then
+    if (nu .gt. 0d0) then ! Using extended link 
+      do i = 1, n
+        logjac = logjac + abs(tht(i))
+      end do
+      logjac = nu*logjac
+    else if (nu .lt. 0d0) then
       do i = 1, n
         logjac = logjac + tht(i)
       end do
-      logjac = (nu - 1d0)*logjac
+      logjac = nu*logjac
     end if
     ! log-likelihood for z
     lfz = logpdfz(n, z, Ups, ldh_Ups, xi, lmxi, ssqdfsc, modeldfh)
@@ -597,7 +604,7 @@ contains
   end function logpdfmu_gm
 
   function logpdfmu_ba (n, mu, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, modeldfh)
-    use linkfcn, only: flink_ba
+    use linkfcns, only: flink_ba
     use pdfz
     implicit none
     logical, intent(in) :: lmxi
@@ -626,7 +633,7 @@ contains
   end function logpdfmu_ba
 
   function logpdfmu_bd (n, mu, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, modeldfh)
-    use linkfcn, only: flink_bd
+    use linkfcns, only: flink_bd
     use pdfz
     implicit none
     logical, intent(in) :: lmxi
@@ -655,7 +662,7 @@ contains
   end function logpdfmu_bd
 
   function logpdfmu_bw (n, mu, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, modeldfh)
-    use linkfcn, only: flink_bw
+    use linkfcns, only: flink_bw
     use interfaces, only: flog1p
     use pdfz
     implicit none

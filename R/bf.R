@@ -1,23 +1,25 @@
 ##' Function to compute the Bayes factors from MCMC samples.
 ##'
 ##' Computes the Bayes factors using \code{method} with respect to
-##' \code{reference}. 
+##' \code{reference}.
 ##' @title Computation of Bayes factors at the skeleton points
 ##' @param runs A list with outputs from the function
-##' \code{\link{mcsglmm}} or \code{\link{mcstrga}}.
+##'   \code{\link{mcsglmm}} or \code{\link{mcstrga}}.
 ##' @param bfsize1 A scalar or vector of the same length as
-##' \code{runs} with all integer values or all values in (0, 1]. How
-##' many samples (or what proportion of the sample) to use for
-##' estimating the Bayes factors at the first stage. The remaining
-##' sample will be used for estimating the Bayes factors in the second
-##' stage. Setting it to 1 will perform only the first stage.
+##'   \code{runs} with all integer values or all values in (0, 1]. How
+##'   many samples (or what proportion of the sample) to use for
+##'   estimating the Bayes factors at the first stage. The remaining
+##'   sample will be used for estimating the Bayes factors in the
+##'   second stage. Setting it to 1 will perform only the first stage.
 ##' @param method Which method to use to calculate the Bayes factors:
 ##' Reverse logistic or Meng-Wong.
 ##' @param reference Which model goes in the denominator.
-##' @param transf Whether to use the transformed sample mu for the
-##' computations. Otherwise it uses z.
-##' @param binwo For the binomial family, if use workaround when the
-##' untransformed sample is used.
+##' @param transf Whether to use a transformed sample for the
+##'   computations. If \code{"no"} or \code{FALSE}, it doesn't. If
+##'   \code{"mu"} or \code{TRUE}, it uses the samples for the mean. If
+##'   \code{"wo"} it uses an alternative transformation. The latter
+##'   can be used only for the families indicated by
+##'   \code{.geoBayes_models$haswo}.
 ##' @return A list with components
 ##' \itemize{
 ##' \item \code{logbf} A vector containing logarithm of the Bayes factors.
@@ -29,7 +31,7 @@
 ##' used at the second stage. Used internally in
 ##' \code{\link{bf2new}} and \code{\link{bf2optim}}.
 ##' \item \code{controlvar} A matrix with the control variates
-##' computed at the samples that will be used in the second stage. 
+##' computed at the samples that will be used in the second stage.
 ##' \item \code{sample2} The MCMC sample for mu or z that will be
 ##' used in the second stage. Used internally in
 ##' \code{\link{bf2new}} and \code{\link{bf2optim}}.
@@ -40,7 +42,7 @@
 ##' \code{tsqdf}, \code{tsqsc}, \code{dispersion}, \code{response},
 ##' \code{weights}, \code{modelmatrix}, \code{locations},
 ##' \code{family}, \code{corrfcn}, \code{transf} Model parameters used
-##' internally in. 
+##' internally in.
 ##' \code{\link{bf2new}} and \code{\link{bf2optim}}.
 ##' \item \code{pnts} A list containing the skeleton points. Used
 ##' internally in \code{\link{bf2new}} and \code{\link{bf2optim}}.
@@ -48,15 +50,14 @@
 ##' @references Geyer, C. J. (1994). Estimating normalizing constants
 ##' and reweighting mixtures. Technical report, University of
 ##' Minnesota.
-##'  
+##'
 ##' Meng, X. L., & Wong, W. H. (1996). Simulating ratios of
 ##' normalizing constants via a simple identity: A theoretical
 ##' exploration. \emph{Statistica Sinica}, 6, 831-860.
 ##'
 ##' Roy, V., Evangelou, E., and Zhu, Z. (2015). Efficient estimation
 ##' and prediction for the Bayesian spatial generalized linear mixed
-##' model with flexible link functions. \emph{Biometrics}.
-##' \url{http://dx.doi.org/10.1111/biom.12371}
+##' model with flexible link functions. \emph{Biometrics}, 72(1), 289-298.
 ##' @examples \dontrun{
 ##' data(rhizoctonia)
 ##' ### Define the model
@@ -84,16 +85,18 @@
 ##'                        betm0 = betm0, betQ0 = betQ0,
 ##'                        ssqdf = ssqdf, ssqsc = ssqsc,
 ##'                        phistart = parlist$phi[i], omgstart = parlist$omg[i],
-##'                        linkp = parlist$linkp[i], kappa = parlist$kappa[i], 
+##'                        linkp = parlist$linkp[i], kappa = parlist$kappa[i],
 ##'                        corrfcn = corrf, phisc = 0, omgsc = 0)
 ##' }
 ##' bf <- bf1skel(runs)
 ##' bf$logbf
 ##' }
 ##' @importFrom sp spDists
-##' @export 
+##' @useDynLib geoBayes bfsp_no bfsp_mu bfsp_wo bfsp_tr
+##' @export
 bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
-                    reference = 1, transf = FALSE, binwo = TRUE){
+                    reference = 1, transf = c("no", "mu", "wo"))
+{
   method <- match.arg(method)
   imeth <- match(method, eval(formals()$method))
   classes <- sapply(runs, class)
@@ -107,40 +110,25 @@ bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
     stop("Argument reference does not correspond to a run in runs")
   }
   Nout <- sapply(runs, "[[", "Nout")
-  bfsize1 <- as.double(bfsize1)
-  if (length(bfsize1) > nruns) {
-    warning ("The number of elements in bfsize1 exceeds the number of runs;
-the extra elements will be discarded")
-  }
-  bfsize1 <- rep(bfsize1, length.out = nruns)
-  if (any(bfsize1 <= 0)) {
-    stop ("Argument bfsize1 must be positive")
-  } else if (all(bfsize1 <= 1)) {
-    Nout1 <- as.integer(bfsize1*Nout)
-    if (any(Nout1 == 0)) stop ("Calculated 0 sizes; give a larger bfsize1")
-  } else if (all(bfsize1 >= 1)) {
-    Nout1 <- as.integer(bfsize1)
-    if (any(Nout1 > Nout)) stop ("The bfsize1 exceeds the number of samples")
-  } else {
-    stop ("Argument bfsize1 is a mix of proportions and sizes")
-  }
+  Nout1 <- getsize(bfsize1, Nout, "*")
 
   ## Extract model
   modelvars <- c("response", "weights", "modelmatrix", "family",
                  "betm0", "betQ0", "ssqdf", "ssqsc",
-                 "dispersion", "tsqdf", "tsqsc", "locations", "corrfcn")
+                 "dispersion", "tsqdf", "tsqsc", "locations",
+                 "longlat", "corrfcn")
   models <- lapply(runs, "[", modelvars)
   model <- models[[1]]
   if (nruns > 1 && !all(sapply(models[2:nruns], identical, model))) {
     stop("MCMC chains don't all correspond to the same model")
   }
   y <- model$response
-  n <- length(y)
+  n <- as.integer(length(y))
   l <- model$weights
   F <- model$modelmatrix
   p <- NCOL(F)
   family <- model$family
-  ifam <- match(family, eval(formals(mcsglmm)$family), 0L)
+  ## ifam <- .geoBayes_family(family)
   betm0 <- model$betm0
   betQ0 <- model$betQ0
   ssqdf <- model$ssqdf
@@ -149,31 +137,17 @@ the extra elements will be discarded")
   tsqdf <- model$tsqdf
   tsqsc <- model$tsqsc
   corrfcn <- model$corrfcn
-  
+
   ## Choose sample
-  transf <- as.logical(transf)
-  if (transf) {
-    bfroutine <- "bfspmu"
-    sample <- lapply(runs, function(r) r[["mu"]][r[["whichobs"]], ])
-  } else {
-    bfroutine <- "bfspz"
-    if (family == "binomial" && binwo) {
-      ifam <- -ifam
-      ftrw <- function (r) {
-        z <- r[["z"]][r[["whichobs"]], ]
-        nu <- r[["nu"]]
-        if (nu > 0) {
-          cnu <- 1 - 2/(8*nu+3)
-          return (sign(z)*cnu*sqrt(nu*log1p(z*z/nu)))
-        } else {
-          return (z)
-        }
-      }
-      sample <- lapply(runs, ftrw)
-    } else {
-      sample <- lapply(runs, function(r) r[["z"]][r[["whichobs"]], ])
-    }
-  }
+  getsample <- transfsample(runs, model, transf)
+  sample <- matrix(unlist(getsample$sample), n)
+  itr <- getsample$itr
+  transf <- getsample$transf
+  real_transf <- getsample$real_transf
+  ifam <- getsample$ifam
+
+  bfroutine <- paste0("bfsp_", real_transf)
+
   Ntot1 <- sum(Nout1)
   Nout2 <- Nout - Nout1
   Ntot2 <- sum(Nout2)
@@ -184,24 +158,23 @@ the extra elements will be discarded")
                 isweights = rep.int(0, Ntot2),
                 controlvar = matrix(1, Ntot2, 1),
                 z = sample[[1]][, -(1:Ntot1), drop = FALSE],
-                N1 = Nout1, N2 = Nout2, 
+                N1 = Nout1, N2 = Nout2,
                 betm0 = runs$betm0, betQ0 = runs$betQ0, ssqdf = runs$ssqdf,
                 ssqsc = runs$ssqsc, tsqdf = runs$tsqdf, tsqsc = runs$tsqsc,
                 dispersion = runs$dispersion, response = runs$response,
                 weights = runs$weights, modelmatrix = runs$modelmatrix,
-                locations = runs$locations,
-                distmat = sp::spDists(runs$locations), 
+                locations = runs$locations, longlat = runs$longlat,
+                distmat = sp::spDists(runs$locations),
                 family = runs$family,
                 referencebf = 0, corrfcn = runs$corrfcn, transf = transf,
-                binwo = binwo, 
+                real_transf = real_transf, itr = itr,
                 pnts = list(nu = runs$nu, phi = runs$phi, omg = runs$omg,
                   kappa = runs$kappa))
     return(out)
   }
-  needkappa <- corrfcn %in% c("matern", "powerexponential")
-  icf <- match(corrfcn, c("matern", "spherical", "powerexponential"))
+  icf <- .geoBayes_correlation(corrfcn)
   loc <- model$locations
-  dm <- sp::spDists(loc)
+  dm <- sp::spDists(loc, longlat = model$longlat)
   fixphi <- sapply(runs, function(r) attr(r[["phi"]], "fixed"))
   if (sum(fixphi) != 0 & sum(fixphi) != nruns) {
     stop ("The parameter phi is not consistently fixed or estimated")
@@ -234,29 +207,25 @@ the extra elements will be discarded")
   }
   if (fixnu) {
     nu_pnts <- sapply(runs, function(r) r[["nu"]][1])
-    if (family == "binomial" && any(nu_pnts <= 0) &&
-        length(unique(nu_pnts)) > 1) {
-      stop ("The link functions don't have the same functional form")
-    }
   }
-  if (needkappa) {
+  if (.geoBayes_corrfcn$needkappa[icf]) {
     kappa_pnts <- sapply(runs, function(r) r[["kappa"]][1])
   } else {
     kappa_pnts <- rep(0, nruns)
   }
   kappa_pnts <- as.double(kappa_pnts)
-  if (any(kappa_pnts < 0) & corrfcn %in% c("matern", "powerexponential")) {
+  if (corrfcn %in% c("matern", "powerexponential") && any(kappa_pnts < 0)) {
     stop ("Argument kappa_pnts cannot be negative")
   }
-  if (any(kappa_pnts > 2) & corrfcn == "powerexponential") {
+  if (corrfcn == "powerexponential" && any(kappa_pnts > 2)) {
     stop ("Argument kappa_pnts cannot be more than 2")
   }
 
-  z1 <- matrix(unlist(mapply(function(z, n) z[, seq_len(n), drop = FALSE],
-                             sample, Nout1)), n, Ntot1)
-  z2 <- matrix(unlist(mapply(function(z, n)
-    z[, n < seq_len(NCOL(z)), drop = FALSE],
-                             sample, Nout1)), n, Ntot2)
+  ## Split the sample
+  sel1 <- rep(rep(c(TRUE, FALSE), nruns), rbind(Nout1, Nout2))
+  z1 <- sample[, sel1, drop = FALSE]
+  z2 <- sample[, !sel1, drop = FALSE]
+
   logbf <- numeric(nruns)
   lglk1 <- matrix(0., Ntot1, nruns)
   lglk2 <- matrix(0., Ntot2, nruns)
@@ -280,9 +249,10 @@ the extra elements will be discarded")
                   as.double(y), as.double(l), as.double(F),
                   as.double(dm), as.double(betm0), as.double(betQ0),
                   as.double(ssqdf), as.double(ssqsc), max(tsqdf, 0),
-                  as.double(tsq), as.double(kappa_pnts), as.integer(icf), 
+                  as.double(tsq), as.double(kappa_pnts), as.integer(icf),
                   as.integer(n), as.integer(p), as.integer(nruns),
-                  as.integer(ifam), as.integer(imeth))
+                  as.integer(ifam), as.integer(imeth), as.integer(itr),
+                  PACKAGE = "geoBayes")
   refbf <- RUN$logbf[reference]
   logbf <- RUN$logbf - refbf
   if (Ntot2 > 0) {
@@ -294,12 +264,13 @@ the extra elements will be discarded")
   }
   out <- list(logbf = logbf, logLik1 = RUN$lglk1, logLik2 = lglk2,
               isweights = weights, controlvar = zcv, sample2 = z2,
-              N1 = Nout1, N2 = Nout2, 
+              N1 = Nout1, N2 = Nout2,
               betm0 = betm0,
               betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc, tsqdf = tsqdf,
               tsqsc = tsqsc, dispersion = dispersion, response = y, weights = l,
               modelmatrix = F, locations = loc, distmat = dm, family = family,
-              corrfcn = corrfcn, transf = transf, binwo = binwo, 
+              corrfcn = corrfcn, transf = transf,
+              real_transf = real_transf, itr = itr,
               pnts = list(nu = nu_pnts, phi = phi_pnts, omg = omg_pnts,
                 kappa = kappa_pnts))
   out

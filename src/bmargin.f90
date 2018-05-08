@@ -59,7 +59,7 @@ contains
     if (iflag > 0) then
       call rwarn ('The reverse logistic algorithm needs more iterations')
     end if
-    eta = eta - eta(1) + log(dble(Nout))
+    eta = eta - eta(1) + log(dble(Nout)) ! -log(BF_i) + log(N_i)
   end subroutine revlogistic
 
 
@@ -74,12 +74,12 @@ contains
     double precision, intent(inout) :: eta(kg)
     integer, parameter :: maxit=500
     double precision, parameter :: pgtol = 5d-5
-    integer ia, ie, i, j, it, ipiv(kg-1)
+    integer ia, ie, i, j, it, ipiv(1:kg-1)
     double precision llik_mix_all(Ntot), a(kg), Bmat(2:kg,2:kg), bvec(2:kg), &
        r(kg), likw(Ntot,kg)
     logical convergence
     double precision bnorm, work(4*kg-4), rcond
-    integer iwork(kg-1)
+    integer iwork(1:kg-1)
     double precision, external :: dlange
 
     a = dble(Nout)

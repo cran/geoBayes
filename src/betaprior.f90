@@ -14,7 +14,6 @@ contains
     logical, intent(out) :: lmxi
     double precision, intent(out) :: modeldfh, xi(n)
     integer i
-
     lmxi = .false.
     lmxi = betQ0(1,1) .gt. 0d0
     if (lmxi) then

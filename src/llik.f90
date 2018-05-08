@@ -1,21 +1,25 @@
-subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
+subroutine llikfcn_no (lglk, philist, nsqlist, nulist, kappalist, &
    zsample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
-   icf, n, p, kg, ifam)
-  
+   icf, n, p, kg, ifam, itr)
+
+  use modelfcns, jointyz_sp => jointyz
   use covfun
-  use jointyz
+  use jointyz, only: jointyz_gt
   use betaprior
   implicit none
-  integer, intent(in) :: n, p, kg, ifam, Ntot, icf
+  integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
      zsample(n, Ntot), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
-  logical lup(n, n), lmxi
+  logical lmxi
   double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
      ldh_Ups, ssqdfsc, modeldfh, &
      tsqdfsc, respdfh, xi(n)
-  integer i, ii, j
+  integer i, j
+
+  call create_model (ifam)
+  call create_spcor (icf,n)
 
   ssqdfsc = ssqdf*ssqsc
   tsqdfsc = tsqdf*tsq
@@ -24,118 +28,55 @@ subroutine llikfcnz (lglk, philist, nsqlist, nulist, kappalist, &
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
-  do i = 1, n
-    lup(:i-1,i) = .true.
-    lup(i:,i) = .false. 
-  end do
-
   select case (ifam)
-  case (0) ! Transformed Gaussian
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
+  case (0)
+    do i = 1, kg
+      call calc_cov (philist(i),nsqlist(i),dm,F,betQ0,&
+         kappalist(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
-        lglk(j,ii) = jointyz_gt(n, zsample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsqdfsc, modeldfh, respdfh)
-      end do
-    end do
-  case (1) ! Gaussian
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointyz_ga(n, zsample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (2) ! Binomial
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointyz_bi(n, zsample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (3) ! Poisson
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointyz_po(n, zsample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (4) ! Gamma
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointyz_gm(n, zsample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (5) ! Binomial Asymmetric
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointyz_ba(n, zsample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (6) ! Binomial Asymmetric Decreasing
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointyz_bd(n, zsample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (7) ! Binomial Wallace
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointyz_bw(n, zsample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk(j,i) = jointyz_gt(n, zsample(:,j), y, l, Ups, ldh_Ups, &
+           nulist(i), xi, lmxi, ssqdfsc, tsqdfsc, modeldfh, respdfh)
       end do
     end do
   case default
-    call rexit ("Unrecognised family")
+    do i = 1, kg
+      call calc_cov (philist(i),nsqlist(i),dm,F,betQ0,&
+         kappalist(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
+      do j = 1, Ntot
+        call rchkusr
+        lglk(j,i) = jointyz_sp(n, zsample(:,j), y, l, Ups, ldh_Ups, &
+           nulist(i), xi, lmxi, ssqdfsc, tsq, modeldfh)
+      end do
+    end do
   end select
-end subroutine llikfcnz
+end subroutine llikfcn_no
 
 
 
 
-subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
+subroutine llikfcn_mu (lglk, philist, nsqlist, nulist, kappalist, &
    musample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
-   icf, n, p, kg, ifam)
-  
+   icf, n, p, kg, ifam, itr)
+
+  use modelfcns, jointymu_sp => jointymu, logpdfmu_sp => logpdfmu
   use covfun
-  use jointymu
+  use jointymu, only: jointymu_gt
   use betaprior
   implicit none
-  integer, intent(in) :: n, p, kg, ifam, Ntot, icf
+  integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
      musample(n, Ntot), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
-  logical lup(n, n), lmxi
+  logical lmxi
   double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
      ldh_Ups, ssqdfsc, modeldfh, &
      tsqdfsc, respdfh, xi(n)
-  integer i, ii, j
+  integer i, j
+
+  call create_model (ifam)
+  call create_spcor(icf,n)
 
   ssqdfsc = ssqdf*ssqsc
   tsqdfsc = tsqdf*tsq
@@ -144,117 +85,96 @@ subroutine llikfcnmu (lglk, philist, nsqlist, nulist, kappalist, &
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
-  do i = 1, n
-    lup(:i-1,i) = .true.
-    lup(i:,i) = .false. 
-  end do
-
   select case (ifam)
-  case (0) ! Transformed Gaussian
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
+  case (0)
+    do i = 1, kg
+      call calc_cov (philist(i),nsqlist(i),dm,F,betQ0,&
+         kappalist(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
-        lglk(j,ii) = jointymu_gt(n, musample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsqdfsc, modeldfh, respdfh)
-      end do
-    end do
-  case (1) ! Gaussian
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointymu_ga(n, musample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (2) ! Binomial
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointymu_bi(n, musample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (3) ! Poisson
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointymu_po(n, musample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (4) ! Gamma
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointymu_gm(n, musample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (5) ! Binomial Asymmetric
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointymu_ba(n, musample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (6) ! Binomial Asymmetric Decreasing
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointymu_bd(n, musample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
-      end do
-    end do
-  case (7) ! Binomial Wallace
-    do ii = 1, kg
-      call calc_cov (philist(ii),nsqlist(ii),dm,F,betQ0,&
-         lup,kappalist(ii),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        call rchkusr
-        lglk(j,ii) = jointymu_bw(n, musample(:, j), y, l, Ups, ldh_Ups, &
-           nulist(ii), xi, lmxi, ssqdfsc, tsq, modeldfh)
+        lglk(j,i) = jointymu_gt(n, musample(:,j), y, l, Ups, ldh_Ups, &
+           nulist(i), xi, lmxi, ssqdfsc, tsqdfsc, modeldfh, respdfh)
       end do
     end do
   case default
-    call rexit ("Unrecognised family")
+    do i = 1, kg
+      call calc_cov (philist(i),nsqlist(i),dm,F,betQ0,&
+         kappalist(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
+      do j = 1, Ntot
+        call rchkusr
+        lglk(j,i) = jointymu_sp(n, musample(:,j), y, l, Ups, ldh_Ups, &
+           nulist(i), xi, lmxi, ssqdfsc, tsq, modeldfh)
+      end do
+    end do
   end select
-end subroutine llikfcnmu
+end subroutine llikfcn_mu
 
+subroutine lpdffcn_mu (lglk, philist, nsqlist, nulist, kappalist, &
+   musample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   icf, n, p, kg, ifam, itr)
+  ! Like llikfcn_mu but not multiplying by p(y|mu)
 
-subroutine llikfcnrb (lglk, philist, nsqlist, nulist, kappalist, &
-   wsample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
-   icf, n, p, kg, ifam)
-  
+  use modelfcns, jointymu_sp => jointymu, logpdfmu_sp => logpdfmu
   use covfun
-  use transfbinomial, only: jointyw_bi
-  use jointyz, only: jointyz_bi
+  use jointymu, only: jointymu_gt
   use betaprior
   implicit none
-  integer, intent(in) :: n, p, kg, ifam, Ntot, icf
+  integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
+  double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
+     musample(n, Ntot), y(n), l(n), F(n, p), &
+     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
+  double precision, intent(out) :: lglk(Ntot, kg)
+  logical lmxi
+  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
+     ldh_Ups, ssqdfsc, modeldfh, &
+     tsqdfsc, respdfh, xi(n)
+  integer i, j
+
+  call create_model (ifam)
+  call create_spcor(icf,n)
+
+  ssqdfsc = ssqdf*ssqsc
+  tsqdfsc = tsqdf*tsq
+  respdfh = .5d0*(n + tsqdf)
+
+  ! Determine flat or normal prior
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+
+  do i = 1, kg
+    call calc_cov (philist(i),nsqlist(i),dm,F,betQ0,&
+       kappalist(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
+    do j = 1, Ntot
+      call rchkusr
+      lglk(j,i) = logpdfmu_sp(n, musample(:,j), Ups, ldh_Ups, &
+         nulist(i), xi, lmxi, ssqdfsc, modeldfh)
+    end do
+  end do
+end subroutine lpdffcn_mu
+
+
+subroutine llikfcn_wo (lglk, philist, nsqlist, nulist, kappalist, &
+   wsample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   icf, n, p, kg, ifam, itr)
+  !! Work-around for the binomial family.
+
+  use modelfcns, jointyz_sp => jointyz
+  use covfun
+  use betaprior
+  implicit none
+  integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
      wsample(n, Ntot), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
-  logical lup(n, n), lmxi
-  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
+  logical lmxi
+  double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n, n), &
      ldh_Ups, ssqdfsc, modeldfh, nu, phi, nsq, kappa, &
      tsqdfsc, respdfh, xi(n)
-  integer i, ii, j
+  integer i, j, m
+  double precision zsam(n)
+
+  call create_model (ifam)
+  call create_spcor(icf,n)
 
   ssqdfsc = ssqdf*ssqsc
   tsqdfsc = tsqdf*tsq
@@ -263,39 +183,122 @@ subroutine llikfcnrb (lglk, philist, nsqlist, nulist, kappalist, &
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
-  do i = 1, n
-    lup(:i-1,i) = .true.
-    lup(i:,i) = .false. 
+  select case (ifam)
+  case (0)
+    call rexit ("This method has not been implemented.")
+  case default
+    do i = 1, kg
+      nu = nulist(i)
+      phi = philist(i)
+      nsq = nsqlist(i)
+      kappa = kappalist(i)
+      call calc_cov (phi,nsq,dm,F,betQ0,&
+         kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+      do j = 1, Ntot
+        call rchkusr
+        zsam = transfw(wsample(:,j),nu)
+        lglk(j,i) = jointyz_sp(n, zsam, y, l, Ups, ldh_Ups, &
+           nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
+        do m = 1, n
+          lglk(j,i) = lglk(j,i) - logitrwdz(zsam(m),nu)
+        end do
+      end do
+    end do
+  end select
+end subroutine llikfcn_wo
+
+subroutine llikfcn_tr (lglk, philist, nsqlist, nulist, kappalist, &
+   sample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   icf, n, p, kg, ifam, itr)
+!! Log-likelihood function.
+!! itr is the type of transformation used: 0 = no, 1 = mu, 2 = wo.
+
+  use modelfcns, logpdfzf => logpdfz, condymu_mf => condymu
+  use covfun
+  use betaprior
+  use condymu, only: condymu_gt
+  implicit none
+  integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
+  double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
+     sample(n, Ntot), y(n), l(n), F(n, p), &
+     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
+  double precision, intent(out) :: lglk(Ntot,kg)
+  logical lmxi
+  double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n, n), &
+     ldh_Ups, ssqdfsc, modeldfh, nu, phi, nsq, kappa, &
+     tsqval, respdfh, xi(n)
+  integer i, j
+  double precision zsam(n), msam(n), jsam(n), sam(n)
+
+  abstract interface
+    function condymu_ (n, y1, y2, mu, tsqval, respdfh)
+      implicit none
+      integer, intent(in) :: n
+      double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
+         respdfh
+      double precision condymu_
+    end function condymu_
+  end interface
+
+  procedure(condymu_), pointer :: condymuf => null()
+
+  call create_model (ifam)
+  call create_spcor(icf,n)
+
+  ssqdfsc = ssqdf*ssqsc
+  select case (ifam)
+  case (0)
+    tsqval = tsqdf*tsq
+    respdfh = .5d0*(n + tsqdf)
+    condymuf => condymu_gt
+  case default
+    tsqval = tsq
+    condymuf => condymu_sp
+  end select
+
+  ! Determine flat or normal prior
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+
+  call rchkusr
+
+  do i = 1, kg
+    nu = nulist(i)
+    phi = philist(i)
+    nsq = nsqlist(i)
+    kappa = kappalist(i)
+    call calc_cov (phi,nsq,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+    do j = 1, Ntot
+      call rchkusr
+      sam = sample(:,j)
+      where (itr == 0)
+        zsam = sam
+        msam = invlink(zsam,nu)
+        jsam = 0d0
+      elsewhere (itr == 1)
+        msam = sam
+        zsam = flink(msam,nu)
+        jsam = logilinkdz(zsam,nu)
+      elsewhere (itr == 2)
+        zsam = transfw(sam,nu)
+        msam = invlink(zsam,nu)
+        jsam = logitrwdz(zsam,nu)
+      end where
+      lglk(j,i) = logpdfzf(n,zsam,Ups,ldh_Ups,xi,lmxi,ssqdfsc,modeldfh) &
+         + condymuf(n,y,l,msam,tsqval,respdfh) - sum(jsam)
+    end do
   end do
 
-  select case (ifam)
-  case (2) ! Binomial
-    do ii = 1, kg
-      nu = nulist(ii)
-      phi = philist(ii)
-      nsq = nsqlist(ii)
-      kappa = kappalist(ii)
-      call calc_cov (phi,nsq,dm,F,betQ0,&
-         lup,kappa,icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      if (nu .gt. 0d0) then
-        do j = 1, Ntot
-          call rchkusr
-          lglk(j,ii) = jointyw_bi(n, wsample(:, j), y, l, Ups, ldh_Ups, &
-             nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
-        end do
-      else
-        do j = 1, Ntot
-          call rchkusr
-          lglk(j,ii) = jointyz_bi(n, wsample(:, j), y, l, Ups, ldh_Ups, &
-             nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
-        end do
-      end if
-    end do
-  case default
-    call rexit ("This function is unsed only for the binomial family.")
-  end select
-end subroutine llikfcnrb
+contains
 
+  function condymu_sp (n, y1, y2, mu, tsqval, respdfh)
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
+       respdfh
+    double precision condymu_sp
+    condymu_sp = condymu_mf(n,y1,y2,mu,tsqval)
+  end function condymu_sp
+end subroutine llikfcn_tr
 
 
 

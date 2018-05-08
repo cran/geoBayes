@@ -1,3 +1,19 @@
+0.5.0
+* Calculation of log-likelihood derivatives.
+
+0.4.1
+* Using transformed z.
+
+0.3.10
+* Spectral variance calculation.
+
+0.3.9
+* Extended Box-Cox link for Poisson and gamma.
+
+0.3.4
+* bf2new and bf2optim handle multicollinearity in control variates.
+* plotbf2 does not plot against non-varying parameters.
+
 0.3.3
 * Fixed a bug of MCMC when using normal prior for beta.
 
@@ -11,7 +27,7 @@
 * This version compiles with parallel make.
 
 0.3.0
-* Please update to this version as a number of bugs have been corrected. 
+* Please update to this version as a number of bugs have been corrected.
 * Implement a fast workaround for for the untransformed binomial-robit model.
 * New binomial link family Wallace.binomial.
 

@@ -1,33 +1,35 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! 
-!!! Commentary: 
-!! 
+!!
+!!! Commentary:
+!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-subroutine calcbz_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+subroutine calcb_no_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
    Ntot, zsample, weights, n, p, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam)
+   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
+  use modelfcns, condyz_sp => condyz
   use interfaces
   use flogsumexp
   use covfun
-  use condyz
-  use pdfz
+  use condyz, only: condyz_gt
   use betaprior
   implicit none
-  integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf
+  integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
   double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
      nu(n_nu), zsample(n, Ntot), weights(Ntot), &
      betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n, p), dm(n, n)
   double precision, intent(out) :: bfact(n_nu, n_cov)
-  logical lup(n, n), lmxi
+  logical lmxi
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
   integer i, j, k
   double precision logfy(n_nu, Ntot), lfz
   double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
      ldh_Ups, llikw(n_nu, Ntot), xi(n)
+
+  call create_model(ifam)
+  call create_spcor(icf,n)
 
   ssqdfsc = ssqdf*ssqsc
   tsqdfsc = tsqdf*tsq
@@ -35,11 +37,6 @@ subroutine calcbz_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
 
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
-
-  do i = 1, n
-    lup(:i-1,i) = .true.
-    lup(i:,i) = .false. 
-  end do
 
   call rchkusr
 
@@ -53,62 +50,18 @@ subroutine calcbz_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
       end do
       call rchkusr
     end do
-  case (1)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_ga(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (2)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_bi(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (3)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_po(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (4)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_gm(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (5)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_ba(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (6)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_bd(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (7)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_bw(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
   case default
-    call rexit ("Unrecognised family")
+    do j = 1, Ntot
+      do k = 1, n_nu
+        logfy(k, j) = condyz_sp(n, y, l, zsample(:, j), nu(k), tsq)
+      end do
+      call rchkusr
+    end do
   end select
 
   do k = 1, n_cov
     call calc_cov (phi(k),nsq(k),dm,F,betQ0,&
-       lup,kappa(k),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
+       kappa(k),n,p,T,TiF,FTF,Ups,ldh_Ups)
     do j = 1, Ntot
       ! Calculate unnormalised log-likelihood at sampled points
       lfz = logpdfz(n, zsample(:, j), Ups, ldh_Ups, xi, lmxi, &
@@ -119,30 +72,32 @@ subroutine calcbz_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
     end do
     bfact(:, k) = logrsumexp(llikw, n_nu, Ntot)
   end do
-end subroutine calcbz_st
+end subroutine calcb_no_st
 
 
-subroutine calcbw_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+subroutine calcb_wo_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
    Ntot, wsample, weights, n, p, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam)
+   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
+  use modelfcns
   use flogsumexp
   use covfun
-  use jointyz, only: jointyz_bi
-  use transfbinomial
   use betaprior
   implicit none
-  integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf
+  integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
   double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
      nu(n_nu), wsample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n,p), dm(n,n)
   double precision, intent(out) :: bfact(n_nu,n_cov)
-  logical lup(n, n), lmxi
-  double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
-  integer i, j, k
+  logical lmxi
+  double precision ssqdfsc, tsqdfsc, respdfh, modeldfh, zsample(n)
+  integer i, j, k, m
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
      ldh_Ups, llikw(n_nu,Ntot), xi(n), lfw
+
+  call create_model (ifam)
+  call create_spcor(icf,n)
 
   ssqdfsc = ssqdf*ssqsc
   tsqdfsc = tsqdf*tsq
@@ -151,65 +106,230 @@ subroutine calcbw_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
-  do i = 1, n
-    lup(:i-1,i) = .true.
-    lup(i:,i) = .false. 
-  end do
-
   call rchkusr
 
-  
   select case (ifam)
-  case (2)
+  case (0)
+    call rexit ("This method has not been implemented.")
+  case default
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
+         kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
-          if (nu(k) .gt. 0d0) then
-            lfw = jointyw_bi(n, wsample(:,j), y, l, Ups, ldh_Ups, &
-               nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
-          else
-            lfw = jointyz_bi(n, wsample(:,j), y, l, Ups, ldh_Ups, &
-               nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
-          end if
-          llikw(k, j) = lfw - weights(j)
+          zsample = transfw(wsample(:,j), nu(k))
+          lfw = jointyz(n, zsample, y, l, Ups, ldh_Ups, &
+             nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
+          do m = 1, n
+            lfw = lfw - logitrwdz(zsample(m),nu(k))
+          end do
+          llikw(k,j) = lfw - weights(j)
+        end do
+      end do
+      bfact(:, i) = logrsumexp(llikw, n_nu, Ntot)
+    end do
+  end select
+end subroutine calcb_wo_st
+
+
+subroutine calcb_mu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+   Ntot, musample, weights, n, p, betm0, betQ0, ssqdf, &
+   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
+
+  use modelfcns
+  use interfaces
+  use flogsumexp
+  use covfun
+  use pdfmu, only: logpdfmu_ga
+  use betaprior
+  implicit none
+  integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
+  double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
+     nu(n_nu), musample(n, Ntot), weights(Ntot), &
+     betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
+     F(n, p), dm(n, n)
+  double precision, intent(out) :: bfact(n_nu, n_cov)
+  logical lmxi
+  double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
+  integer i, j, k
+  double precision lfmu
+  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
+     ldh_Ups, llikw(n_nu, Ntot), xi(n)
+
+  call create_model(ifam)
+  call create_spcor(icf,n)
+
+  ssqdfsc = ssqdf*ssqsc
+  tsqdfsc = tsqdf*tsq
+  respdfh = .5d0*(n + tsqdf)
+
+  ! Determine flat or normal prior
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+
+  call rchkusr
+
+  select case (ifam)
+  case (0)
+    do i = 1, n_cov
+      call rchkusr
+      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
+         kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
+      do j = 1, Ntot
+        do k = 1, n_nu
+          lfmu = logpdfmu_ga(n, musample(:, j), Ups, ldh_Ups, &
+             nu(k), xi, lmxi, ssqdfsc, modeldfh)
+          llikw(k, j) = lfmu - weights(j)
         end do
       end do
       bfact(:, i) = logrsumexp(llikw, n_nu, Ntot)
     end do
   case default
-    call rexit ("Unrecognised family")
+    do i = 1, n_cov
+      call rchkusr
+      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
+         kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
+      do j = 1, Ntot
+        do k = 1, n_nu
+          lfmu = logpdfmu(n, musample(:,j), Ups, ldh_Ups, &
+             nu(k), xi, lmxi, ssqdfsc, modeldfh)
+          llikw(k,j) = lfmu - weights(j)
+        end do
+      end do
+      bfact(:,i) = logrsumexp(llikw, n_nu, Ntot)
+    end do
   end select
-end subroutine calcbw_st
+end subroutine calcb_mu_st
 
 
-subroutine calcbz_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
-   Ntot, zsample, weights, zcv, n, p, kg, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam)
+subroutine calcb_tr_st (bfact, philist, nulist, nsqlist, kappalist, &
+   icf, n_cov, n_nu, Ntot, sample, weights, n, p, betm0, betQ0, ssqdf, &
+   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
+  use modelfcns, logpdfzf => logpdfz, condymu_mf => condymu
+  use flogsumexp
+  use covfun
+  use betaprior
+  use condymu, only: condymu_gt
+  implicit none
+  integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
+  double precision, intent(in) :: philist(n_cov), nsqlist(n_cov), &
+     kappalist(n_cov), nulist(n_nu), sample(n,Ntot), weights(Ntot), &
+     betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
+     F(n,p), dm(n,n)
+  double precision, intent(out) :: bfact(n_nu,n_cov)
+  logical lmxi
+  double precision ssqdfsc, respdfh, modeldfh, tsqval
+  integer i, j, k
+  double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
+     ldh_Ups, lglk(Ntot), xi(n)
+  double precision nu, phi, nsq, kappa
+  double precision zsam(n), msam(n), jsam(n), sam(n)
+
+  abstract interface
+    function condymu_ (n, y1, y2, mu, tsqval, respdfh)
+      implicit none
+      integer, intent(in) :: n
+      double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
+         respdfh
+      double precision condymu_
+    end function condymu_
+  end interface
+
+  procedure(condymu_), pointer :: condymuf => null()
+
+  call create_model (ifam)
+  call create_spcor(icf,n)
+
+  ssqdfsc = ssqdf*ssqsc
+  select case (ifam)
+  case (0)
+    tsqval = tsqdf*tsq
+    respdfh = .5d0*(n + tsqdf)
+    condymuf => condymu_gt
+  case default
+    tsqval = tsq
+    condymuf => condymu_sp
+  end select
+
+  ! Determine flat or normal prior
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+
+  call rchkusr
+
+  do i = 1, n_cov
+    phi = philist(i)
+    nsq = nsqlist(i)
+    kappa = kappalist(i)
+    call calc_cov (phi,nsq,dm,F,betQ0,&
+       kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+    do j = 1, n_nu
+      nu = nulist(j)
+      do k = 1, Ntot
+        call rchkusr
+        sam = sample(:,k)
+        where (itr == 0)
+          zsam = sam
+          msam = invlink(zsam,nu)
+          jsam = 0d0
+        elsewhere (itr == 1)
+          msam = sam
+          zsam = flink(msam,nu)
+          jsam = logilinkdz(zsam,nu)
+        elsewhere (itr == 2)
+          zsam = transfw(sam,nu)
+          msam = invlink(zsam,nu)
+          jsam = logitrwdz(zsam,nu)
+        end where
+        lglk(k) = logpdfzf(n,zsam,Ups,ldh_Ups,xi,lmxi,ssqdfsc,modeldfh) &
+           + condymuf(n,y,l,msam,tsqval,respdfh) - sum(jsam) - weights(k)
+      end do
+      bfact(j,i) = logsumexpv(lglk,Ntot)
+    end do
+  end do
+
+contains
+
+  function condymu_sp (n, y1, y2, mu, tsqval, respdfh)
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
+       respdfh
+    double precision condymu_sp
+    condymu_sp = condymu_mf(n,y1,y2,mu,tsqval)
+  end function condymu_sp
+end subroutine calcb_tr_st
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!! Control variates method !!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine calcb_no_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+   Ntot, zsample, weights, QRin, n, p, betm0, betQ0, ssqdf, &
+   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
+
+  use modelfcns, condyz_sp => condyz
   use interfaces
   use flogsumexp
   use covfun
-  use condyz
-  use pdfz
+  use condyz, only: condyz_gt
   use betaprior
   implicit none
-  integer, intent(in) :: n, p, kg, Ntot, n_cov, n_nu, ifam, icf
+  integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
   double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
-     nu(n_nu), zsample(n, Ntot), weights(Ntot), zcv(Ntot, kg), &
+     nu(n_nu), zsample(n, Ntot), weights(Ntot), QRin(Ntot), &
      betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n, p), dm(n, n)
   double precision, intent(out) :: bfact(n_nu, n_cov)
-  logical lup(n, n), lmxi
+  logical lmxi
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
   integer i, j, k
-  integer ltmp
-  double precision tmp(32*kg)
-  double precision qrtau(kg), zcvqr(Ntot, kg), logfy(n_nu, Ntot), lfz, dNtot
+  double precision logfy(n_nu, Ntot), lfz, dNtot
   double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
-     ldh_Ups, ycv(n_nu, Ntot), llikw, xi(n)
+     ldh_Ups, ycv(n_nu, Ntot), llikw, xi(n), betareg(n_nu)
+
+  call create_model(ifam)
+  call create_spcor(icf,n)
 
   ssqdfsc = ssqdf*ssqsc
   tsqdfsc = tsqdf*tsq
@@ -219,13 +339,7 @@ subroutine calcbz_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
-  do i = 1, n
-    lup(:i-1,i) = .true.
-    lup(i:,i) = .false. 
-  end do
-
   call rchkusr
-
   ! Calculate log f(y|z,nu)
   select case (ifam)
   case (0)
@@ -236,71 +350,19 @@ subroutine calcbz_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
       end do
       call rchkusr
     end do
-  case (1)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_ga(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (2)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_bi(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (3)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_po(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (4)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_gm(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (5)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_ba(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (6)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_bd(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
-  case (7)
-    do j = 1, Ntot
-      do k = 1, n_nu
-        logfy(k, j) = condyz_bw(n, y, l, zsample(:, j), nu(k), tsq)
-      end do
-      call rchkusr
-    end do
   case default
-    call rexit ("Unrecognised family")
+    do j = 1, Ntot
+      do k = 1, n_nu
+        logfy(k, j) = condyz_sp(n, y, l, zsample(:, j), nu(k), tsq)
+      end do
+      call rchkusr
+    end do
   end select
-
-  ! QR factorisation
-  zcvqr = zcv
-  ltmp = size(tmp)
-  call dgeqrf (Ntot, kg, zcvqr, Ntot, qrtau, tmp, ltmp, i)
-  if (i .ne. 0) then
-    call rexit ('calcb - Error with the QR factorisation')
-  end if
 
   do k = 1, n_cov
     call rchkusr
     call calc_cov (phi(k),nsq(k),dm,F,betQ0,&
-       lup,kappa(k),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
+       kappa(k),n,p,T,TiF,FTF,Ups,ldh_Ups)
     do j = 1, Ntot
       ! Calculate unnormalised log-likelihood at sampled points
       lfz = logpdfz(n, zsample(:,j), Ups, ldh_Ups, xi, lmxi, &
@@ -310,36 +372,42 @@ subroutine calcbz_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
         ycv(i,j) = exp(llikw + dNtot)
       end do
     end do
-    call calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact(:,k))
+    betareg = matmul(ycv,QRin)
+    where (betareg .gt. 0d0)
+      bfact(:,k) = log(betareg)
+    elsewhere
+      bfact(:,k) = -huge(1d0)
+    end where
   end do
-end subroutine calcbz_cv
+end subroutine calcb_no_cv
 
 
 
 
-subroutine calcbw_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
-   Ntot, wsample, weights, zcv, n, p, kg, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam)
+subroutine calcb_wo_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+   Ntot, wsample, weights, QRin, n, p, betm0, betQ0, ssqdf, &
+   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
+  use modelfcns
   use flogsumexp
   use covfun
-  use jointyz, only: jointyz_bi
-  use transfbinomial
   use betaprior
   implicit none
-  integer, intent(in) :: n, p, kg, Ntot, n_cov, n_nu, ifam, icf
+  integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
   double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
-     nu(n_nu), wsample(n,Ntot), weights(Ntot), zcv(Ntot, kg), &
+     nu(n_nu), wsample(n,Ntot), weights(Ntot), QRin(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n,p), dm(n,n)
   double precision, intent(out) :: bfact(n_nu,n_cov)
-  logical lup(n, n), lmxi
+  logical lmxi
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
-  integer i, j, k
+  integer i, j, k, m
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
-     ldh_Ups, llikw, ycv(n_nu,Ntot), xi(n), lfw
-  integer ltmp
-  double precision qrtau(kg), zcvqr(Ntot, kg), dNtot, tmp(32*kg)
+     ldh_Ups, llikw, ycv(n_nu,Ntot), xi(n), lfw, zsample(n), betareg(n_nu)
+  double precision dNtot
+
+  call create_model (ifam)
+  call create_spcor(icf,n)
 
   ssqdfsc = ssqdf*ssqsc
   tsqdfsc = tsqdf*tsq
@@ -349,232 +417,66 @@ subroutine calcbw_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
-  do i = 1, n
-    lup(:i-1,i) = .true.
-    lup(i:,i) = .false. 
-  end do
-
   call rchkusr
 
-  ! QR factorisation
-  zcvqr = zcv
-  ltmp = size(tmp)
-  call dgeqrf (Ntot, kg, zcvqr, Ntot, qrtau, tmp, ltmp, i)
-  if (i .ne. 0) then
-    call rexit ('calcb - Error with the QR factorisation')
-  end if
-
   select case (ifam)
-  case (2)
+  case (0)
+    call rexit ("This method has not been implemented.")
+  case default
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
+         kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
-          if (nu(k) .gt. 0d0) then
-            lfw = jointyw_bi(n, wsample(:,j), y, l, Ups, ldh_Ups, &
-               nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
-          else
-            lfw = jointyz_bi(n, wsample(:,j), y, l, Ups, ldh_Ups, &
-               nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
-          end if
+          zsample = transfw(wsample(:,j),nu(k))
+          lfw = jointyz(n, zsample, y, l, Ups, ldh_Ups, &
+             nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
+          do m = 1, n
+            lfw = lfw - logitrwdz(zsample(m),nu(k))
+          end do
           llikw = lfw - weights(j)
           ycv(k,j) = exp(llikw + dNtot)
         end do
       end do
-      call calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact(:,i))
+      betareg = matmul(ycv,QRin)
+      where (betareg .gt. 0d0)
+        bfact(:,i) = log(betareg)
+      elsewhere
+        bfact(:,i) = -huge(1d0)
+      end where
     end do
-  case default
-    call rexit ("Unrecognised family")
   end select
-end subroutine calcbw_cv
+end subroutine calcb_wo_cv
 
 
 
-subroutine calcbmu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
-   Ntot, musample, weights, n, p, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam)
+subroutine calcb_mu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+   Ntot, musample, weights, QRin, n, p, betm0, betQ0, ssqdf, &
+   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
+  use modelfcns
   use interfaces
   use flogsumexp
   use covfun
-  use condymu
-  use pdfmu
-  use transfbinomial
+  use pdfmu, only: logpdfmu_ga
   use betaprior
   implicit none
-  integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf
+  integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
   double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
-     nu(n_nu), musample(n, Ntot), weights(Ntot), &
+     nu(n_nu), musample(n,Ntot), weights(Ntot), QRin(Ntot), &
      betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n, p), dm(n, n)
   double precision, intent(out) :: bfact(n_nu, n_cov)
-  logical lup(n, n), lmxi
+  logical lmxi
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
   integer i, j, k
-  double precision logfy(Ntot), lfmu
+  double precision lfmu, dNtot
   double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
-     ldh_Ups, llikw(n_nu, Ntot), xi(n)
+     ldh_Ups, ycv(n_nu, Ntot), llikw, xi(n), betareg(n_nu)
 
-  ssqdfsc = ssqdf*ssqsc
-  tsqdfsc = tsqdf*tsq
-  respdfh = .5d0*(n + tsqdf)
-
-  ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
-
-  do i = 1, n
-    lup(:i-1,i) = .true.
-    lup(i:,i) = .false. 
-  end do
-
-  call rchkusr
-
-  select case (ifam)
-  case (0)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_ga(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw(k, j) = lfmu - weights(j)
-        end do
-      end do
-      bfact(:, i) = logrsumexp(llikw, n_nu, Ntot)
-    end do
-  case (1)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_ga(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw(k, j) = lfmu - weights(j)
-        end do
-      end do
-      bfact(:, i) = logrsumexp(llikw, n_nu, Ntot)
-    end do
-  case (2)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_bi(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw(k, j) = lfmu - weights(j)
-        end do
-      end do
-      bfact(:, i) = logrsumexp(llikw, n_nu, Ntot)
-    end do
-  case (3)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_po(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw(k, j) = lfmu - weights(j)
-        end do
-      end do
-      bfact(:, i) = logrsumexp(llikw, n_nu, Ntot)
-    end do
-  case (4)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_gm(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw(k, j) = lfmu - weights(j)
-        end do
-      end do
-      bfact(:, i) = logrsumexp(llikw, n_nu, Ntot)
-    end do
-  case (5)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_ba(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw(k, j) = lfmu - weights(j)
-        end do
-      end do
-      bfact(:, i) = logrsumexp(llikw, n_nu, Ntot)
-    end do
-  case (6)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_bd(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw(k, j) = lfmu - weights(j)
-        end do
-      end do
-      bfact(:, i) = logrsumexp(llikw, n_nu, Ntot)
-    end do
-  case (7)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_bw(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw(k, j) = lfmu - weights(j)
-        end do
-      end do
-      bfact(:, i) = logrsumexp(llikw, n_nu, Ntot)
-    end do
-  case default
-    call rexit ("Unrecognised family")
-  end select
-end subroutine calcbmu_st
-
-
-subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
-   Ntot, musample, weights, zcv, n, p, kg, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam)
-
-  use interfaces
-  use flogsumexp
-  use covfun
-  use condymu
-  use pdfmu
-  use betaprior
-  implicit none
-  integer, intent(in) :: n, p, kg, Ntot, n_cov, n_nu, ifam, icf
-  double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
-     nu(n_nu), musample(n, Ntot), weights(Ntot), zcv(Ntot, kg), &
-     betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n, p), dm(n, n)
-  double precision, intent(out) :: bfact(n_nu, n_cov)
-  logical lup(n, n), lmxi
-  double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
-  integer i, j, k
-  integer ltmp
-  double precision :: tmp(32*kg)
-  double precision qrtau(kg), zcvqr(Ntot, kg), lfmu, dNtot
-  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
-     ldh_Ups, ycv(n_nu, Ntot), llikw, xi(n)
+  call create_model (ifam)
+  call create_spcor(icf,n)
 
   ssqdfsc = ssqdf*ssqsc
   tsqdfsc = tsqdf*tsq
@@ -584,170 +486,158 @@ subroutine calcbmu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
-  do i = 1, n
-    lup(:i-1,i) = .true.
-    lup(i:,i) = .false. 
-  end do
-
   call rchkusr
-
-  ! QR factorisation
-  zcvqr = zcv
-  ltmp = size(tmp)
-  call dgeqrf (Ntot, kg, zcvqr, Ntot, qrtau, tmp, ltmp, i)
-  if (i .ne. 0) then
-    call rexit ('calcb - Error with the QR factorisation')
-  end if
 
   select case (ifam)
   case (0)
     do i = 1, n_cov
       call rchkusr
       call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
+         kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
-          lfmu = logpdfmu_ga(n, musample(:, j), Ups, ldh_Ups, &
+          lfmu = logpdfmu_ga(n, musample(:,j), Ups, ldh_Ups, &
              nu(k), xi, lmxi, ssqdfsc, modeldfh)
           llikw = lfmu - weights(j)
           ycv(k, j) = exp(llikw + dNtot)
         end do
       end do
-      call calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact(:,i))
-    end do
-  case (1)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_ga(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw = lfmu - weights(j)
-          ycv(k, j) = exp(llikw + dNtot)
-        end do
-      end do
-      call calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact(:,i))
-    end do
-  case (2)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_bi(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw = lfmu - weights(j)
-          ycv(k, j) = exp(llikw + dNtot)
-        end do
-      end do
-      call calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact(:,i))
-    end do
-  case (3)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_po(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw = lfmu - weights(j)
-          ycv(k, j) = exp(llikw + dNtot)
-        end do
-      end do
-      call calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact(:,i))
-    end do
-  case (4)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_gm(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw = lfmu - weights(j)
-          ycv(k, j) = exp(llikw + dNtot)
-        end do
-      end do
-      call calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact(:,i))
-    end do
-  case (5)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_ba(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw = lfmu - weights(j)
-          ycv(k, j) = exp(llikw + dNtot)
-        end do
-      end do
-      call calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact(:,i))
-    end do
-  case (6)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_bd(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw = lfmu - weights(j)
-          ycv(k, j) = exp(llikw + dNtot)
-        end do
-      end do
-      call calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact(:,i))
-    end do
-  case (7)
-    do i = 1, n_cov
-      call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
-         lup,kappa(i),icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
-      do j = 1, Ntot
-        do k = 1, n_nu
-          lfmu = logpdfmu_bw(n, musample(:, j), Ups, ldh_Ups, &
-             nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw = lfmu - weights(j)
-          ycv(k, j) = exp(llikw + dNtot)
-        end do
-      end do
-      call calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact(:,i))
+      betareg = matmul(ycv,QRin)
+      where (betareg .gt. 0d0)
+        bfact(:,i) = log(betareg)
+      elsewhere
+        bfact(:,i) = -huge(1d0)
+      end where
     end do
   case default
-    call rexit ("Unrecognised family")
+    do i = 1, n_cov
+      call rchkusr
+      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
+         kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
+      do j = 1, Ntot
+        do k = 1, n_nu
+          lfmu = logpdfmu(n, musample(:,j), Ups, ldh_Ups, &
+             nu(k), xi, lmxi, ssqdfsc, modeldfh)
+          llikw = lfmu - weights(j)
+          ycv(k, j) = exp(llikw + dNtot)
+        end do
+      end do
+      betareg = matmul(ycv,QRin)
+      where (betareg .gt. 0d0)
+        bfact(:,i) = log(betareg)
+      elsewhere
+        bfact(:,i) = -huge(1d0)
+      end where
+    end do
   end select
-end subroutine calcbmu_cv
+end subroutine calcb_mu_cv
 
 
 
+subroutine calcb_tr_cv (bfact, philist, nulist, nsqlist, kappalist, &
+   icf, n_cov, n_nu, Ntot, sample, weights, QRin, &
+   n, p, betm0, betQ0, ssqdf, &
+   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
-subroutine calcbfcv (n_nu,Ntot,kg,zcvqr,qrtau,ycv,bfact)
+  use modelfcns, logpdfzf => logpdfz, condymu_mf => condymu
+  use flogsumexp
+  use covfun
+  use betaprior
+  use condymu, only: condymu_gt
   implicit none
-  integer, intent(in) :: n_nu, Ntot, kg
-  double precision, intent(in) :: zcvqr(Ntot,kg), qrtau(kg)
-  double precision, intent(inout) :: ycv(n_nu,Ntot)
-  double precision, intent(out) :: bfact(n_nu)
-  integer ltmp, info
-  double precision tmp(n_nu*32)
+  integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
+  double precision, intent(in) :: philist(n_cov), nsqlist(n_cov), &
+     kappalist(n_cov), nulist(n_nu), sample(n,Ntot), weights(Ntot), &
+     betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
+     F(n,p), dm(n,n)
+  double precision, intent(in) :: QRin(Ntot)
+  double precision, intent(out) :: bfact(n_nu,n_cov)
+  logical lmxi
+  double precision ssqdfsc, respdfh, modeldfh, tsqval
+  integer i, j, k
+  double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
+     ldh_Ups, lglk(Ntot), xi(n)
+  double precision nu, phi, nsq, kappa
+  double precision zsam(n), msam(n), jsam(n), sam(n)
+  double precision dNtot, ycv(Ntot), betareg
 
-  ltmp = size(tmp)
-  call dormqr ('r','n',n_nu,Ntot,kg,zcvqr,Ntot,qrtau,ycv,n_nu,tmp,ltmp,&
-     info) 
-  if (info .ne. 0) then
-    call rexit ('calcb - Error in DORMQR')
-  end if
-  call dtrsm ('r','u','t','n',n_nu,kg,1d0,zcvqr,Ntot,ycv,n_nu)
-  where (ycv(:, 1) .gt. 0d0)
-    bfact = log(ycv(:, 1))
-  elsewhere
-    bfact = -huge(1d0)
-  end where
-end subroutine calcbfcv
+  abstract interface
+    function condymu_ (n, y1, y2, mu, tsqval, respdfh)
+      implicit none
+      integer, intent(in) :: n
+      double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
+         respdfh
+      double precision condymu_
+    end function condymu_
+  end interface
 
+  procedure(condymu_), pointer :: condymuf => null()
+
+  call create_model (ifam)
+  call create_spcor(icf,n)
+
+  ssqdfsc = ssqdf*ssqsc
+  select case (ifam)
+  case (0)
+    tsqval = tsqdf*tsq
+    respdfh = .5d0*(n + tsqdf)
+    condymuf => condymu_gt
+  case default
+    tsqval = tsq
+    condymuf => condymu_sp
+  end select
+  dNtot = log(dble(Ntot))
+
+  ! Determine flat or normal prior
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+
+  call rchkusr
+
+  do i = 1, n_cov
+    phi = philist(i)
+    nsq = nsqlist(i)
+    kappa = kappalist(i)
+    call calc_cov (phi,nsq,dm,F,betQ0,&
+       kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+    do j = 1, n_nu
+      nu = nulist(j)
+      do k = 1, Ntot
+        call rchkusr
+        sam = sample(:,k)
+        where (itr == 0)
+          zsam = sam
+          msam = invlink(zsam,nu)
+          jsam = 0d0
+        elsewhere (itr == 1)
+          msam = sam
+          zsam = flink(msam,nu)
+          jsam = logilinkdz(zsam,nu)
+        elsewhere (itr == 2)
+          zsam = transfw(sam,nu)
+          msam = invlink(zsam,nu)
+          jsam = logitrwdz(zsam,nu)
+        end where
+        lglk(k) = logpdfzf(n,zsam,Ups,ldh_Ups,xi,lmxi,ssqdfsc,modeldfh) &
+           + condymuf(n,y,l,msam,tsqval,respdfh) - sum(jsam) - weights(k)
+        ycv(k) = exp(lglk(k) + dNtot)
+      end do
+      betareg = dot_product(ycv,QRin)
+      if (betareg .gt. 0d0) then
+        bfact(j,i) = log(betareg)
+      else
+        bfact(j,i) = -huge(1d0)
+      end if
+    end do
+  end do
+
+contains
+
+  function condymu_sp (n, y1, y2, mu, tsqval, respdfh)
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
+       respdfh
+    double precision condymu_sp
+    condymu_sp = condymu_mf(n,y1,y2,mu,tsqval)
+  end function condymu_sp
+end subroutine calcb_tr_cv

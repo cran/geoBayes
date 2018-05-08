@@ -6,7 +6,7 @@
 ##' probabilities are transformed to \code{d2}. Also creates a plot of
 ##' the two link functions.
 ##' @title Compare two link functions for the binomial distribution
-##' @param d1 Either a positive number of one of "logit" or "probit"
+##' @param d1 Either a positive number or one of "logit" or "probit"
 ##' defining the link function. If positive number, this corresponds
 ##' to the \code{robit(d1)} link.
 ##' @param d2 Same as \code{d1}.

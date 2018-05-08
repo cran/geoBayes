@@ -4,7 +4,7 @@
 !! 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-module linkfcn
+module linkfcns
   implicit none
   double precision, parameter :: bigpos = huge(1d0), bigneg = -bigpos, &
      smallpos = epsilon(1d0), smallneg = -smallpos
@@ -13,123 +13,61 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! binomial !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link function
-  elemental function flink_bi (mu, d) result (z)
+  elemental function flink_bi (w, d) result (z)
     use interfaces, only: quantt, quantnorm, quantlogis
     implicit none
-    double precision, intent(in) :: mu, d
+    double precision, intent(in) :: w, d
     double precision z
     if (d .gt. 0d0) then
-      z = quantt(mu, d)
+      z = quantt(w, d)
     else if (d .lt. 0d0) then
-      z = quantlogis(mu)
+      z = quantlogis(w)
     else
-      z = quantnorm(mu)
+      z = quantnorm(w)
     end if
   end function flink_bi
 
 !! Inverse link function (log scale)
-  elemental function invlink_bi (z, d) result (y)
+  elemental function invlink_bi (z, d) result (w)
     ! Binomial symmetric (robit) link fcn
     use interfaces, only: logprobt, logprobnorm, logproblogis
     implicit none
     double precision, intent(in) :: z, d
-    double precision y
+    double precision w
     if (d .gt. 0d0) then
-      y = logprobt(z, d)
+      w = logprobt(z, d)
     else if (d .lt. 0d0) then
-      y = logproblogis(z)
+      w = logproblogis(z)
     else
-      y = logprobnorm(z)
+      w = logprobnorm(z)
     end if
   end function invlink_bi
 
-!! 1st derivative w.r.t. z
-  pure function invlink1_bi (z, d) result (y)
-    use interfaces, only: logprobt, logprobnorm, logpdft, logpdfnorm
+!! Derivative of inverse link function w.r.t. parameter
+  function invlinkdnu_bi (z, d) result (y)
+    ! Binomial symmetric (robit) link fcn
+    use interfaces, only: logprobt
+    use tcdfder
     implicit none
     double precision, intent(in) :: z, d
     double precision y
-    double precision f, ff
     if (d .gt. 0d0) then
-      ff = logprobt(z, d)
-      f = logpdft(z, d)
-      y = exp(f - ff)
-    else if (d .lt. 0d0) then
-      f = 0.6458
-      y = 1d0/(f*(1d0 + exp(z/f)))
-    else
-      ff = logprobnorm(z)
-      f = logpdfnorm(z)
-      y = exp(f - ff)      
+      y = tcdfdnu(z, d)
+    else 
+      y = 0d0
     end if
-  end function invlink1_bi
-
-!! 2nd derivative w.r.t. z
-  pure function invlink2_bi (z, d) result (y)
-    use interfaces, only: logprobt, logprobnorm, logpdft, logpdfnorm
-    implicit none
-    double precision, intent(in) :: z, d
-    double precision y
-    double precision f, ff
-    if (d .gt. 0d0) then
-      ff = logprobt(z, d)
-      f = logpdft(z, d)
-      y = f/ff
-      y = -y*(z+y)
-    else if (d .lt. 0d0) then
-      f = 0.6458
-      ff = f + f
-      y = z/ff
-      y = 1d0/(cosh(y)*ff)
-      y = -y*y
-    else
-      ff = logprobnorm(z)
-      f = logpdfnorm(z)
-      y = f/ff
-      y = -y*((d+1d0)*z/(d+z*z) + y)
-    end if
-  end function invlink2_bi
-
-!! 3rd derivative w.r.t. z
-  pure function invlink3_bi (z, d) result (y)
-    use interfaces, only: logprobt, logprobnorm, logpdft, logpdfnorm
-    implicit none
-    double precision, intent(in) :: z, d
-    double precision y
-    double precision f, ff
-    if (d .gt. 0d0) then
-      f = invlink1_bi(z, d)
-      ff = invlink2_bi(z, d)
-      y = d + z*z
-      y = (d+1d0)*(d + d - y)/(y*y)*f + (d+1d0)*z/y*ff + 2d0*f*ff
-      y = -y
-    else if (d .lt. 0d0) then
-      f = 0.6458
-      y = z/f
-      ff = .5d0*y
-      y = 1d0/(f*sinh(y))
-      ff = sinh(ff)
-      ff = ff*ff
-      y = y*y*y*ff*ff
-      y = y + y
-    else
-      f = invlink1_bi(z, d)
-      ff = invlink2_bi(z, d)
-      y = f + z*ff + 2d0*f*ff
-      y = -y
-    end if
-  end function invlink3_bi
+  end function invlinkdnu_bi
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! GEV binomial !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link function
 !! mu = 1 - exp{-max(0,1+d*z)**(1/d)} , if d /= 0
 !!    = 1 - exp(-exp(z))              , if d == 0
-  elemental function flink_ba (mu, d) result (z)
-    ! mu is log(1-mu)
+  elemental function flink_ba (w, d) result (z)
+    ! w is log(1-mu)
     implicit none
-    double precision, intent(in) :: mu, d
+    double precision, intent(in) :: w, d
     double precision z
-      z = -mu
+      z = -w
       if (d .eq. 0d0) then
         z = log(z)
       else if (d .eq. .5d0) then
@@ -152,7 +90,76 @@ contains
   end function flink_ba
 
 !! Inverse link fcn. Returns log(1-mu)
-  elemental function invlink_ba (z, d) result (y)
+  elemental function invlink_ba (z, d) result (w)
+    ! Binomial asymmetric (GEV) link fcn
+    ! mu = 1 - exp{-max(0,1+d*z)**(1/d)} , if d /= 0
+    !    = 1 - exp(-exp(z))              , if d == 0
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w
+    if (d .eq. 0d0) then
+      w = -exp(z)
+    else if (d .eq. 0.5d0) then
+      w = 1d0 + 0.5d0*z
+      if (w .gt. 0d0) then
+        w = -w*w
+      else
+        w = smallneg
+      end if
+    else if (d .eq. -0.5d0) then
+      w = 1d0 - 0.5d0*z
+      if (w .gt. 0d0) then
+        w = -1d0/(w*w)
+      else
+        w = bigneg
+      end if
+    else if (d .eq. 1d0) then
+      w = 1d0 + z
+      if (w .gt. 0d0) then
+        w = -w
+      else
+        w = smallneg
+      end if
+    else if (d .eq. -1d0) then
+      w = 1d0 - z
+      if (w .gt. 0d0) then
+        w = -1d0/w
+      else
+        w = bigneg
+      end if
+    else if (d .eq. 2d0) then
+      w = 1d0 + z + z
+      if (w .gt. 0d0) then
+        w = -sqrt(w)
+      else
+        w = smallneg
+      end if
+    else if (d .eq. -2d0) then
+      w = 1d0 - z - z
+      if (w .gt. 0d0) then
+        w = -1d0/sqrt(w)
+      else
+        w = bigneg
+      end if
+    else if (d .gt. 0d0) then 
+      w = 1d0 + d*z
+      if (w .gt. 0d0) then
+        w = -w**(1d0/d)
+      else
+        w = smallneg
+      end if
+    else
+      w = 1d0 + d*z
+      if (w .gt. 0d0) then
+        w = -w**(1d0/d)
+      else
+        w = bigneg
+      end if
+    end if
+  end function invlink_ba
+
+!! Inverse link fcn derivative w.r.t. nu
+  elemental function invlinkdnu_ba (z, d) result (y)
     ! Binomial asymmetric (GEV) link fcn
     ! mu = 1 - exp{-max(0,1+d*z)**(1/d)} , if d /= 0
     !    = 1 - exp(-exp(z))              , if d == 0
@@ -160,77 +167,70 @@ contains
     double precision, intent(in) :: z, d
     double precision y
     if (d .eq. 0d0) then
-      y = -exp(z)
+      y = .5d0*exp(z)*z*z
     else if (d .eq. 0.5d0) then
-      y = 1d0 + 0.5d0*z
+      y = 2d0 + z
       if (y .gt. 0d0) then
-        y = -y*y
+        y = y*(y*log(.5d0*y) - z)
       else
-        y = smallneg
+        y = 0d0
       end if
     else if (d .eq. -0.5d0) then
-      y = 1d0 - 0.5d0*z
+      y = 2d0 - z
       if (y .gt. 0d0) then
-        y = -1d0/(y*y)
+        y = 16d0 * (y*log(.5d0*y) + z)/(y*y*y)
       else
-        y = bigneg
+        y = bigpos
       end if
     else if (d .eq. 1d0) then
       y = 1d0 + z
       if (y .gt. 0d0) then
-        y = -y
+        y = y*log(y) - z
       else
-        y = smallneg
+        y = -z
       end if
     else if (d .eq. -1d0) then
       y = 1d0 - z
       if (y .gt. 0d0) then
-        y = -1d0/y
+        y = (y*log(y) + z)/(y*y)
       else
-        y = bigneg
+        y = bigpos
       end if
     else if (d .eq. 2d0) then
       y = 1d0 + z + z
       if (y .gt. 0d0) then
-        y = -sqrt(y)
+        y = (y*log(y) - z - z)/(4d0*sqrt(y))
       else
-        y = smallneg
+        y = bigpos
       end if
     else if (d .eq. -2d0) then
       y = 1d0 - z - z
       if (y .gt. 0d0) then
-        y = -1d0/sqrt(y)
+        y = (y*log(y) + z + z)/(4d0*y*sqrt(y))
       else
-        y = bigneg
-      end if
-    else if (d .gt. 0d0) then 
-      y = 1d0 + d*z
-      if (y .gt. 0d0) then
-        y = -y**(1d0/d)
-      else
-        y = smallneg
+        y = bigpos
       end if
     else
       y = 1d0 + d*z
       if (y .gt. 0d0) then
-        y = -y**(1d0/d)
+        y = (y*log(y) - d*z)/(d*d*y**(1d0-1d0/d))
       else
-        y = bigneg
+        y = bigpos
       end if
     end if
-  end function invlink_ba
+  end function invlinkdnu_ba
 
  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! GEVD binomial !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link function
 !! mu = 1 - exp{-max(0, 1+d*z)**(-1/d)} , if d /= 0
 !!    = 1 - exp(-exp(-z))               , if d == 0
-  elemental function flink_bd (mu, d) result (z)
-    ! mu is log (1-mu)
+  elemental function flink_bd (w, d) result (z)
+    ! w is log (1-mu)
     implicit none
-    double precision, intent(in) :: mu, d
+    double precision, intent(in) :: w, d
     double precision z
-    z = -mu
+    z = -w
     if (d .eq. 0d0) then
       z = -log(z)
     else ! d .ne. 0d0
@@ -239,154 +239,225 @@ contains
   end function flink_bd
   
 !! Inverse link fcn. Returns log(1-mu)
-  elemental function invlink_bd (z, d) result (y)
+  elemental function invlink_bd (z, d) result (w)
     ! Binomial asymmetric (GEV) decreasing link fcn
     ! p = 1 - exp{-max(0, 1+d*z)**(-1/d)}
-    ! y = log(1-p) = -max(0, 1+d*z)**(-1/d)
+    ! w = log(1-p) = -max(0, 1+d*z)**(-1/d)
     implicit none
     double precision, intent(in) :: z, d
-    double precision y
+    double precision w
     if (d .eq. 0d0) then
-      y = -exp(-z)
+      w = -exp(-z)
     else
-      y = 1d0 + d*z
-      if (y .gt. 0d0) then
-        y = -y**(-1d0/d)
+      w = 1d0 + d*z
+      if (w .gt. 0d0) then
+        w = -w**(-1d0/d)
       else if (d .gt. 0d0) then
-        y = bigneg
+        w = bigneg
       else
-        y = smallneg
+        w = smallneg
       end if
     end if
   end function invlink_bd
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Poisson !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Box-Cox !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link fcn
-  elemental function flink_po (mu, d) result (z)
-    ! mu is log(mu)
+  elemental function flink_boxcox (w, d) result (z)
+    ! z = (mu^d - 1)/d
+    ! w is log(mu)
     use interfaces, only: fexpm1
     implicit none
-    double precision, intent(in) :: mu, d
+    double precision, intent(in) :: w, d
     double precision z
     if (d .eq. 0d0) then
-      z = mu
+      z = w
     else if (d .eq. 1d0) then
-      z = fexpm1(mu)
+      z = fexpm1(w)
     else if (d .eq. -1d0) then
-      z = -fexpm1(-mu)
+      z = -fexpm1(-w)
     else
-      z = fexpm1(mu*d)/d
+      z = fexpm1(w*d)/d
     end if
-  end function flink_po
+  end function flink_boxcox
   
 !! Inverse link fcn, returns log(mu)
-  elemental function invlink_po (z,d) result (y)
+  elemental function invlink_boxcox (z,d) result (w)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
-    double precision y
+    double precision w
     if (d .eq. 0d0) then
-      y = z
+      w = z
     else 
-      y = d*z
-      if (y .gt. -1d0) then
-        y = flog1p(y)/d
+      w = d*z
+      if (w .gt. -1d0) then
+        w = flog1p(w)/d
       else
-        y = bigneg
+        w = bigneg
+      end if
+    end if
+  end function invlink_boxcox
+
+!!   elemental function invlinkdnu_boxcox (z,d) result (y)
+!!     implicit none
+!!     double precision, intent(in) :: z, d
+!!     double precision y
+!!     if (d .eq. 0d0) then
+!!       y = -.5d0*z*z
+!!     else 
+!!       y = 1d0 + d*z
+!!       if (y .gt. 0d0) then
+!!         y = z/(d*y) - log(y)/(d*d)
+!!       else
+!!         y = bigneg
+!!       end if
+!!     end if
+!!   end function invlinkdnu_boxcox
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Poisson !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! Link fcn
+  elemental function flink_po (w, d) result (z)
+    ! w is log(mu)
+    ! z = sign(w)*expm1(d*|w|)/d for d > 0
+    use interfaces, only: fexpm1
+    implicit none
+    double precision, intent(in) :: w, d
+    double precision z
+    if (d .eq. 0d0) then
+      z = w
+    else if (d .eq. 1d0) then
+      z = fexpm1(abs(w))
+      z = sign(z,w)
+    else if (d .gt. 0d0) then
+      z = fexpm1(d*abs(w))/d
+      z = sign(z,w)
+    else ! Use regular Box-Cox
+      z = fexpm1(w*d)/d
+    end if
+  end function flink_po
+
+  elemental function invlink_po (z,d) result (w)
+    use interfaces, only: flog1p
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w
+    if (d .eq. 0d0) then
+      w = z
+    else if (d .eq. 1d0) then
+      w = flog1p(abs(z))
+      w = sign(w,z)
+    else if (d .gt. 0d0) then
+      w = flog1p(d*abs(z))/d
+      w = sign(w,z)
+    else ! Use regular Box-Cox
+      w = d*z
+      if (w .gt. -1d0) then
+        w = flog1p(w)/d
+      else
+        w = bigneg
       end if
     end if
   end function invlink_po
 
-  
+ 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Gamma !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link fcn
-  elemental function flink_gm (mu, d) result (z)
+  elemental function flink_gm (w, d) result (z)
+    ! z = (mu^d - 1)/d
+    ! w is log(mu)
     implicit none
-    double precision, intent(in) :: mu, d
+    double precision, intent(in) :: w, d
     double precision z
-    z = flink_po(mu, d)
+    z = flink_po(w, d)
   end function flink_gm
   
 !! Inverse link fcn, returns log(mu)
-  elemental function invlink_gm (z,d) result (y)
+  elemental function invlink_gm (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
-    double precision y
-    y = invlink_po(z, d)
+    double precision w
+    w = invlink_po(z, d)
   end function invlink_gm
+
+!!   elemental function invlinkdnu_gm (z,d) result (y)
+!!     implicit none
+!!     double precision, intent(in) :: z, d
+!!     double precision y
+!!     y = invlinkdnu_po(z, d)
+!!   end function invlinkdnu_gm
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Gaussian !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Linf fcn
-  elemental function flink_ga (mu, d) result (z)
+  elemental function flink_ga (w, d) result (z)
     implicit none
-    double precision, intent(in) :: mu, d
+    double precision, intent(in) :: w, d
     double precision z
     if (d .eq. 0d0) then
-      if (mu > 0d0) then
-        z = log(mu)
+      if (w > 0d0) then
+        z = log(w)
       else
         z = bigneg
       end if
     else if (d .gt. 0d0) then
       if (d .eq. 2d0) then
-        z = .5d0*(mu*mu - 1d0)
+        z = .5d0*(w*w - 1d0)
       else if (d .eq. 1d0) then
-        z = mu - 1d0
+        z = w - 1d0
       else if (d .eq. .5d0) then
-        z = sign(sqrt(abs(mu)), mu) - 1d0
+        z = sign(sqrt(abs(w)), w) - 1d0
         z = z + z
       else
-        z = (sign(abs(mu)**d, mu) - 1d0)/d
+        z = (sign(abs(w)**d, w) - 1d0)/d
       end if
     else ! d .lt. 0d0
-      if (mu .gt. 0d0) then
+      if (w .gt. 0d0) then
         if (d .eq. -0.5d0) then
-          z = -(1d0/sqrt(mu) - 1d0)
+          z = -(1d0/sqrt(w) - 1d0)
           z = z + z
         else if (d .eq. -1d0) then
-          z = -(1d0/mu - 1d0)
+          z = -(1d0/w - 1d0)
         else if (d .eq. -2d0) then
-          z = -.5d0*(1d0/(mu*mu) - 1d0)
+          z = -.5d0*(1d0/(w*w) - 1d0)
         else
-          z = (mu**d - 1d0)/d
+          z = (w**d - 1d0)/d
         end if
-      else ! mu .le. 0d0
+      else ! w .le. 0d0
         z = bigneg
       end if
     end if
   end function flink_ga
   
 !! Inverse link fcn 
-  elemental function invlink_ga (z,d) result(y)
+  elemental function invlink_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
-    double precision y
+    double precision w
     if (d .eq. 0d0) then
-      y = exp(z)
+      w = exp(z)
     else if (d .gt. 0d0) then
-      y = d*z + 1d0
+      w = d*z + 1d0
       if (d .eq. 2d0) then
-        y = sign(sqrt(abs(y)),y)
+        w = sign(sqrt(abs(w)),w)
       else if (d .eq. .5d0) then
-        y = sign(y*y,y)
+        w = sign(w*w,w)
       else if (d .ne. 1d0) then
-        y = sign(abs(y)**(1d0/d),y)
+        w = sign(abs(w)**(1d0/d),w)
       end if
     else ! d .lt. 0d0
-      y = d*z + 1d0
-      if (y .gt. 0d0) then
-        y = 1d0/y
+      w = d*z + 1d0
+      if (w .gt. 0d0) then
+        w = 1d0/w
         if (d .eq. -2d0) then
-          y = sqrt(y)
+          w = sqrt(w)
         else if (d .eq. -.5d0) then
-          y = y*y
+          w = w*w
         else if (d .ne. -1d0) then
-          y = y**(1d0/(-d))
+          w = w**(1d0/(-d))
         end if
       else
-        y = bigpos
+        w = bigpos
       end if
     end if
   end function invlink_ga
@@ -396,33 +467,36 @@ contains
 !!! See function u4 in
 !!!  Wallace, D. L. (1959). Bounds on normal approximations to Student's
 !!!  and the chi-square distributions. The Annals of Mathematical
-!!!  Statistics, 1121-1130. 
+!!!  Statistics, 1121-1130.
 !! Link fcn
-  elemental function flink_bw (mu, d) result(z)
+!! mu = PHI[sign(z) * c(nu) * sqrt(nu*log(1+z*z/nu))]
+!! where c(nu) = (8*nu+1)/(8*nu+3)
+!! w = log(mu)
+  elemental function flink_bw (w, d) result(z)
     use interfaces, only: quantnorm, fexpm1
     implicit none
-    double precision, intent(in) :: mu, d
+    double precision, intent(in) :: w, d
     double precision :: z
     double precision t, e
     t = 8d0*d
-    e = quantnorm(mu)*(t + 3d0)/(t + 1d0)
+    e = quantnorm(w)*(t + 3d0)/(t + 1d0)
     t = sqrt(d*fexpm1(e*e/d))
     z = sign(t, e)
   end function flink_bw
 
 !! Inverse link fcn (log scale)
-  elemental function invlink_bw (z,d) result (y)
+  elemental function invlink_bw (z,d) result (w)
     use interfaces, only: logprobnorm, flog1p
     implicit none
     double precision, intent(in) :: z, d
-    double precision y
+    double precision w
     double precision x, t
     t = 8d0*d
     x = sqrt(d*flog1p(z*z/d))*(t + 1d0)/(t + 3d0)
     t = sign(x, z)
-    y = logprobnorm(t)
+    w = logprobnorm(t)
   end function invlink_bw
-end module linkfcn
+end module linkfcns
 
 
 ! Local Variables:

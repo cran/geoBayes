@@ -1,25 +1,175 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! 
-!!! Commentary: 
-!! 
+!!
+!!! Commentary:
+!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 module covfun
-  implicit none 
+  use cor_fcns
+  implicit none
   public
-  private covmat_a, covmat_l
+  private :: covmat_a, covmat_l, covmat_v
+  public :: spcor, spcor_dh, spcor_dk, spcor_hh, spcor_hk, &
+     spcor_dhdk, upper_tri
+  private :: spcor_, spcor_dh_, spcor_dk_, spcor_hh_, spcor_hk_, &
+     spcor_dhdk_
+  private :: spcor__, spcor_dh__, spcor_dk__, spcor_hh__, spcor_hk__, &
+     spcor_dhdk__
+  integer, parameter, private :: CORCODES(3) = (/1,2,3/)
+  logical, private :: CORDEF = .false.
+  integer, private :: CORIS = 0, DIMSP = 0
+  logical, private, pointer :: lup(:,:) => null()
+
 
   interface covmat
-    module procedure covmat_a, covmat_l
+    module procedure covmat_a, covmat_l, covmat_v
   end interface covmat
 
+  abstract interface
+    pure double precision function spcor_ (h,k)
+      double precision, intent(in) :: h,k
+    end function spcor_
+  end interface
+
+  abstract interface
+    pure double precision function spcor_dh_ (h,k)
+      double precision, intent(in) :: h,k
+    end function spcor_dh_
+  end interface
+
+  abstract interface
+    pure double precision function spcor_dk_ (h,k)
+      double precision, intent(in) :: h,k
+    end function spcor_dk_
+  end interface
+
+  abstract interface
+    pure double precision function spcor_hh_ (h,k)
+      double precision, intent(in) :: h,k
+    end function spcor_hh_
+  end interface
+
+  abstract interface
+    pure double precision function spcor_hk_ (h,k)
+      double precision, intent(in) :: h,k
+    end function spcor_hk_
+  end interface
+
+  abstract interface
+    pure double precision function spcor_dhdk_ (h,k)
+      double precision, intent(in) :: h,k
+    end function spcor_dhdk_
+  end interface
+
+  procedure (spcor_     ), pointer :: spcor__      => null()
+  procedure (spcor_dh_  ), pointer :: spcor_dh__   => null()
+  procedure (spcor_dk_  ), pointer :: spcor_dk__   => null()
+  procedure (spcor_hh_  ), pointer :: spcor_hh__   => null()
+  procedure (spcor_hk_  ), pointer :: spcor_hk__   => null()
+  procedure (spcor_dhdk_), pointer :: spcor_dhdk__ => null()
+
 contains
-  subroutine calc_cov (phi,nsq,dm,F,betQ0, &
-     lup,kappa,icf,n,p,T,TiF,FTF,Ups,ldh_Ups)
+
+  function upper_tri () result (lup_)
+    logical, allocatable :: lup_(:,:)
+    allocate(lup_(DIMSP,DIMSP))
+    lup_ = lup
+  end function upper_tri
+
+  subroutine create_spcor (icf,n)
+    use cor_fcns
     implicit none
-    integer, intent(in) :: n, p, icf
-    logical, intent(in) :: lup(n,n)
+    integer, intent(in) :: icf
+    integer, intent(in) :: n
+    integer i
+
+    if (.not.(CORDEF .and. (CORIS .eq. icf))) then
+      if (.not. (any(icf .eq. CORCODES))) then
+        call rexit ("Unrecognised correlation.")
+      end if
+
+      select case (icf)
+      case (1) ! Matern
+        spcor__      => cor_matern
+        spcor_dh__   => cor_dh_matern
+        spcor_dk__   => cor_dk_matern
+        spcor_hh__   => cor_hh_matern
+        spcor_hk__   => cor_hk_matern
+        spcor_dhdk__ => cor_dhdk_matern
+      case (2) ! Spherical
+        spcor__      => cor_spher
+        spcor_dh__   => cor_dh_spher
+        spcor_dk__   => cor_dk_spher
+        spcor_hh__   => cor_hh_spher
+        spcor_hk__   => cor_hk_spher
+        spcor_dhdk__ => cor_dhdk_spher
+      case (3) ! Power exponential
+        spcor__      => cor_powexp
+        spcor_dh__   => cor_dh_powexp
+        spcor_dk__   => cor_dk_powexp
+        spcor_hh__   => cor_hh_powexp
+        spcor_hk__   => cor_hk_powexp
+        spcor_dhdk__ => cor_dhdk_powexp
+      case default
+        call rexit("Correlation code not used.")
+      end select
+
+      CORIS = icf
+      CORDEF = .true.
+    end if
+
+    if (n .gt. 0) then
+      if (DIMSP .ne. n) then
+        nullify(lup)
+        allocate(lup(n,n))
+        DIMSP = n
+        do i = 1, n
+          lup(1:i,i) = .true.
+          lup(i+1:n,i) = .false.
+        end do
+      end if
+    end if
+
+  end subroutine create_spcor
+
+
+  elemental double precision function spcor (h,k)
+    double precision, intent(in) :: h,k
+    spcor = spcor__(h,k)
+  end function spcor
+
+  elemental double precision function spcor_dh (h,k)
+    double precision, intent(in) :: h,k
+    spcor_dh = spcor_dh__(h,k)
+  end function spcor_dh
+
+  elemental double precision function spcor_dk (h,k)
+    double precision, intent(in) :: h,k
+    spcor_dk = spcor_dk__(h,k)
+  end function spcor_dk
+
+  elemental double precision function spcor_hh (h,k)
+    double precision, intent(in) :: h,k
+    spcor_hh = spcor_hh__(h,k)
+  end function spcor_hh
+
+  elemental double precision function spcor_hk (h,k)
+    double precision, intent(in) :: h,k
+    spcor_hk = spcor_hk__(h,k)
+  end function spcor_hk
+
+  elemental double precision function spcor_dhdk (h,k)
+    double precision, intent(in) :: h,k
+    spcor_dhdk = spcor_dhdk__(h,k)
+  end function spcor_dhdk
+
+
+
+  subroutine calc_cov (phi,nsq,dm,F,betQ0, &
+     kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+    implicit none
+    integer, intent(in) :: n, p
     double precision, intent(in) :: phi, nsq, dm(n,n), &
        F(n,p), betQ0(p,p), kappa
     double precision, intent(out) :: T(n,n), FTF(p,p), Ups(n,n), &
@@ -29,18 +179,18 @@ contains
 
     nsqp1 = nsq + 1d0
     T = dm
-    call covmat_l(T,phi,kappa,n,n,lup,icf)
+    call covmat_l(T,phi,kappa,n,n,lup)
     do i = 1, n
       T(i,i) = nsqp1
     end do
     Tih = T
-    ldh_T = oppdf(Tih,n) ! Tih is uppertri s.t. Tih*Tih' = T^{-1}
+    call oppdf(n,Tih,ldh_T) ! Tih is uppertri s.t. Tih*Tih' = T^{-1}
     TiF = F
     call dtrmm ('l','u','t','n',n,p,1d0,Tih,n,TiF,n) ! TiF = T^{-1/2}*F
     FTF = betQ0
     call dsyrk ('u','t',p,n,1d0,TiF,n,1d0,FTF,p) ! FTF = F'*T^{-1}*F + Q0
     call dtrmm ('l','u','n','n',n,p,1d0,Tih,n,TiF,n) ! TiF = T^{-1}*F
-    ldh_FTF = oppdf(FTF,p) ! FTF is uptri s.t. FTF*FTF' = (F'*T^{-1}*F + Q0)^{-1}
+    call oppdf(p,FTF,ldh_FTF) ! FTF is uptri s.t. FTF*FTF' = (F'*T^{-1}*F + Q0)^{-1}
     TFFT = TiF
     call dtrmm ('r','u','n','n',n,p,1d0,FTF,p,TFFT,n) ! TFFT =
     ! T^{-1}*F*(F'*T^{-1}*F + Q0)^{-1/2}
@@ -52,14 +202,14 @@ contains
     end do
     T = Ups ! T is now T^{-1}
     call dsyrk ('u','n',n,p,-1d0,TFFT,n,1d0,Ups,n) ! Ups = T^{-1} -
-    ! T^{-1}*F*(F'*T^{-1}*F  Q0)^{-1}*F'*T^{-1}
+    ! T^{-1}*F*(F'*T^{-1}*F + Q0)^{-1}*F'*T^{-1}
     ldh_Ups = -ldh_T - ldh_FTF
   end subroutine calc_cov
 
   subroutine calc_cov_pred (z0_ups, TC, FCTF, &
-     phi, nsq, dmdm0, F, F0, kappa, icf, T, n, n0, p)
+     phi, nsq, dmdm0, F, F0, kappa,  T, n, n0, p)
     implicit none
-    integer, intent(in) :: n, n0, p, icf
+    integer, intent(in) :: n, n0, p
     double precision, intent(in) :: phi, nsq, dmdm0(n,n0), F(n,p), &
        F0(n0,p), kappa, T(n,n)
     double precision, intent(out) :: z0_ups(n0), TC(n,n0), FCTF(n0,p)
@@ -67,7 +217,7 @@ contains
 
     nsqp1 = nsq + 1d0
     C = dmdm0
-    call covmat_a (C,phi,kappa,n,n0,icf)
+    call covmat_a (C,phi,kappa,n,n0)
     call dsymm ('l','u',n,n0,1d0,T,n,C,n,0d0,TC,n)
     z0_ups = sqrt(nsqp1 - sum(TC*C,1))
     FCTF = F0
@@ -75,36 +225,36 @@ contains
   end subroutine calc_cov_pred
 
 
-  subroutine covlist (kg,philist,nsqlist,n,p,betQ0,F,dm,kappa,icf, &
+  subroutine covlist (kg,philist,nsqlist,n,p,betQ0,F,dm,kappa, &
      Ulist,ldh_Ulist)
 !!! Compute list of relevant covariance matrices
 
     implicit none
 
-    integer, intent(in) :: kg, n, p, icf
+    integer, intent(in) :: kg, n, p
     double precision, intent(in) :: philist(kg), betQ0(p,p), nsqlist(kg), &
        F(n,p), dm(n,n), kappa
     double precision, intent(out) :: ldh_Ulist(kg), Ulist(n,n,kg)
     integer i
     double precision FTF(p,p), T(n,n), TiF(n,p)
-    logical lup(n,n)
-
-    do i = 1, n
-      lup(:i-1,i) = .true.
-      lup(i:,i) = .false. 
-    end do
 
     do i = 1, kg
       call calc_cov(philist(i),nsqlist(i),dm,F,betQ0,&
-         lup,kappa,icf,n,p,T,TiF,FTF,Ulist(:,:,i),ldh_Ulist(i))
+         kappa,n,p,T,TiF,FTF,Ulist(:,:,i),ldh_Ulist(i))
     end do
   end subroutine covlist
 
-
-  subroutine covmat_a (dm,phi,kappa,n1,n2,icf)
-    use interfaces, only: matern
+  subroutine covmat_v (dm,phi,kappa,n)
     implicit none
-    integer, intent(in) :: n1, n2, icf
+    integer, intent(in) :: n
+    double precision, intent(in) :: phi, kappa
+    double precision, intent(inout) :: dm(n)
+    call covmat_a (dm,phi,kappa,n,1)
+  end subroutine covmat_v
+
+  subroutine covmat_a (dm,phi,kappa,n1,n2)
+    implicit none
+    integer, intent(in) :: n1, n2
     double precision, intent(in) :: phi, kappa
     double precision, intent(inout) :: dm(n1,n2)
     if (phi .eq. 0d0) then
@@ -114,58 +264,17 @@ contains
         dm = 0d0
       end where
     else if (phi .gt. 0d0) then
-      select case (icf)
-      case (1) ! Matern
-        if (kappa .eq. .5d0) then
-          dm = dm/phi
-          dm=exp(-dm)
-        else if (kappa .eq. 1.5d0) then
-          dm = dm/phi
-          dm=exp(-dm)*(1d0+dm)
-        else if (kappa .eq. 2.5d0) then
-          dm = dm/phi
-          dm=exp(-dm)*(1d0 + dm + dm*dm/3d0)
-        else if (kappa .gt. 0d0) then
-          dm = dm/phi
-          dm = matern(dm,kappa)
-        else
-          call rexit ('covmat - Invalid kappa')
-        end if
-      case (2) ! Spherical
-        where (dm .lt. phi)
-          dm = dm/phi
-          dm = 1d0 - 1.5d0*dm + .5d0*dm*dm*dm
-        elsewhere
-          dm = 0d0
-        end where
-      case (3) ! Power-exponential
-        if (kappa .le. 2d0 .and. kappa .ge. 0d0) then
-          if (kappa .eq. 1d0) then ! exponential
-            dm = dm/phi
-            dm = exp(-dm)
-          else if (kappa .eq. 2d0) then ! Gaussian
-            dm = dm/phi
-            dm = dm*dm
-            dm = exp(-dm)
-          else
-            dm = dm/phi
-            dm = dm**(kappa)
-            dm = exp(-dm)
-          end if
-        else
-          call rexit ('covmat - Invalid kappa')
-        end if
-      end select
+      dm = dm/phi
+      dm = spcor(dm,kappa)
     else
       call rexit ('covmat - Negative phi')
     end if
   end subroutine covmat_a
 
 
-  subroutine covmat_l (dm,phi,kappa,n1,n2,ldm,icf)
-    use interfaces, only: matern
+  subroutine covmat_l (dm,phi,kappa,n1,n2,ldm)
     implicit none
-    integer, intent(in) :: n1, n2, icf
+    integer, intent(in) :: n1, n2
     double precision, intent(in) :: phi, kappa
     double precision, intent(inout) :: dm(n1,n2)
     logical, intent(in) :: ldm(n1,n2)
@@ -176,68 +285,15 @@ contains
         dm = 0d0
       end where
     else if (phi .gt. 0d0) then
-      select case (icf)
-      case (1) ! Matern
-        if (kappa .eq. .5d0) then
-          where (ldm)
-            dm = dm/phi
-            dm=exp(-dm)
-          end where
-        else if (kappa .eq. 1.5d0) then
-          where (ldm)
-            dm = dm/phi
-            dm=exp(-dm)*(1d0+dm)
-          end where
-        else if (kappa .eq. 2.5d0) then
-          where (ldm)
-            dm = dm/phi
-            dm=exp(-dm)*(1d0 + dm + dm*dm/3d0)
-          end where
-        else if (kappa .gt. 0d0) then
-          where (ldm)
-            dm = dm/phi
-            dm = matern(dm,kappa)
-          end where
-        else
-          call rexit('covmat - Invalid kappa')
-        end if
-      case (2) ! Spherical
-        where (ldm .and. dm .lt. phi)
-          dm = dm/phi
-          dm = 1d0 - 1.5d0*dm + .5d0*dm*dm*dm
-        elsewhere (ldm)
-          dm = 0d0
-        end where
-      case (3)
-        if (kappa .le. 2d0 .and. kappa .ge. 0d0) then
-          if (kappa .eq. 1d0) then ! exponential
-            where (ldm)
-              dm = dm/phi
-              dm = exp(-dm)
-            end where
-          else if (kappa .eq. 2d0) then
-            where (ldm)
-              dm = dm/phi
-              dm = dm*dm
-              dm = exp(-dm)
-            end where
-          else
-            where (ldm)
-              dm = dm/phi
-              dm = dm**(kappa)
-              dm = exp(-dm)
-            end where
-          end if
-        else
-          call rexit ('covmat - Invalid kappa')
-        end if
-      end select
+      where (ldm) dm = dm/phi
+      where (ldm) dm = spcor(dm,kappa)
     else
       call rexit ('covmat - Negative phi')
     end if
   end subroutine covmat_l
 
-  function oppdf (A,n) result (ldh)
+
+  subroutine oppdf (n,A,ldh)
     ! INPUT:
     ! A - A positive definite matrix
     ! OUTPUT:
@@ -246,12 +302,12 @@ contains
     implicit none
     integer, intent(in) :: n
     double precision, intent(inout) :: A(n,n)
-    double precision ldh
+    double precision, intent(out) :: ldh
     integer i
     ! First call cholesky decomposition
     call dpotrf ('u',n,A,n,i)
-    if (i /= 0) then
-      call rexit ("Error: oppdf - Matrix not positive definite")
+    if (i .ne. 0) then
+      call rexit ("oppdf - Matrix not positive definite")
     end if
     ldh = 0d0
     do i = 1, n
@@ -259,9 +315,19 @@ contains
     end do
     ! Next invert
     call dtrtri ('u','n',n,A,n,i)
-    if (i /= 0) then
-      call rexit ("Error: oppdf - Matrix not invertible")
+    if (i .ne. 0) then
+      call rexit ("oppdf - Matrix not invertible")
     end if
-  end function oppdf
-end module covfun
+  end subroutine oppdf
 
+  subroutine fill_symmetric_matrix (A,n)
+    ! If A is symmetric, but only the upper triangle is specified, this
+    ! routine returns the complete matrix A.
+    integer, intent(in) :: n
+    double precision, intent(inout) :: A(n,n)
+    integer i
+    do i = 1, n-1
+      A(i+1:,i) = A(i,i+1:)
+    end do
+  end subroutine fill_symmetric_matrix
+end module covfun

@@ -1,7 +1,7 @@
 ######################################################################
-## 
+##
 ### Commentary: MCMC analysis of the rhizoctonia data.
-## 
+##
 ######################################################################
 
 library(geoBayes)
@@ -24,7 +24,7 @@ phiprior <- c(100, 1, 1000, 100) # U(100, 200)
 phisc <- 4
 omgprior <- c(2, 1, 1, 0)        # Exp(mean = 2)
 omgsc <- .3
-linkp <- "probit"
+linkp <- 20
 
 ### MCMC sizes
 Nout <- 1000
@@ -35,16 +35,16 @@ emt <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
                atsample = ~ Xcoord + Ycoord,
                Nout = Nout, Nthin = Nthin, Nbi = Nbi,
                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-               phipars = phiprior, omgpars = omgprior, linkp = linkp, 
-               corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc, 
+               phipars = phiprior, omgpars = omgprior, linkp = linkp,
+               corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc,
                dispersion = 1, test = TRUE)
 
 emc <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
                atsample = ~ Xcoord + Ycoord,
                Nout = Nout, Nthin = Nthin, Nbi = Nbi,
                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-               phipars = phiprior, omgpars = omgprior, linkp = linkp, 
-               corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc, 
+               phipars = phiprior, omgpars = omgprior, linkp = linkp,
+               corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc,
                dispersion = 1, test = FALSE)
 
 emcmc <- mcmcmake(emc)
