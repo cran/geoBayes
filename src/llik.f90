@@ -230,18 +230,6 @@ subroutine llikfcn_tr (lglk, philist, nsqlist, nulist, kappalist, &
   integer i, j
   double precision zsam(n), msam(n), jsam(n), sam(n)
 
-  abstract interface
-    function condymu_ (n, y1, y2, mu, tsqval, respdfh)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
-         respdfh
-      double precision condymu_
-    end function condymu_
-  end interface
-
-  procedure(condymu_), pointer :: condymuf => null()
-
   call create_model (ifam)
   call create_spcor(icf,n)
 
@@ -250,10 +238,8 @@ subroutine llikfcn_tr (lglk, philist, nsqlist, nulist, kappalist, &
   case (0)
     tsqval = tsqdf*tsq
     respdfh = .5d0*(n + tsqdf)
-    condymuf => condymu_gt
   case default
     tsqval = tsq
-    condymuf => condymu_sp
   end select
 
   ! Determine flat or normal prior
@@ -284,13 +270,12 @@ subroutine llikfcn_tr (lglk, philist, nsqlist, nulist, kappalist, &
         jsam = logitrwdz(zsam,nu)
       end where
       lglk(j,i) = logpdfzf(n,zsam,Ups,ldh_Ups,xi,lmxi,ssqdfsc,modeldfh) &
-         + condymuf(n,y,l,msam,tsqval,respdfh) - sum(jsam)
+         + condymuf(ifam,n,y,l,msam,tsqval,respdfh) - sum(jsam)
     end do
   end do
 
 contains
-
-  function condymu_sp (n, y1, y2, mu, tsqval, respdfh)
+  pure function condymu_sp (n, y1, y2, mu, tsqval, respdfh)
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
@@ -298,6 +283,21 @@ contains
     double precision condymu_sp
     condymu_sp = condymu_mf(n,y1,y2,mu,tsqval)
   end function condymu_sp
+
+  pure function condymuf (ifam, n, y1, y2, mu, tsqval, respdfh)
+    implicit none
+    integer, intent(in) :: ifam
+    integer, intent(in) :: n
+    double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
+       respdfh
+    double precision condymuf
+    select case (ifam)
+    case (0)
+      condymuf = condymu_gt(n, y1, y2, mu, tsqval, respdfh)
+    case default
+      condymuf = condymu_sp(n, y1, y2, mu, tsqval, respdfh)
+    end select
+  end function condymuf
 end subroutine llikfcn_tr
 
 

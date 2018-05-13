@@ -1,7 +1,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! 
+!!
 !!! Commentary: Computes the conditional log-pdf of y
-!! 
+!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 module pdfy
@@ -12,7 +12,7 @@ contains
     ! y1 :: The average across all realisations
     ! y2 :: The number of replications
     ! par :: The mean of a single realisation
-    implicit none 
+    implicit none
     double precision, intent(in) :: y1, y2, par
     double precision d
     d = y1 - par
@@ -24,7 +24,7 @@ contains
     ! y1 :: The total across all realisations
     ! y2 :: The number of replications
     ! par :: The mean of a single realisation
-    implicit none 
+    implicit none
     double precision, intent(in) :: y1, y2, par
     logpdfy_ga = y1*par - .5d0*y2*par*par
   end function logpdfy_ga
@@ -61,14 +61,14 @@ contains
     logpdfy_gm = -y1*exp(-par) - y2*par
   end function logpdfy_gm
 
-  
+
 !!!!!!!!! Compute the difference log pdf of y wrt two parameters !!!!!!!!!!
   elemental double precision function logdffy_gt (y1, y2, p1, p2)
     ! Transformed Gaussian
     ! y1 :: The average across all realisations
     ! y2 :: The number of replications
     ! p1, p2 :: The mean of a single realisation
-    implicit none 
+    implicit none
     double precision, intent(in) :: y1, y2, p1, p2
     double precision d1, d2
     d1 = y1 - p1
@@ -81,7 +81,7 @@ contains
     ! y1 :: The total across all realisations
     ! y2 :: The number of replications
     ! p1, p2 :: The mean of a single realisation
-    implicit none 
+    implicit none
     double precision, intent(in) :: y1, y2, p1, p2
     logdffy_ga = y1*(p1 - p2) - .5d0*y2*(p1*p1 - p2*p2)
   end function logdffy_ga
@@ -120,11 +120,11 @@ contains
 end module pdfy
 
 
-  
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! 
+!!
 !!! Commentary: Computes the log-pdf of z
-!! 
+!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 module pdfz
@@ -152,11 +152,11 @@ end module pdfz
 
 
 
-  
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! 
+!!
 !!! Commentary: Computes the conditional log-pdf of y|z
-!! 
+!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 module condyz
@@ -301,11 +301,11 @@ end module condyz
 
 
 
-  
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! 
+!!
 !!! Commentary: Computes the joint log-pdf of (y,z)
-!! 
+!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 module jointyz
@@ -445,9 +445,9 @@ end module jointyz
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! 
+!!
 !!! Commentary: Computes the log-pdf of mu
-!! 
+!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 module pdfmu
@@ -514,7 +514,7 @@ contains
       do i = 1, n
         logjac = logjac - logpdft(z(i), nu)
       end do
-    else if (nu .lt. 0d0) then ! pdf logistic 
+    else if (nu .lt. 0d0) then ! pdf logistic
       do i = 1, n
         tmp = -z(i)
         logjac = logjac - tmp + 2d0*flog1pexp(tmp)
@@ -550,7 +550,7 @@ contains
     end do
     ! Jacobian
     logjac = 0d0
-    if (nu .gt. 0d0) then ! Using extended link 
+    if (nu .gt. 0d0) then ! Using extended link
       do i = 1, n
         logjac = logjac + abs(tht(i))
       end do
@@ -586,7 +586,7 @@ contains
     end do
     ! Jacobian
     logjac = 0d0
-    if (nu .gt. 0d0) then ! Using extended link 
+    if (nu .gt. 0d0) then ! Using extended link
       do i = 1, n
         logjac = logjac + abs(tht(i))
       end do
@@ -672,7 +672,7 @@ contains
        ldh_Ups, nu, xi(n), ssqdfsc, modeldfh
     double precision logpdfmu_bw
     integer i
-    double precision z(n), logjac, logjac1, logjac2, lfz, cnu, log1pzsq 
+    double precision z(n), logjac, logjac1, logjac2, lfz, cnu, log1pzsq
     ! Linear predictor
     do i = 1, n
       z(i) = flink_bw(mu(i), nu)
@@ -688,7 +688,7 @@ contains
         logjac2 = logjac2 - log1pzsq
       end if
     end do
-    logjac = .5d0*n*log(nu) - n*log(cnu) - logjac1 - .5d0*cnu*cnu*nu*logjac2 
+    logjac = .5d0*n*log(nu) - n*log(cnu) - logjac1 - .5d0*cnu*cnu*nu*logjac2
     ! log-likelihood for z
     lfz = logpdfz(n, z, Ups, ldh_Ups, xi, lmxi, ssqdfsc, modeldfh)
     ! Put all together
@@ -703,14 +703,14 @@ end module pdfmu
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! 
+!!
 !!! Commentary: Computes the conditional log-pdf of y|mu
-!! 
+!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 module condymu
 contains
-  function condymu_gt (n, y1, y2, mu, tsqdfsc, respdfh)
+  pure function condymu_gt (n, y1, y2, mu, tsqdfsc, respdfh)
     use pdfy, only: logpdfy_gt
     implicit none
     integer, intent(in) :: n
@@ -839,9 +839,9 @@ end module condymu
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! 
+!!
 !!! Commentary: Computes the joint log-pdf of (y,mu)
-!! 
+!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 module jointymu
@@ -957,7 +957,7 @@ contains
     double precision jointymu_bd
     double precision lfmu, lfy
     lfmu = logpdfmu_bd(n, mu, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, &
-       modeldfh) 
+       modeldfh)
     lfy = condymu_bd(n, y, l, mu, tsq)
     jointymu_bd = lfmu + lfy
   end function jointymu_bd

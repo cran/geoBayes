@@ -32,46 +32,6 @@ subroutine calcbd_no (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   double precision zUz, zUDTUz, DT(n,n,3), trUpsDTh(3), Upsz(n), dfozUz
   double precision ymm(n), ymml(n)
 
-  abstract interface
-    function condymu_ (n, y1, y2, mu, tsqval, respdfh)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
-         respdfh
-      double precision condymu_
-    end function condymu_
-  end interface
-
-  procedure(condymu_), pointer :: condymuf => null()
-
-  abstract interface
-    double precision function weigh_llik_ (llik, lw, q, n)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: llik(n), lw(n), q(n)
-    end function weigh_llik_
-  end interface
-
-  abstract interface
-    double precision function weigh_llik_deriv_ (dllik, llik, lw, q, n)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: dllik(n), llik(n), lw(n), q(n)
-    end function weigh_llik_deriv_
-  end interface
-
-  procedure (weigh_llik_), pointer :: weigh_llik
-  procedure (weigh_llik_deriv_), pointer :: weigh_llik_deriv
-
-  select case (icv)
-  case (0)
-    weigh_llik => weigh_llik_st
-    weigh_llik_deriv => weigh_llik_deriv_st
-  case default
-    weigh_llik => weigh_llik_cv
-    weigh_llik_deriv => weigh_llik_deriv_cv
-  end select
-
   call create_model (ifam)
   call create_spcor(icf,n)
 
@@ -80,10 +40,8 @@ subroutine calcbd_no (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   case (0)
     tsqval = tsqdf*tsq
     respdfh = .5d0*(n + tsqdf)
-    condymuf => condymu_gt
   case default
     tsqval = tsq
-    condymuf => condymu_sp
   end select
 
   ! Determine flat or normal prior
@@ -112,12 +70,12 @@ subroutine calcbd_no (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
     if (ifam .eq. 0) then
       ymm = y - msam
       ymml = l*ymm
-      lpdfy = condymuf(n,y,l,msam,tsqval,respdfh)
+      lpdfy = condymuf(ifam,n,y,l,msam,tsqval,respdfh)
       dy = dot_product(ymm,ymml) + tsqval
       dlogpy = (2*respdfh/dy)*ymml
       dy = dot_product(dlogpy,dmudnu)
     else
-      lpdfy = condymuf(n,y,l,msam,tsqval,respdfh)
+      lpdfy = condymuf(ifam,n,y,l,msam,tsqval,respdfh)
       dy = dot_product(dlogpy,dmudnu)
     end if
     lglk(j) = lpdfz + lpdfy
@@ -129,11 +87,11 @@ subroutine calcbd_no (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
     zUDTUz = qform(Upsz,DT(:,:,3),n)
     dlglkdkappa(j) = -trUpsDTh(3) + dfozUz*zUDTUz
   end do
-  bfact = weigh_llik(lglk, weights, QRin, Ntot)
-  bfdnu = weigh_llik_deriv(dlglkdnu, lglk, weights, QRin, Ntot)
-  bfdphi = weigh_llik_deriv(dlglkdphi, lglk, weights, QRin, Ntot)
-  bfdnsq = weigh_llik_deriv(dlglkdnsq, lglk, weights, QRin, Ntot)
-  bfdkappa = weigh_llik_deriv(dlglkdkappa, lglk, weights, QRin, Ntot)
+  bfact = weigh_llik(icv, lglk, weights, QRin, Ntot)
+  bfdnu = weigh_llik_deriv(icv, dlglkdnu, lglk, weights, QRin, Ntot)
+  bfdphi = weigh_llik_deriv(icv, dlglkdphi, lglk, weights, QRin, Ntot)
+  bfdnsq = weigh_llik_deriv(icv, dlglkdnsq, lglk, weights, QRin, Ntot)
+  bfdkappa = weigh_llik_deriv(icv, dlglkdkappa, lglk, weights, QRin, Ntot)
 end subroutine calcbd_no
 
 subroutine calcbd_mu (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
@@ -164,46 +122,6 @@ subroutine calcbd_mu (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   double precision zUz, zUDTUz, DT(n,n,3), trUpsDTh(3), Upsz(n), dfozUz
   double precision ymm(n), ymml(n)
 
-  abstract interface
-    function condymu_ (n, y1, y2, mu, tsqval, respdfh)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
-         respdfh
-      double precision condymu_
-    end function condymu_
-  end interface
-
-  procedure(condymu_), pointer :: condymuf => null()
-
-  abstract interface
-    double precision function weigh_llik_ (llik, lw, q, n)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: llik(n), lw(n), q(n)
-    end function weigh_llik_
-  end interface
-
-  abstract interface
-    double precision function weigh_llik_deriv_ (dllik, llik, lw, q, n)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: dllik(n), llik(n), lw(n), q(n)
-    end function weigh_llik_deriv_
-  end interface
-
-  procedure (weigh_llik_), pointer :: weigh_llik
-  procedure (weigh_llik_deriv_), pointer :: weigh_llik_deriv
-
-  select case (icv)
-  case (0)
-    weigh_llik => weigh_llik_st
-    weigh_llik_deriv => weigh_llik_deriv_st
-  case default
-    weigh_llik => weigh_llik_cv
-    weigh_llik_deriv => weigh_llik_deriv_cv
-  end select
-
   call create_model (ifam)
   call create_spcor(icf,n)
 
@@ -212,10 +130,8 @@ subroutine calcbd_mu (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   case (0)
     tsqval = tsqdf*tsq
     respdfh = .5d0*(n + tsqdf)
-    condymuf => condymu_gt
   case default
     tsqval = tsq
-    condymuf => condymu_sp
   end select
 
   ! Determine flat or normal prior
@@ -258,11 +174,11 @@ subroutine calcbd_mu (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
     zUDTUz = qform(Upsz,DT(:,:,3),n)
     dlglkdkappa(j) = -trUpsDTh(3) + dfozUz*zUDTUz
   end do
-  bfact = weigh_llik(lglk, weights, QRin, Ntot)
-  bfdnu = weigh_llik_deriv(dlglkdnu, lglk, weights, QRin, Ntot)
-  bfdphi = weigh_llik_deriv(dlglkdphi, lglk, weights, QRin, Ntot)
-  bfdnsq = weigh_llik_deriv(dlglkdnsq, lglk, weights, QRin, Ntot)
-  bfdkappa = weigh_llik_deriv(dlglkdkappa, lglk, weights, QRin, Ntot)
+  bfact = weigh_llik(icv, lglk, weights, QRin, Ntot)
+  bfdnu = weigh_llik_deriv(icv, dlglkdnu, lglk, weights, QRin, Ntot)
+  bfdphi = weigh_llik_deriv(icv, dlglkdphi, lglk, weights, QRin, Ntot)
+  bfdnsq = weigh_llik_deriv(icv, dlglkdnsq, lglk, weights, QRin, Ntot)
+  bfdkappa = weigh_llik_deriv(icv, dlglkdkappa, lglk, weights, QRin, Ntot)
 end subroutine calcbd_mu
 
 
@@ -294,46 +210,6 @@ subroutine calcbd_wo (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   double precision zUz, zUDTUz, DT(n,n,3), trUpsDTh(3), Upsz(n), dfozUz
   double precision ymm(n), ymml(n)
 
-  abstract interface
-    function condymu_ (n, y1, y2, mu, tsqval, respdfh)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
-         respdfh
-      double precision condymu_
-    end function condymu_
-  end interface
-
-  procedure(condymu_), pointer :: condymuf => null()
-
-  abstract interface
-    double precision function weigh_llik_ (llik, lw, q, n)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: llik(n), lw(n), q(n)
-    end function weigh_llik_
-  end interface
-
-  abstract interface
-    double precision function weigh_llik_deriv_ (dllik, llik, lw, q, n)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: dllik(n), llik(n), lw(n), q(n)
-    end function weigh_llik_deriv_
-  end interface
-
-  procedure (weigh_llik_), pointer :: weigh_llik
-  procedure (weigh_llik_deriv_), pointer :: weigh_llik_deriv
-
-  select case (icv)
-  case (0)
-    weigh_llik => weigh_llik_st
-    weigh_llik_deriv => weigh_llik_deriv_st
-  case default
-    weigh_llik => weigh_llik_cv
-    weigh_llik_deriv => weigh_llik_deriv_cv
-  end select
-
   call create_model (ifam)
   call create_spcor(icf,n)
 
@@ -342,10 +218,8 @@ subroutine calcbd_wo (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   case (0)
     tsqval = tsqdf*tsq
     respdfh = .5d0*(n + tsqdf)
-    condymuf => condymu_gt
   case default
     tsqval = tsq
-    condymuf => condymu_sp
   end select
 
   ! Determine flat or normal prior
@@ -379,12 +253,12 @@ subroutine calcbd_wo (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
     if (ifam .eq. 0) then
       ymm = y - msam
       ymml = l*ymm
-      lpdfy = condymuf(n,y,l,msam,tsqval,respdfh)
+      lpdfy = condymuf(ifam,n,y,l,msam,tsqval,respdfh)
       dy = dot_product(ymm,ymml) + tsqval
       dlogpy = (2*respdfh/dy)*ymml
       dy = dot_product(dlogpy,dmudnu)
     else
-      lpdfy = condymuf(n,y,l,msam,tsqval,respdfh)
+      lpdfy = condymuf(ifam,n,y,l,msam,tsqval,respdfh)
       dy = dot_product(dlogpy,dmudnu)
     end if
     lglk(j) = lpdfz + lpdfy - sum(jsam)
@@ -396,11 +270,11 @@ subroutine calcbd_wo (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
     zUDTUz = qform(Upsz,DT(:,:,3),n)
     dlglkdkappa(j) = -trUpsDTh(3) + dfozUz*zUDTUz
   end do
-  bfact = weigh_llik(lglk, weights, QRin, Ntot)
-  bfdnu = weigh_llik_deriv(dlglkdnu, lglk, weights, QRin, Ntot)
-  bfdphi = weigh_llik_deriv(dlglkdphi, lglk, weights, QRin, Ntot)
-  bfdnsq = weigh_llik_deriv(dlglkdnsq, lglk, weights, QRin, Ntot)
-  bfdkappa = weigh_llik_deriv(dlglkdkappa, lglk, weights, QRin, Ntot)
+  bfact = weigh_llik(icv, lglk, weights, QRin, Ntot)
+  bfdnu = weigh_llik_deriv(icv, dlglkdnu, lglk, weights, QRin, Ntot)
+  bfdphi = weigh_llik_deriv(icv, dlglkdphi, lglk, weights, QRin, Ntot)
+  bfdnsq = weigh_llik_deriv(icv, dlglkdnsq, lglk, weights, QRin, Ntot)
+  bfdkappa = weigh_llik_deriv(icv, dlglkdkappa, lglk, weights, QRin, Ntot)
 end subroutine calcbd_wo
 
 
@@ -432,47 +306,6 @@ subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   double precision zUz, zUDTUz, DT(n,n,3), trUpsDTh(3), Upsz(n), dfozUz
   double precision ymm(n), ymml(n)
   logical ltr0(n), ltr1(n), ltr2(n), ltrmu
-
-  abstract interface
-    function condymu_ (n, y1, y2, mu, tsqval, respdfh)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
-         respdfh
-      double precision condymu_
-    end function condymu_
-  end interface
-
-  procedure(condymu_), pointer :: condymuf => null()
-
-  abstract interface
-    double precision function weigh_llik_ (llik, lw, q, n)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: llik(n), lw(n), q(n)
-    end function weigh_llik_
-  end interface
-
-  abstract interface
-    double precision function weigh_llik_deriv_ (dllik, llik, lw, q, n)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: dllik(n), llik(n), lw(n), q(n)
-    end function weigh_llik_deriv_
-  end interface
-
-  procedure (weigh_llik_), pointer :: weigh_llik
-  procedure (weigh_llik_deriv_), pointer :: weigh_llik_deriv
-
-  select case (icv)
-  case (0)
-    weigh_llik => weigh_llik_st
-    weigh_llik_deriv => weigh_llik_deriv_st
-  case default
-    weigh_llik => weigh_llik_cv
-    weigh_llik_deriv => weigh_llik_deriv_cv
-  end select
-
   call create_model (ifam)
   call create_spcor(icf,n)
 
@@ -481,10 +314,8 @@ subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   case (0)
     tsqval = tsqdf*tsq
     respdfh = .5d0*(n + tsqdf)
-    condymuf => condymu_gt
   case default
     tsqval = tsq
-    condymuf => condymu_sp
   end select
 
   ! Determine flat or normal prior
@@ -546,12 +377,12 @@ subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
       if (ifam .eq. 0) then
         ymm = y - msam
         ymml = l*ymm
-        lpdfy = condymuf(n,y,l,msam,tsqval,respdfh)
+        lpdfy = condymuf(ifam,n,y,l,msam,tsqval,respdfh)
         dy = dot_product(ymm,ymml) + tsqval
         dlogpy = (2*respdfh/dy)*ymml
         dy = dot_product(dlogpy,dmudnu)
       else
-        lpdfy = condymuf(n,y,l,msam,tsqval,respdfh)
+        lpdfy = condymuf(ifam,n,y,l,msam,tsqval,respdfh)
         dy = dot_product(dlogpy,dmudnu)
       end if
     end if
@@ -564,9 +395,9 @@ subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
     zUDTUz = qform(Upsz,DT(:,:,3),n)
     dlglkdkappa(j) = -trUpsDTh(3) + dfozUz*zUDTUz
   end do
-  bfact = weigh_llik(lglk, weights, QRin, Ntot)
-  bfdnu = weigh_llik_deriv(dlglkdnu, lglk, weights, QRin, Ntot)
-  bfdphi = weigh_llik_deriv(dlglkdphi, lglk, weights, QRin, Ntot)
-  bfdnsq = weigh_llik_deriv(dlglkdnsq, lglk, weights, QRin, Ntot)
-  bfdkappa = weigh_llik_deriv(dlglkdkappa, lglk, weights, QRin, Ntot)
+  bfact = weigh_llik(icv, lglk, weights, QRin, Ntot)
+  bfdnu = weigh_llik_deriv(icv, dlglkdnu, lglk, weights, QRin, Ntot)
+  bfdphi = weigh_llik_deriv(icv, dlglkdphi, lglk, weights, QRin, Ntot)
+  bfdnsq = weigh_llik_deriv(icv, dlglkdnsq, lglk, weights, QRin, Ntot)
+  bfdkappa = weigh_llik_deriv(icv, dlglkdkappa, lglk, weights, QRin, Ntot)
 end subroutine calcbd_tr

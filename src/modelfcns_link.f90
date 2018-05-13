@@ -13,7 +13,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!! binomial robit !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link function
-  pure function flink_robit (w,d) result (z)
+  elemental function flink_robit (w,d) result (z)
     use interfaces, only: quantt
     implicit none
     double precision, intent(in) :: w, d
@@ -22,7 +22,7 @@ contains
   end function flink_robit
 
 !! Inverse link function (log scale)
-  pure function invlink_robit (z,d) result (w)
+  elemental function invlink_robit (z,d) result (w)
     ! Binomial symmetric (robit) link fcn
     use interfaces, only: logprobt
     implicit none
@@ -31,7 +31,7 @@ contains
     w = logprobt(z, d)
   end function invlink_robit
 
-  pure function invlinkdz_robit (z,d) result (y)
+  elemental function invlinkdz_robit (z,d) result (y)
     use interfaces, only: logprobt, logpdft
     implicit none
     double precision, intent(in) :: z, d
@@ -42,7 +42,7 @@ contains
     y = exp(f - ff)
   end function invlinkdz_robit
 
-  pure function invlinkhz_robit (z,d) result (y)
+  elemental function invlinkhz_robit (z,d) result (y)
     ! If g_d(z) is the pdf of the t_d distribution, then we need
     ! d2w = d(log g_d(z)) * d1w - (d1w)^2
     implicit none
@@ -54,7 +54,7 @@ contains
     y = dlogtdz*dwdz - dwdz*dwdz
   end function invlinkhz_robit
 
-  pure function invlink3z_robit (z,d) result (y)
+  elemental function invlink3z_robit (z,d) result (y)
     ! If g_d(z) is the pdf of the t_d distribution, then we need
     ! d3w = d2(log g_d(z)) * d1w - (d1w)*(d2w) + (d2w)^2/(d1w)
     implicit none
@@ -69,28 +69,30 @@ contains
     y = hlogt*dw - dw*hw + hw*hw/dw
   end function invlink3z_robit
 
-  pure function invlinkdn_robit (z,d) result (y)
+  elemental function invlinkdn_robit (z,d) result (y)
     ! First derivative w.r.t. d
     double precision, intent(in) :: z, d
     double precision y
-    double precision, parameter :: eps = sqrt(epsilon(1d0))
+    double precision eps
+    eps = sqrt(epsilon(1d0))
     y = 8d0*invlink_robit(z,d+eps) - 8d0*invlink_robit(z,d-eps) &
        - invlink_robit(z,d+eps*2d0) + invlink_robit(z,d-eps*2d0)
     y = y/(12d0*eps)
   end function invlinkdn_robit
 
-  pure function invlinkhn_robit (z,d) result (y)
+  elemental function invlinkhn_robit (z,d) result (y)
     ! First derivative w.r.t. d
     double precision, intent(in) :: z, d
     double precision y
-    double precision, parameter :: eps = sqrt(sqrt(epsilon(1d0)))
+    double precision eps
+    eps = sqrt(sqrt(epsilon(1d0)))
     y = 16d0*invlink_robit(z,d+eps) + 16d0*invlink_robit(z,d-eps) &
        - invlink_robit(z,d+eps*2d0) - invlink_robit(z,d-eps*2d0) &
        - 30d0*invlink_robit(z,d)
     y = y/(12d0*eps*eps)
   end function invlinkhn_robit
 
-  pure function invlinkdzdn_robit (z,d) result (y)
+  elemental function invlinkdzdn_robit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
@@ -100,7 +102,7 @@ contains
     dlogt = dnu_logpdft(z,d)
     y = (dlogt - dlogF)*dz
   contains
-    pure function dnu_logpdft (z,d)
+    elemental function dnu_logpdft (z,d)
       use interfaces, only: fdigamma, flog1p
       implicit none
       double precision, intent(in) :: z, d
@@ -112,7 +114,7 @@ contains
     end function dnu_logpdft
   end function invlinkdzdn_robit
 
-  pure function invlinkhzdn_robit (z,d) result (y)
+  elemental function invlinkhzdn_robit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
@@ -123,7 +125,7 @@ contains
     ddlogt = dzdn_logpdft(z,d)
     y = ddlogt*dz + hz*dzdn/dz - dzdn*dz
   contains
-    pure function dzdn_logpdft (z,d)
+    elemental function dzdn_logpdft (z,d)
       implicit none
       double precision, intent(in) :: z, d
       double precision dzdn_logpdft
@@ -134,7 +136,7 @@ contains
     end function dzdn_logpdft
   end function invlinkhzdn_robit
 
-  pure function invlinkdzhn_robit (z,d) result (y)
+  elemental function invlinkdzhn_robit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
@@ -146,7 +148,7 @@ contains
     dlogg = dlogg/dz
     y = dz*(dlogg*dlogg + hlogt - hlogF)
   contains
-    pure function hnu_logpdft (z,d)
+    elemental function hnu_logpdft (z,d)
       use interfaces, only: ftrigamma, flog1p
       implicit none
       double precision, intent(in) :: z, d
@@ -161,7 +163,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!! binomial logit !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link function
-  pure function flink_logit (w,d) result (z)
+  elemental function flink_logit (w,d) result (z)
     use interfaces, only: quantlogis
     implicit none
     double precision, intent(in) :: w, d
@@ -170,7 +172,7 @@ contains
   end function flink_logit
 
 !! Inverse link function (log scale)
-  pure function invlink_logit (z,d) result (w)
+  elemental function invlink_logit (z,d) result (w)
     ! Binomial symmetric (robit) link fcn
     use interfaces, only: logproblogis
     implicit none
@@ -179,7 +181,7 @@ contains
     w = logproblogis(z)
   end function invlink_logit
 
-  pure function invlinkdz_logit (z,d) result (y)
+  elemental function invlinkdz_logit (z,d) result (y)
     use interfaces, only: logproblogis
     implicit none
     double precision, intent(in) :: z, d
@@ -190,7 +192,7 @@ contains
     y = 1d0 - y
   end function invlinkdz_logit
 
-  pure function invlinkhz_logit (z,d) result (y)
+  elemental function invlinkhz_logit (z,d) result (y)
     use interfaces, only: logproblogis
     implicit none
     double precision, intent(in) :: z, d
@@ -200,7 +202,7 @@ contains
     y = y*(y-1d0)
   end function invlinkhz_logit
 
-  pure function invlink3z_logit (z,d) result (y)
+  elemental function invlink3z_logit (z,d) result (y)
     use interfaces, only: logproblogis
     implicit none
     double precision, intent(in) :: z, d
@@ -210,35 +212,35 @@ contains
     y = y*(1d0-y)*(y+y-1d0)
   end function invlink3z_logit
 
-  pure function invlinkdn_logit (z,d) result (y)
+  elemental function invlinkdn_logit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
     y = 0d0
   end function invlinkdn_logit
 
-  pure function invlinkhn_logit (z,d) result (y)
+  elemental function invlinkhn_logit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
     y = 0d0
   end function invlinkhn_logit
 
-  pure function invlinkdzdn_logit (z,d) result (y)
+  elemental function invlinkdzdn_logit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
     y = 0d0
   end function invlinkdzdn_logit
 
-  pure function invlinkhzdn_logit (z,d) result (y)
+  elemental function invlinkhzdn_logit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
     y = 0d0
   end function invlinkhzdn_logit
 
-  pure function invlinkdzhn_logit (z,d) result (y)
+  elemental function invlinkdzhn_logit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
@@ -247,7 +249,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!! binomial probit !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link function
-  pure function flink_probit (w,d) result (z)
+  elemental function flink_probit (w,d) result (z)
     use interfaces, only: quantnorm
     implicit none
     double precision, intent(in) :: w, d
@@ -256,7 +258,7 @@ contains
   end function flink_probit
 
 !! Inverse link function (log scale)
-  pure function invlink_probit (z,d) result (w)
+  elemental function invlink_probit (z,d) result (w)
     ! Binomial symmetric (robit) link fcn
     use interfaces, only: logprobnorm
     implicit none
@@ -265,7 +267,7 @@ contains
     w = logprobnorm(z)
   end function invlink_probit
 
-  pure function invlinkdz_probit (z,d) result (y)
+  elemental function invlinkdz_probit (z,d) result (y)
     use interfaces, only: logprobnorm, logpdfnorm
     implicit none
     double precision, intent(in) :: z, d
@@ -276,7 +278,7 @@ contains
     y = exp(f - ff)
   end function invlinkdz_probit
 
-  pure function invlinkhz_probit (z,d) result (y)
+  elemental function invlinkhz_probit (z,d) result (y)
     ! If g(z) is the pdf of the N(0,1) distribution, then we need
     ! d2w = d(log g(z)) * d1w - (d1w)^2
     implicit none
@@ -287,7 +289,7 @@ contains
     y = -z*dwdz - dwdz*dwdz
   end function invlinkhz_probit
 
-  pure function invlink3z_probit (z,d) result (y)
+  elemental function invlink3z_probit (z,d) result (y)
     ! If g(z) is the pdf of the N(0,1) distribution, then we need
     ! d3w = h(log g(z)) * dw - dw * hw + hw*hw/dw
     implicit none
@@ -299,35 +301,35 @@ contains
     y = -dw - dw*hw + hw*hw/dw
   end function invlink3z_probit
 
-  pure function invlinkdn_probit (z,d) result (y)
+  elemental function invlinkdn_probit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
     y = 0d0
   end function invlinkdn_probit
 
-  pure function invlinkhn_probit (z,d) result (y)
+  elemental function invlinkhn_probit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
     y = 0d0
   end function invlinkhn_probit
 
-  pure function invlinkdzdn_probit (z,d) result (y)
+  elemental function invlinkdzdn_probit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
     y = 0d0
   end function invlinkdzdn_probit
 
-  pure function invlinkhzdn_probit (z,d) result (y)
+  elemental function invlinkhzdn_probit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
     y = 0d0
   end function invlinkhzdn_probit
 
-  pure function invlinkdzhn_probit (z,d) result (y)
+  elemental function invlinkdzhn_probit (z,d) result (y)
     implicit none
     double precision, intent(in) :: z, d
     double precision y
@@ -337,7 +339,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Box-Cox !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link fcn
-  pure function flink_boxcox (w,d) result (z)
+  elemental function flink_boxcox (w,d) result (z)
     ! z = (mu^d - 1)/d
     ! w is log(mu)
     use interfaces, only: fexpm1
@@ -356,7 +358,7 @@ contains
   end function flink_boxcox
 
 !! Inverse link fcn, returns log(mu)
-  pure function invlink_boxcox (z,d) result (w)
+  elemental function invlink_boxcox (z,d) result (w)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -375,7 +377,7 @@ contains
     end if
   end function invlink_boxcox
 
-  pure function invlinkdz_boxcox (z,d) result (w)
+  elemental function invlinkdz_boxcox (z,d) result (w)
     ! w = log(mu)
     implicit none
     double precision, intent(in) :: z, d
@@ -392,7 +394,7 @@ contains
     end if
   end function invlinkdz_boxcox
 
-  pure function invlinkhz_boxcox (z,d) result (w)
+  elemental function invlinkhz_boxcox (z,d) result (w)
     ! w = log(mu)
     implicit none
     double precision, intent(in) :: z, d
@@ -410,7 +412,7 @@ contains
     end if
   end function invlinkhz_boxcox
 
-  pure function invlink3z_boxcox (z,d) result (w)
+  elemental function invlink3z_boxcox (z,d) result (w)
     ! w = log(mu)
     implicit none
     double precision, intent(in) :: z, d
@@ -428,7 +430,7 @@ contains
     end if
   end function invlink3z_boxcox
 
-  pure function invlinkdn_boxcox (z,d) result (w)
+  elemental function invlinkdn_boxcox (z,d) result (w)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -445,7 +447,7 @@ contains
     end if
   end function invlinkdn_boxcox
 
-  pure function invlinkhn_boxcox (z,d) result (w)
+  elemental function invlinkhn_boxcox (z,d) result (w)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -465,7 +467,7 @@ contains
     end if
   end function invlinkhn_boxcox
 
-  pure function invlinkdzdn_boxcox (z,d) result (w)
+  elemental function invlinkdzdn_boxcox (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -482,7 +484,7 @@ contains
     end if
   end function invlinkdzdn_boxcox
 
-  pure function invlinkhzdn_boxcox (z,d) result (w)
+  elemental function invlinkhzdn_boxcox (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w, dz
@@ -499,7 +501,7 @@ contains
     end if
   end function invlinkhzdn_boxcox
 
-  pure function invlinkdzhn_boxcox (z,d) result (w)
+  elemental function invlinkdzhn_boxcox (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -519,7 +521,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!! Modified Box-Cox !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link fcn
-  pure function flink_modbc (w, d) result (z)
+  elemental function flink_modbc (w, d) result (z)
     ! w is log(mu)
     ! z = sign(w)*expm1(d*|w|)/d for d > 0
     use interfaces, only: fexpm1
@@ -542,7 +544,7 @@ contains
     end if
   end function flink_modbc
 
-  pure function invlink_modbc (z,d) result (w)
+  elemental function invlink_modbc (z,d) result (w)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -568,7 +570,7 @@ contains
     end if
   end function invlink_modbc
 
-  pure function invlinkdz_modbc (z,d) result (w)
+  elemental function invlinkdz_modbc (z,d) result (w)
     ! w = log(mu)
     implicit none
     double precision, intent(in) :: z, d
@@ -590,7 +592,7 @@ contains
     end if
   end function invlinkdz_modbc
 
-  pure function invlinkhz_modbc (z,d) result (w)
+  elemental function invlinkhz_modbc (z,d) result (w)
     ! w = log(mu)
     implicit none
     double precision, intent(in) :: z, d
@@ -608,7 +610,7 @@ contains
     end if
   end function invlinkhz_modbc
 
-  pure function invlink3z_modbc (z,d) result (w)
+  elemental function invlink3z_modbc (z,d) result (w)
     ! w = log(mu)
     implicit none
     double precision, intent(in) :: z, d
@@ -622,7 +624,7 @@ contains
     end if
   end function invlink3z_modbc
 
-  pure function invlinkdn_modbc (z,d) result (w)
+  elemental function invlinkdn_modbc (z,d) result (w)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -639,7 +641,7 @@ contains
     if (z .lt. 0d0) w = -w
   end function invlinkdn_modbc
 
-  pure function invlinkhn_modbc (z,d) result (w)
+  elemental function invlinkhn_modbc (z,d) result (w)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -657,7 +659,7 @@ contains
     end if
   end function invlinkhn_modbc
 
-  pure function invlinkdzdn_modbc (z,d) result (w)
+  elemental function invlinkdzdn_modbc (z,d) result (w)
     ! w = log(mu)
     implicit none
     double precision, intent(in) :: z, d
@@ -673,7 +675,7 @@ contains
     end if
   end function invlinkdzdn_modbc
 
-  pure function invlinkhzdn_modbc (z,d) result (w)
+  elemental function invlinkhzdn_modbc (z,d) result (w)
     ! w = log(mu)
     implicit none
     double precision, intent(in) :: z, d
@@ -691,7 +693,7 @@ contains
     if (z .lt. 0d0) w = -w
   end function invlinkhzdn_modbc
 
-  pure function invlinkdzhn_modbc (z,d) result (w)
+  elemental function invlinkdzhn_modbc (z,d) result (w)
     ! w = log(mu)
     implicit none
     double precision, intent(in) :: z, d
@@ -707,7 +709,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Gaussian !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Linf fcn
-  pure function flink_ga (w, d) result (z)
+  elemental function flink_ga (w, d) result (z)
     implicit none
     double precision, intent(in) :: w, d
     double precision z
@@ -747,7 +749,7 @@ contains
   end function flink_ga
 
 !! Inverse link fcn
-  pure function invlink_ga (z,d) result(w)
+  elemental function invlink_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
@@ -780,7 +782,7 @@ contains
     end if
   end function invlink_ga
 
-  pure function invlinkdz_ga (z,d) result(w)
+  elemental function invlinkdz_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
@@ -814,7 +816,7 @@ contains
     end if
   end function invlinkdz_ga
 
-  pure function invlinkhz_ga (z,d) result(w)
+  elemental function invlinkhz_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
@@ -842,7 +844,7 @@ contains
     end if
   end function invlinkhz_ga
 
-  pure function invlink3z_ga (z,d) result(w)
+  elemental function invlink3z_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
@@ -866,7 +868,7 @@ contains
     end if
   end function invlink3z_ga
 
-  pure function invlinkdn_ga (z,d) result(w)
+  elemental function invlinkdn_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
@@ -889,7 +891,7 @@ contains
     end if
   end function invlinkdn_ga
 
-  pure function invlinkhn_ga (z,d) result(w)
+  elemental function invlinkhn_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
@@ -918,7 +920,7 @@ contains
     end if
   end function invlinkhn_ga
 
-  pure function invlinkdzdn_ga (z,d) result(w)
+  elemental function invlinkdzdn_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
@@ -947,7 +949,7 @@ contains
     end if
   end function invlinkdzdn_ga
 
-  pure function invlinkhzdn_ga (z,d) result(w)
+  elemental function invlinkhzdn_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
@@ -976,7 +978,7 @@ contains
     end if
   end function invlinkhzdn_ga
 
-  pure function invlinkdzhn_ga (z,d) result(w)
+  elemental function invlinkdzhn_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
@@ -1015,7 +1017,7 @@ contains
 !! mu = PHI[sign(z) * c(nu) * sqrt(nu*log(1+z*z/nu))]
 !! where c(nu) = (8*nu+1)/(8*nu+3)
 !! w = log(mu)
-  pure function flink_wallace (w, d) result(z)
+  elemental function flink_wallace (w, d) result(z)
     use interfaces, only: quantnorm, fexpm1
     implicit none
     double precision, intent(in) :: w, d
@@ -1028,7 +1030,7 @@ contains
   end function flink_wallace
 
 !! Inverse link fcn (log scale)
-  pure function invlink_wallace (z,d) result (w)
+  elemental function invlink_wallace (z,d) result (w)
     use interfaces, only: logprobnorm, flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1040,7 +1042,7 @@ contains
     w = logprobnorm(t)
   end function invlink_wallace
 
-  pure function invlinkdz_wallace (z,d) result (w)
+  elemental function invlinkdz_wallace (z,d) result (w)
     use interfaces, only: logprobnorm, logpdfnorm, flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1063,7 +1065,7 @@ contains
     w = exp(f-w)*dzt
   end function invlinkdz_wallace
 
-  pure function invlinkhz_wallace (z,d) result (w)
+  elemental function invlinkhz_wallace (z,d) result (w)
     use interfaces, only: logprobnorm, logpdfnorm, flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1096,7 +1098,7 @@ contains
     w = w*(hzt - zt*dzt) - w*w*dzt
   end function invlinkhz_wallace
 
-  pure function invlink3z_wallace (z,d) result (w)
+  elemental function invlink3z_wallace (z,d) result (w)
     use interfaces, only: logprobnorm, logpdfnorm, flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1113,7 +1115,7 @@ contains
     w = (zt*zt-1)*w*dzt*dzt*dzt -3*zt*w*dzt*hzt + w*szt - dw*dw*dw - 3*dw*hw
   end function invlink3z_wallace
 
-  pure function invlinkdn_wallace (z,d) result (w)
+  elemental function invlinkdn_wallace (z,d) result (w)
     use interfaces, only: logprobnorm, logpdfnorm, flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1141,7 +1143,7 @@ contains
     w = exp(phid - phip)*dzt
   end function invlinkdn_wallace
 
-  pure function invlinkhn_wallace (z,d) result (w)
+  elemental function invlinkhn_wallace (z,d) result (w)
     use interfaces, only: logprobnorm, logpdfnorm, flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1177,7 +1179,7 @@ contains
     w = w*(hzt - zt*dzt) - w*w*dzt
   end function invlinkhn_wallace
 
-  pure function invlinkdzdn_wallace (z,d) result (w)
+  elemental function invlinkdzdn_wallace (z,d) result (w)
     use interfaces, only: logprobnorm, logpdfnorm
     implicit none
     double precision, intent(in) :: z, d
@@ -1193,7 +1195,7 @@ contains
     w = w*ztdzdn - (zt+w)*w*ztdz*ztdn
   end function invlinkdzdn_wallace
 
-  pure function invlinkhzdn_wallace (z,d) result (w)
+  elemental function invlinkhzdn_wallace (z,d) result (w)
     use interfaces, only: logprobnorm, logpdfnorm
     implicit none
     double precision, intent(in) :: z, d
@@ -1217,7 +1219,7 @@ contains
        + w*zthzdn - wdz*wdz*wdn - 2*wdz*wdzdn - whz*wdn
   end function invlinkhzdn_wallace
 
-  pure function invlinkdzhn_wallace (z,d) result (w)
+  elemental function invlinkdzhn_wallace (z,d) result (w)
     use interfaces, only: logprobnorm, logpdfnorm
     implicit none
     double precision, intent(in) :: z, d
@@ -1239,7 +1241,7 @@ contains
        + dw2*(ztdzdn*ztdn*2 + ztdz*zthn) +dw1*ztdzhn
   end function invlinkdzhn_wallace
 
-  pure double precision function wallace_zeta (z,d) result (zt)
+  elemental double precision function wallace_zeta (z,d) result (zt)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1256,7 +1258,7 @@ contains
     end if
   end function wallace_zeta
 
-  pure double precision function wallace_zeta_dz (z,d) result (zt)
+  elemental double precision function wallace_zeta_dz (z,d) result (zt)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1274,7 +1276,7 @@ contains
     end if
   end function wallace_zeta_dz
 
-  pure double precision function wallace_zeta_hz (z,d) result (zt)
+  elemental double precision function wallace_zeta_hz (z,d) result (zt)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1294,7 +1296,7 @@ contains
     end if
   end function wallace_zeta_hz
 
-  pure double precision function wallace_zeta_3z (z,d) result (zt)
+  elemental double precision function wallace_zeta_3z (z,d) result (zt)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1314,7 +1316,7 @@ contains
     end if
   end function wallace_zeta_3z
 
-  pure double precision function wallace_zeta_dn (z,d) result (zt)
+  elemental double precision function wallace_zeta_dn (z,d) result (zt)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1334,7 +1336,7 @@ contains
     end if
   end function wallace_zeta_dn
 
-  pure double precision function wallace_zeta_hn (z,d) result (zt)
+  elemental double precision function wallace_zeta_hn (z,d) result (zt)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1357,7 +1359,7 @@ contains
     end if
   end function wallace_zeta_hn
 
-  pure double precision function wallace_zeta_dzdn (z,d) result (zt)
+  elemental double precision function wallace_zeta_dzdn (z,d) result (zt)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1377,7 +1379,7 @@ contains
     end if
   end function wallace_zeta_dzdn
 
-  pure double precision function wallace_zeta_hzdn (z,d) result (zt)
+  elemental double precision function wallace_zeta_hzdn (z,d) result (zt)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1400,7 +1402,7 @@ contains
     end if
   end function wallace_zeta_hzdn
 
-  pure double precision function wallace_zeta_dzhn (z,d) result (zt)
+  elemental double precision function wallace_zeta_dzhn (z,d) result (zt)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -1429,28 +1431,28 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!! modified GEV binomial !!!!!!!!!!!!!!!!!!!!!!!!!!
 !! mu = exp{-max(0,1+nu*z)^{-1/nu}} if nu neq 0
 !!    = exp{-exp(z)}                if nu == 0
-  pure function flink_modgev (w,d) result(z)
+  elemental function flink_modgev (w,d) result(z)
     implicit none
     double precision, intent(in) :: w, d
     double precision :: z
     z = -flink_modbc(log(-w),-d)
   end function flink_modgev
 
-  pure function invlink_modgev (z,d) result (w)
+  elemental function invlink_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
     w = -exp(invlink_modbc(-z,-d))
   end function invlink_modgev
 
-  pure function invlinkdz_modgev (z,d) result (w)
+  elemental function invlinkdz_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
     w = exp(invlink_modbc(-z,-d))*invlinkdz_modbc(-z,-d)
   end function invlinkdz_modgev
 
-  pure function invlinkhz_modgev (z,d) result (w)
+  elemental function invlinkhz_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w, y, hz
@@ -1460,7 +1462,7 @@ contains
     w = -(w*w + hz)*y
   end function invlinkhz_modgev
 
-  pure function invlink3z_modgev (z,d) result (w)
+  elemental function invlink3z_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision dz, y, hz, w
@@ -1471,7 +1473,7 @@ contains
     w = (dz*dz*dz + 3*dz*hz + w)*y
   end function invlink3z_modgev
 
-  pure function invlinkdn_modgev (z,d) result (w)
+  elemental function invlinkdn_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -1481,7 +1483,7 @@ contains
     w = dg*w
   end function invlinkdn_modgev
 
-  pure function invlinkhn_modgev (z,d) result (w)
+  elemental function invlinkhn_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -1492,7 +1494,7 @@ contains
     w = -(dg*dg + d2g)*w
   end function invlinkhn_modgev
 
-  pure function invlinkdzdn_modgev (z,d) result (w)
+  elemental function invlinkdzdn_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -1504,7 +1506,7 @@ contains
     w = -(dz*dn + dzdn)*w
   end function invlinkdzdn_modgev
 
-  pure function invlinkhzdn_modgev (z,d) result (w)
+  elemental function invlinkhzdn_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -1518,7 +1520,7 @@ contains
     w = (dz*dz*dn + 2*dz*dzdn + hz*dn +hzdn)*w
   end function invlinkhzdn_modgev
 
-  pure function invlinkdzhn_modgev (z,d) result (w)
+  elemental function invlinkdzhn_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -1536,28 +1538,28 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! GEV binomial !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! mu = exp{-max(0,1+nu*z)^{-1/nu}} if nu neq 0
 !!    = exp{-exp(z)}                if nu == 0
-  pure function flink_gev (w,d) result(z)
+  elemental function flink_gev (w,d) result(z)
     implicit none
     double precision, intent(in) :: w, d
     double precision :: z
     z = -flink_boxcox(log(-w),-d)
   end function flink_gev
 
-  pure function invlink_gev (z,d) result (w)
+  elemental function invlink_gev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
     w = -exp(invlink_boxcox(-z,-d))
   end function invlink_gev
 
-  pure function invlinkdz_gev (z,d) result (w)
+  elemental function invlinkdz_gev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
     w = exp(invlink_boxcox(-z,-d))*invlinkdz_boxcox(-z,-d)
   end function invlinkdz_gev
 
-  pure function invlinkhz_gev (z,d) result (w)
+  elemental function invlinkhz_gev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w, y, hz
@@ -1567,7 +1569,7 @@ contains
     w = -(w*w + hz)*y
   end function invlinkhz_gev
 
-  pure function invlink3z_gev (z,d) result (w)
+  elemental function invlink3z_gev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision dz, y, hz, w
@@ -1578,7 +1580,7 @@ contains
     w = (dz*dz*dz + 3*dz*hz + w)*y
   end function invlink3z_gev
 
-  pure function invlinkdn_gev (z,d) result (w)
+  elemental function invlinkdn_gev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -1588,7 +1590,7 @@ contains
     w = dg*w
   end function invlinkdn_gev
 
-  pure function invlinkhn_gev (z,d) result (w)
+  elemental function invlinkhn_gev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -1599,7 +1601,7 @@ contains
     w = -(dg*dg + d2g)*w
   end function invlinkhn_gev
 
-  pure function invlinkdzdn_gev (z,d) result (w)
+  elemental function invlinkdzdn_gev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -1611,7 +1613,7 @@ contains
     w = -(dz*dn + dzdn)*w
   end function invlinkdzdn_gev
 
-  pure function invlinkhzdn_gev (z,d) result (w)
+  elemental function invlinkhzdn_gev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -1625,7 +1627,7 @@ contains
     w = (dz*dz*dn + 2*dz*dzdn + hz*dn +hzdn)*w
   end function invlinkhzdn_gev
 
-  pure function invlinkdzhn_gev (z,d) result (w)
+  elemental function invlinkdzhn_gev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -1642,25 +1644,25 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!! Other functions !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  pure function identity (z,d) result (w)
-    implicit none
-    double precision, intent(in) :: z, d
-    double precision w
-    w = z
-  end function identity
-
-  pure function constant (z,d) result (w)
-    implicit none
-    double precision, intent(in) :: z, d
-    double precision w
-    w = 1d0
-  end function constant
-
-  pure function zero (z,d) result (w)
-    implicit none
-    double precision, intent(in) :: z, d
-    double precision w
-    w = 0d0
-  end function zero
+!!   elemental function identity (z,d) result (w)
+!!     implicit none
+!!     double precision, intent(in) :: z, d
+!!     double precision w
+!!     w = z
+!!   end function identity
+!!
+!!   elemental function constant (z,d) result (w)
+!!     implicit none
+!!     double precision, intent(in) :: z, d
+!!     double precision w
+!!     w = 1d0
+!!   end function constant
+!!
+!!   elemental function zero (z,d) result (w)
+!!     implicit none
+!!     double precision, intent(in) :: z, d
+!!     double precision w
+!!     w = 0d0
+!!   end function zero
 
 end module modelfcns_link

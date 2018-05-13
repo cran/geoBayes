@@ -45,3 +45,4 @@ mcmcfcns.o: modelfcns.o interfaces.o covfun.o betaprior.o linkfcn.o pdfy.o
 transformz.o: modelfcns.o
 linkcalc.o: mcmcfcns.o
 seeb.o: covfun.o modelfcns.o
+llikderiv.o: modelfcns.o covfun.o betaprior.o

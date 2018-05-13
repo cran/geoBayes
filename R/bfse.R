@@ -45,10 +45,9 @@
 ##' \item \code{bfSigma} The covariance matrix for the Bayes factors
 ##' estimates.
 ##' }
-##' @references Roy, V., Tan, A. and Flegal, J. (2015). Estimating
-##' standard errors for importance sampling estimators with multiple
-##' Markov chains. Technical report, Iowa State University.
-##' \url{http://lib.dr.iastate.edu/stat_las_preprints/34}
+##' @references Roy, V., Tan, A. and Flegal, J. (2018). Estimating
+##'   standard errors for importance sampling estimators with multiple
+##'   Markov chains, Statistica Sinica, 28 1079-1101.
 ##' @useDynLib geoBayes bfse_no bfse_mu bfse_wo bfse_tr
 ##' @export
 bfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,

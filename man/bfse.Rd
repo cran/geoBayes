@@ -70,8 +70,7 @@ Uses the batch means method to compute the standard errors for
 Bayes factors.
 }
 \references{
-Roy, V., Tan, A. and Flegal, J. (2015). Estimating
-standard errors for importance sampling estimators with multiple
-Markov chains. Technical report, Iowa State University.
-\url{http://lib.dr.iastate.edu/stat_las_preprints/34}
+Roy, V., Tan, A. and Flegal, J. (2018). Estimating
+  standard errors for importance sampling estimators with multiple
+  Markov chains, Statistica Sinica, 28 1079-1101.
 }

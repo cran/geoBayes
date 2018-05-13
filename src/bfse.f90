@@ -215,41 +215,6 @@ subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
   integer i, j, kgm1, ia, ie
   double precision tmp
 
-  abstract interface
-    function bv1 (x,n,k,b)
-      ! Compute the matrix batch means variance at the 1st stage
-      implicit none
-      integer, intent(in) :: n, k, b
-      double precision, intent(in) :: x(n,k)
-      double precision bv1(k,k)
-    end function bv1
-  end interface
-
-  abstract interface
-    function bv2(x,n,b)
-      ! Compute the univariate batch means variance at the 2nd stage
-      implicit none
-      integer, intent(in) :: n, b
-      double precision, intent(in) :: x(n)
-      double precision bv2
-    end function bv2
-  end interface
-
-  procedure (bv1), pointer :: bmmcvrmat => null()
-  procedure (bv2), pointer :: bmmcvr => null()
-
-  select case (ibvmeth)
-  case (1) ! Standard
-    bmmcvrmat => bmmcvrmat_st
-    bmmcvr => bmmcvr_st
-  case (2) ! Spectral Tukey-Hanning
-    bmmcvrmat => bmmcvrmat_th
-    bmmcvr => bmmcvr_th
-  case (3) ! Spectral modified Bartlett
-    bmmcvrmat => bmmcvrmat_mb
-    bmmcvr => bmmcvr_mb
-  end select
-
   ! Estimate BF
   logN = log(dble(Nout1))
   eta = logN
@@ -276,7 +241,7 @@ subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
   do j = 1, kg
     ia = ie + 1
     ie = ie + Nout1(j)
-    Omg = Omg + bmmcvrmat(YY(ia:ie,:),Nout1(j),kg,nb1(j))*&
+    Omg = Omg + bmmcvrmat(ibvmeth,YY(ia:ie,:),Nout1(j),kg,nb1(j))*&
        dble(Nout1(j))/dble(Ntot1)
   end do
 
@@ -334,7 +299,7 @@ subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
     do j = 1, kg
       ia = ie + 1
       ie = ie + Nout2(j)
-      tmp = bmmcvr(VVcol(ia:ie),Nout2(j),nb2(j))
+      tmp = bmmcvr(ibvmeth,VVcol(ia:ie),Nout2(j),nb2(j))
       VT2(i) = VT2(i) + tmp*NNratio(j)
     end do
   end do
@@ -454,6 +419,23 @@ contains
     ! bmmcvr_st = bmmcvr_st/dble(n)
   end function bmmcvr_st
 
+  function bmmcvrmat (i,x,n,k,b)
+    ! Split matrix x(n,k) to b batches of roughly equal size and compute the
+    ! MC variance. The output is a k*k matrix.
+    implicit none
+    integer, intent(in) :: i, n, k, b
+    double precision, intent(in) :: x(n,k)
+    double precision bmmcvrmat(k,k)
+    select case (i)
+    case (1) ! Standard
+      bmmcvrmat = bmmcvrmat_st(x,n,k,b)
+    case (2) ! Spectral Tukey-Hanning
+      bmmcvrmat = bmmcvrmat_th(x,n,k,b)
+    case (3) ! Spectral modified Bartlett
+      bmmcvrmat = bmmcvrmat_mb(x,n,k,b)
+    end select
+  end function bmmcvrmat
+
   function batchmeans (x,n,b)
     ! Split vector x(n) to b batches of roughly equal size and compute the
     ! mean of each batch. The output is a vector of size b.
@@ -535,6 +517,23 @@ contains
     end do
     bmmcvr_th = bmmcvr_th/dble(n)
   end function bmmcvr_th
+
+  function bmmcvr (i,x,n,b)
+    ! Compute the univariate spectral variance estimator using the
+    ! Tukey-Hanning lag window.
+    implicit none
+    integer, intent(in) :: i, n, b
+    double precision, intent(in) :: x(n)
+    double precision bmmcvr
+    select case (i)
+    case (1) ! Standard
+      bmmcvr = bmmcvr_st(x,n,b)
+    case (2) ! Spectral Tukey-Hanning
+      bmmcvr = bmmcvr_th(x,n,b)
+    case (3) ! Spectral modified Bartlett
+      bmmcvr = bmmcvr_mb(x,n,b)
+    end select
+  end function bmmcvr
 
   function bmmcvrmat_mb (x,n,k,b)
     implicit none

@@ -12,10 +12,6 @@ module covfun
   private :: covmat_a, covmat_l, covmat_v
   public :: spcor, spcor_dh, spcor_dk, spcor_hh, spcor_hk, &
      spcor_dhdk, upper_tri
-  private :: spcor_, spcor_dh_, spcor_dk_, spcor_hh_, spcor_hk_, &
-     spcor_dhdk_
-  private :: spcor__, spcor_dh__, spcor_dk__, spcor_hh__, spcor_hk__, &
-     spcor_dhdk__
   integer, parameter, private :: CORCODES(3) = (/1,2,3/)
   logical, private :: CORDEF = .false.
   integer, private :: CORIS = 0, DIMSP = 0
@@ -26,53 +22,10 @@ module covfun
     module procedure covmat_a, covmat_l, covmat_v
   end interface covmat
 
-  abstract interface
-    pure double precision function spcor_ (h,k)
-      double precision, intent(in) :: h,k
-    end function spcor_
-  end interface
-
-  abstract interface
-    pure double precision function spcor_dh_ (h,k)
-      double precision, intent(in) :: h,k
-    end function spcor_dh_
-  end interface
-
-  abstract interface
-    pure double precision function spcor_dk_ (h,k)
-      double precision, intent(in) :: h,k
-    end function spcor_dk_
-  end interface
-
-  abstract interface
-    pure double precision function spcor_hh_ (h,k)
-      double precision, intent(in) :: h,k
-    end function spcor_hh_
-  end interface
-
-  abstract interface
-    pure double precision function spcor_hk_ (h,k)
-      double precision, intent(in) :: h,k
-    end function spcor_hk_
-  end interface
-
-  abstract interface
-    pure double precision function spcor_dhdk_ (h,k)
-      double precision, intent(in) :: h,k
-    end function spcor_dhdk_
-  end interface
-
-  procedure (spcor_     ), pointer :: spcor__      => null()
-  procedure (spcor_dh_  ), pointer :: spcor_dh__   => null()
-  procedure (spcor_dk_  ), pointer :: spcor_dk__   => null()
-  procedure (spcor_hh_  ), pointer :: spcor_hh__   => null()
-  procedure (spcor_hk_  ), pointer :: spcor_hk__   => null()
-  procedure (spcor_dhdk_), pointer :: spcor_dhdk__ => null()
-
 contains
 
   function upper_tri () result (lup_)
-    logical, allocatable :: lup_(:,:)
+    logical, pointer :: lup_(:,:)
     allocate(lup_(DIMSP,DIMSP))
     lup_ = lup
   end function upper_tri
@@ -88,33 +41,6 @@ contains
       if (.not. (any(icf .eq. CORCODES))) then
         call rexit ("Unrecognised correlation.")
       end if
-
-      select case (icf)
-      case (1) ! Matern
-        spcor__      => cor_matern
-        spcor_dh__   => cor_dh_matern
-        spcor_dk__   => cor_dk_matern
-        spcor_hh__   => cor_hh_matern
-        spcor_hk__   => cor_hk_matern
-        spcor_dhdk__ => cor_dhdk_matern
-      case (2) ! Spherical
-        spcor__      => cor_spher
-        spcor_dh__   => cor_dh_spher
-        spcor_dk__   => cor_dk_spher
-        spcor_hh__   => cor_hh_spher
-        spcor_hk__   => cor_hk_spher
-        spcor_dhdk__ => cor_dhdk_spher
-      case (3) ! Power exponential
-        spcor__      => cor_powexp
-        spcor_dh__   => cor_dh_powexp
-        spcor_dk__   => cor_dk_powexp
-        spcor_hh__   => cor_hh_powexp
-        spcor_hk__   => cor_hk_powexp
-        spcor_dhdk__ => cor_dhdk_powexp
-      case default
-        call rexit("Correlation code not used.")
-      end select
-
       CORIS = icf
       CORDEF = .true.
     end if
@@ -135,33 +61,81 @@ contains
 
 
   elemental double precision function spcor (h,k)
+    implicit none
     double precision, intent(in) :: h,k
-    spcor = spcor__(h,k)
+    select case (CORIS)
+    case (1) ! Matern
+      spcor = cor_matern(h,k)
+    case (2) ! Spherical
+      spcor = cor_spher(h,k)
+    case (3) ! Power exponential
+      spcor = cor_powexp(h,k)
+    end select
   end function spcor
 
   elemental double precision function spcor_dh (h,k)
+    implicit none
     double precision, intent(in) :: h,k
-    spcor_dh = spcor_dh__(h,k)
+    select case (CORIS)
+    case (1) ! Matern
+      spcor_dh = cor_dh_matern(h,k)
+    case (2) ! Spherical
+      spcor_dh = cor_dh_spher(h,k)
+    case (3) ! Power exponential
+      spcor_dh = cor_dh_powexp(h,k)
+    end select
   end function spcor_dh
 
   elemental double precision function spcor_dk (h,k)
+    implicit none
     double precision, intent(in) :: h,k
-    spcor_dk = spcor_dk__(h,k)
+    select case (CORIS)
+    case (1) ! Matern
+      spcor_dk = cor_dk_matern(h,k)
+    case (2) ! Spherical
+      spcor_dk = cor_dk_spher(h,k)
+    case (3) ! Power exponential
+      spcor_dk = cor_dk_powexp(h,k)
+    end select
   end function spcor_dk
 
   elemental double precision function spcor_hh (h,k)
+    implicit none
     double precision, intent(in) :: h,k
-    spcor_hh = spcor_hh__(h,k)
+    select case (CORIS)
+    case (1) ! Matern
+      spcor_hh = cor_hh_matern(h,k)
+    case (2) ! Spherical
+      spcor_hh = cor_hh_spher(h,k)
+    case (3) ! Power exponential
+      spcor_hh = cor_hh_powexp(h,k)
+    end select
   end function spcor_hh
 
   elemental double precision function spcor_hk (h,k)
+    implicit none
     double precision, intent(in) :: h,k
-    spcor_hk = spcor_hk__(h,k)
+    select case (CORIS)
+    case (1) ! Matern
+      spcor_hk = cor_hk_matern(h,k)
+    case (2) ! Spherical
+      spcor_hk = cor_hk_spher(h,k)
+    case (3) ! Power exponential
+      spcor_hk = cor_hk_powexp(h,k)
+    end select
   end function spcor_hk
 
   elemental double precision function spcor_dhdk (h,k)
+    implicit none
     double precision, intent(in) :: h,k
-    spcor_dhdk = spcor_dhdk__(h,k)
+    select case (CORIS)
+    case (1) ! Matern
+      spcor_dhdk = cor_dhdk_matern(h,k)
+    case (2) ! Spherical
+      spcor_dhdk = cor_dhdk_spher(h,k)
+    case (3) ! Power exponential
+      spcor_dhdk = cor_dhdk_powexp(h,k)
+    end select
   end function spcor_dhdk
 
 

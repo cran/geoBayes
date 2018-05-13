@@ -1,10 +1,27 @@
 module calcbd_fcns
-  use modelfcns, only: condymu_mf => condymu
-  use condymu, only: condymu_gt
+
+  private :: condymu_sp, weigh_llik_st, weigh_llik_cv, weigh_llik_deriv_st,&
+     weigh_llik_deriv_cv
 
 contains
 
-  function condymu_sp (n, y1, y2, mu, tsqval, respdfh)
+  pure function condymuf (ifam, n, y1, y2, mu, tsqval, respdfh)
+    use condymu, only: condymu_gt
+    implicit none
+    integer, intent(in) :: n, ifam
+    double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
+       respdfh
+    double precision condymuf
+    select case (ifam)
+    case (0)
+      condymuf = condymu_gt(n, y1, y2, mu, tsqval, respdfh)
+    case default
+      condymuf = condymu_sp(n, y1, y2, mu, tsqval, respdfh)
+    end select
+  end function condymuf
+
+  pure function condymu_sp (n, y1, y2, mu, tsqval, respdfh)
+    use modelfcns, only: condymu_mf => condymu
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
@@ -13,7 +30,19 @@ contains
     condymu_sp = condymu_mf(n,y1,y2,mu,tsqval)
   end function condymu_sp
 
-  double precision function weigh_llik_st (llik, lw, Qcv, n) result (out)
+  pure double precision function weigh_llik (icv, llik, lw, Qcv, n)
+    implicit none
+    integer, intent(in) :: n, icv
+    double precision, intent(in) :: llik(n), lw(n), Qcv(n)
+    select case (icv)
+    case (0) ! No control variates
+      weigh_llik = weigh_llik_st(llik,lw,Qcv,n)
+    case (1) ! With control variates
+      weigh_llik = weigh_llik_cv(llik,lw,Qcv,n)
+    end select
+  end function weigh_llik
+
+  pure double precision function weigh_llik_st (llik, lw, Qcv, n) result (out)
     ! out = log(sum(exp(llik - lw)))
     implicit none
     integer, intent(in) :: n
@@ -25,7 +54,7 @@ contains
     out = out + log(sum(llikw))
   end function weigh_llik_st
 
-  double precision function weigh_llik_cv (llik, lw, Qcv, n) result (out)
+  pure double precision function weigh_llik_cv (llik, lw, Qcv, n) result (out)
     ! out = log(Qcv'*(n*exp(llik - lw)))
     implicit none
     integer, intent(in) :: n
@@ -42,7 +71,19 @@ contains
     end if
   end function weigh_llik_cv
 
-  double precision function weigh_llik_deriv_st (dllik, llik, lw, Qcv, n) &
+  pure double precision function weigh_llik_deriv (icv, dllik, llik, lw, Qcv, n)
+    implicit none
+    integer, intent(in) :: n, icv
+    double precision, intent(in) :: dllik(n), llik(n), lw(n), Qcv(n)
+    select case (icv)
+    case (0) ! No control variates
+      weigh_llik_deriv = weigh_llik_deriv_st(dllik,llik,lw,Qcv,n)
+    case (1) ! With control variates
+      weigh_llik_deriv = weigh_llik_deriv_cv(dllik,llik,lw,Qcv,n)
+    end select
+  end function weigh_llik_deriv
+
+  pure double precision function weigh_llik_deriv_st (dllik, llik, lw, Qcv, n) &
      result (out)
     ! out = log(sum(exp(llik - lw)))
     implicit none
@@ -56,7 +97,7 @@ contains
     out = dot_product(dllik,llikw)
   end function weigh_llik_deriv_st
 
-  double precision function weigh_llik_deriv_cv (dllik, llik, lw, Qcv, n) &
+  pure double precision function weigh_llik_deriv_cv (dllik, llik, lw, Qcv, n) &
      result (out)
     ! out = log(Qcv'*(n*exp(llik - lw)))
     implicit none

@@ -156,7 +156,7 @@ double F77_SUB(flogexpm1)(double *x)
 
 double F77_SUB(fbesselkratio)(double *x, double *ktop, double *kbot)
 {
-  if (abs(*ktop) == abs(*kbot)) return 1.0;
+  if (fabs(*ktop) == fabs(*kbot)) return 1.0;
   // The scaling cancels in the ratio.
   return bessel_k(*x,*ktop,2.)/bessel_k(*x,*kbot,2.);
 }

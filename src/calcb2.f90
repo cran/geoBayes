@@ -226,18 +226,6 @@ subroutine calcb_tr_st (bfact, philist, nulist, nsqlist, kappalist, &
   double precision nu, phi, nsq, kappa
   double precision zsam(n), msam(n), jsam(n), sam(n)
 
-  abstract interface
-    function condymu_ (n, y1, y2, mu, tsqval, respdfh)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
-         respdfh
-      double precision condymu_
-    end function condymu_
-  end interface
-
-  procedure(condymu_), pointer :: condymuf => null()
-
   call create_model (ifam)
   call create_spcor(icf,n)
 
@@ -246,10 +234,8 @@ subroutine calcb_tr_st (bfact, philist, nulist, nsqlist, kappalist, &
   case (0)
     tsqval = tsqdf*tsq
     respdfh = .5d0*(n + tsqdf)
-    condymuf => condymu_gt
   case default
     tsqval = tsq
-    condymuf => condymu_sp
   end select
 
   ! Determine flat or normal prior
@@ -282,7 +268,7 @@ subroutine calcb_tr_st (bfact, philist, nulist, nsqlist, kappalist, &
           jsam = logitrwdz(zsam,nu)
         end where
         lglk(k) = logpdfzf(n,zsam,Ups,ldh_Ups,xi,lmxi,ssqdfsc,modeldfh) &
-           + condymuf(n,y,l,msam,tsqval,respdfh) - sum(jsam) - weights(k)
+           + condymuf(ifam,n,y,l,msam,tsqval,respdfh) - sum(jsam) - weights(k)
       end do
       bfact(j,i) = logsumexpv(lglk,Ntot)
     end do
@@ -290,7 +276,7 @@ subroutine calcb_tr_st (bfact, philist, nulist, nsqlist, kappalist, &
 
 contains
 
-  function condymu_sp (n, y1, y2, mu, tsqval, respdfh)
+  pure function condymu_sp (n, y1, y2, mu, tsqval, respdfh)
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
@@ -298,6 +284,20 @@ contains
     double precision condymu_sp
     condymu_sp = condymu_mf(n,y1,y2,mu,tsqval)
   end function condymu_sp
+
+  pure function condymuf (ifam, n, y1, y2, mu, tsqval, respdfh)
+    implicit none
+    integer, intent(in) :: n, ifam
+    double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
+       respdfh
+    double precision condymuf
+    select case (ifam)
+    case (0)
+      condymuf = condymu_gt(n, y1, y2, mu, tsqval, respdfh)
+    case default
+      condymuf = condymu_sp(n, y1, y2, mu, tsqval, respdfh)
+    end select
+  end function condymuf
 end subroutine calcb_tr_st
 
 
@@ -561,18 +561,6 @@ subroutine calcb_tr_cv (bfact, philist, nulist, nsqlist, kappalist, &
   double precision zsam(n), msam(n), jsam(n), sam(n)
   double precision dNtot, ycv(Ntot), betareg
 
-  abstract interface
-    function condymu_ (n, y1, y2, mu, tsqval, respdfh)
-      implicit none
-      integer, intent(in) :: n
-      double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
-         respdfh
-      double precision condymu_
-    end function condymu_
-  end interface
-
-  procedure(condymu_), pointer :: condymuf => null()
-
   call create_model (ifam)
   call create_spcor(icf,n)
 
@@ -581,10 +569,8 @@ subroutine calcb_tr_cv (bfact, philist, nulist, nsqlist, kappalist, &
   case (0)
     tsqval = tsqdf*tsq
     respdfh = .5d0*(n + tsqdf)
-    condymuf => condymu_gt
   case default
     tsqval = tsq
-    condymuf => condymu_sp
   end select
   dNtot = log(dble(Ntot))
 
@@ -618,7 +604,7 @@ subroutine calcb_tr_cv (bfact, philist, nulist, nsqlist, kappalist, &
           jsam = logitrwdz(zsam,nu)
         end where
         lglk(k) = logpdfzf(n,zsam,Ups,ldh_Ups,xi,lmxi,ssqdfsc,modeldfh) &
-           + condymuf(n,y,l,msam,tsqval,respdfh) - sum(jsam) - weights(k)
+           + condymuf(ifam,n,y,l,msam,tsqval,respdfh) - sum(jsam) - weights(k)
         ycv(k) = exp(lglk(k) + dNtot)
       end do
       betareg = dot_product(ycv,QRin)
@@ -632,7 +618,7 @@ subroutine calcb_tr_cv (bfact, philist, nulist, nsqlist, kappalist, &
 
 contains
 
-  function condymu_sp (n, y1, y2, mu, tsqval, respdfh)
+  pure function condymu_sp (n, y1, y2, mu, tsqval, respdfh)
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
@@ -640,4 +626,18 @@ contains
     double precision condymu_sp
     condymu_sp = condymu_mf(n,y1,y2,mu,tsqval)
   end function condymu_sp
+
+  pure function condymuf (ifam, n, y1, y2, mu, tsqval, respdfh)
+    implicit none
+    integer, intent(in) :: n, ifam
+    double precision, intent(in) :: y1(n), y2(n), mu(n), tsqval, &
+       respdfh
+    double precision condymuf
+    select case (ifam)
+    case (0)
+      condymuf = condymu_gt(n, y1, y2, mu, tsqval, respdfh)
+    case default
+      condymuf = condymu_sp(n, y1, y2, mu, tsqval, respdfh)
+    end select
+  end function condymuf
 end subroutine calcb_tr_cv

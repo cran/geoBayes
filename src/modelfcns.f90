@@ -5,276 +5,13 @@ module modelfcns
 
   integer, parameter :: &                             ! Models
      MODELCODES(14) = (/1,2,-2,3,4,5,6,7,-7,8,9,10,11,-11/)
-
-  private :: logpdfy_ , logdffy_ , logpdfydlnk_ , logpdfyhlnk_ ,&
-     mustart_ , fcntruemu_ , invtruemu_ , flink_ , invlink_ , &
-     fcncum_, fcncumd2_, fcncumd3_, &
-     invlinkdz_ , invlinkhz_ , invlink3z_ , &
-     invlinkdn_ , invlinkhn_ , &
-     invlinkdzdn_ , invlinkhzdn_ , invlinkdzhn_ , &
-     transfw_ , invtrw_ , invtrwdz_, invtrwhz_, invtrw3z_ , invtrwdn_, &
-     invtrwhn_, invtrwdzdn_, invtrwhzdn_ , invtrwdzhn_
-  private :: logpdfy__ , logdffy__ , logpdfydlnk__ , logpdfyhlnk__ ,&
-     mustart__ , fcntruemu__ , invtruemu__ , flink__ , invlink__ , &
-     fcncum__, fcncumd2__, fcncumd3__, &
-     invlinkdz__, invlinkhz__, invlink3z__, &
-     invlinkdn__, invlinkhn__, &
-     invlinkdzdn__, invlinkhzdn__, invlinkdzhn__, &
-     transfw__ , invtrw__ , invtrwdz__, invtrwhz__, invtrw3z__, invtrwdn__, &
-     invtrwhn__, invtrwdzdn__, invtrwhzdn__, invtrwdzhn__
-  private :: self, slog, sexp
   private :: MODELCODES
-
   logical, private :: MODELDEF = .false.
   integer, private :: MODELIS = 0
-
-  abstract interface
-    pure double precision function logpdfy_ (y1, y2, par)
-      double precision, intent(in) :: y1, y2, par
-    end function logpdfy_
-  end interface
-
-  abstract interface
-    pure double precision function logdffy_ (y1, y2, p1, p2)
-      double precision, intent(in) :: y1, y2, p1, p2
-    end function logdffy_
-  end interface
-
-  abstract interface
-    pure double precision function logpdfydlnk_ (y1, y2, par)
-      double precision, intent(in) :: y1, y2, par
-    end function logpdfydlnk_
-  end interface
-
-  abstract interface
-    pure double precision function logpdfyhlnk_ (y1, y2, par)
-      double precision, intent(in) :: y1, y2, par
-    end function logpdfyhlnk_
-  end interface
-
-  abstract interface
-    pure double precision function mustart_ (y1, y2)
-      double precision, intent(in) :: y1, y2
-    end function mustart_
-  end interface
-
-  abstract interface
-    pure double precision function fcntruemu_ (w)
-      double precision, intent(in) :: w
-    end function fcntruemu_
-  end interface
-
-  abstract interface
-    pure double precision function invtruemu_ (mu)
-      double precision, intent(in) :: mu
-    end function invtruemu_
-  end interface
-
-  abstract interface
-    pure double precision function fcncum_ (mu)
-      double precision, intent(in) :: mu
-    end function fcncum_
-  end interface
-
-  abstract interface
-    pure double precision function fcncumd2_ (mu)
-      double precision, intent(in) :: mu
-    end function fcncumd2_
-  end interface
-
-  abstract interface
-    pure double precision function fcncumd3_ (mu)
-      double precision, intent(in) :: mu
-    end function fcncumd3_
-  end interface
-
-  abstract interface
-    pure double precision function flink_ (w, d)
-      double precision, intent(in) :: w, d
-    end function flink_
-  end interface
-
-  abstract interface
-    pure double precision function invlink_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invlink_
-  end interface
-
-  abstract interface
-    pure double precision function invlinkdz_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invlinkdz_
-  end interface
-
-  abstract interface
-    pure double precision function invlinkhz_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invlinkhz_
-  end interface
-
-  abstract interface
-    pure double precision function invlink3z_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invlink3z_
-  end interface
-
-  abstract interface
-    pure double precision function invlinkdn_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invlinkdn_
-  end interface
-
-  abstract interface
-    pure double precision function invlinkhn_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invlinkhn_
-  end interface
-
-  abstract interface
-    pure double precision function invlinkdzdn_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invlinkdzdn_
-  end interface
-
-  abstract interface
-    pure double precision function invlinkhzdn_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invlinkhzdn_
-  end interface
-
-  abstract interface
-    pure double precision function invlinkdzhn_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invlinkdzhn_
-  end interface
-
-  abstract interface
-    pure double precision function transfw_ (w,d)
-      double precision, intent(in) :: w, d
-    end function transfw_
-  end interface
-
-  abstract interface
-    pure double precision function invtrw_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invtrw_
-  end interface
-
-  abstract interface
-    pure double precision function invtrwdz_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invtrwdz_
-  end interface
-
-  abstract interface
-    pure double precision function invtrwhz_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invtrwhz_
-  end interface
-
-  abstract interface
-    pure double precision function invtrw3z_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invtrw3z_
-  end interface
-
-  abstract interface
-    pure double precision function invtrwdn_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invtrwdn_
-  end interface
-
-  abstract interface
-    pure double precision function invtrwhn_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invtrwhn_
-  end interface
-
-  abstract interface
-    pure double precision function invtrwdzdn_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invtrwdzdn_
-  end interface
-
-  abstract interface
-    pure double precision function invtrwhzdn_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invtrwhzdn_
-  end interface
-
-  abstract interface
-    pure double precision function invtrwdzhn_ (z,d)
-      double precision, intent(in) :: z, d
-    end function invtrwdzhn_
-  end interface
-
-  procedure (logpdfy_    ), pointer :: logpdfy__     => null()
-  procedure (logdffy_    ), pointer :: logdffy__     => null()
-  procedure (logpdfydlnk_), pointer :: logpdfydlnk__ => null()
-  procedure (logpdfyhlnk_), pointer :: logpdfyhlnk__ => null()
-  procedure (mustart_    ), pointer :: mustart__     => null()
-  procedure (fcntruemu_  ), pointer :: fcntruemu__   => null()
-  procedure (invtruemu_  ), pointer :: invtruemu__   => null()
-  procedure (fcncum_     ), pointer :: fcncum__      => null()
-  procedure (fcncumd2_   ), pointer :: fcncumd2__    => null()
-  procedure (fcncumd3_   ), pointer :: fcncumd3__    => null()
-  procedure (flink_      ), pointer :: flink__       => null()
-  procedure (invlink_    ), pointer :: invlink__     => null()
-  procedure (invlinkdz_  ), pointer :: invlinkdz__   => null()
-  procedure (invlinkhz_  ), pointer :: invlinkhz__   => null()
-  procedure (invlink3z_  ), pointer :: invlink3z__   => null()
-  procedure (invlinkdn_  ), pointer :: invlinkdn__   => null()
-  procedure (invlinkhn_  ), pointer :: invlinkhn__   => null()
-  procedure (invlinkdzdn_), pointer :: invlinkdzdn__ => null()
-  procedure (invlinkhzdn_), pointer :: invlinkhzdn__ => null()
-  procedure (invlinkdzhn_), pointer :: invlinkdzhn__ => null()
-  procedure (transfw_    ), pointer :: transfw__     => null()
-  procedure (invtrw_     ), pointer :: invtrw__      => null()
-  procedure (invtrwdz_   ), pointer :: invtrwdz__    => null()
-  procedure (invtrwhz_   ), pointer :: invtrwhz__    => null()
-  procedure (invtrw3z_   ), pointer :: invtrw3z__    => null()
-  procedure (invtrwdn_   ), pointer :: invtrwdn__    => null()
-  procedure (invtrwhn_   ), pointer :: invtrwhn__    => null()
-  procedure (invtrwdzdn_ ), pointer :: invtrwdzdn__  => null()
-  procedure (invtrwhzdn_ ), pointer :: invtrwhzdn__  => null()
-  procedure (invtrwdzhn_ ), pointer :: invtrwdzhn__  => null()
 
 contains
 
   subroutine create_model (ifam)
-    ! Assign pointer functions to the family and link.
-    ! Sets the following pointers
-    ! logpdfy__
-    ! logdffy__
-    ! logpdfydlnk__
-    ! logpdfyhlnk__
-    ! mustart__
-    ! fcntruemu__
-    ! invtruemu__
-    ! fcncum__
-    ! fcncumd2__
-    ! fcncumd3__
-    ! flink__
-    ! invlink__
-    ! invlinkdz__
-    ! invlinkhz__
-    ! invlink3z__
-    ! invlinkdn__
-    ! invlinkhn__
-    ! invlinkdzdn__
-    ! invlinkhzdn__
-    ! invlinkdzhn__
-    ! transfw__
-    ! invtrw__
-    ! invtrwdz__
-    ! invtrwhz__
-    ! invtrwdn__
-    ! invtrwhn__
-    ! invtrwdzdn__
-    ! invtrwdzhn__
-
-    use modelfcns_pdfy
-    use modelfcns_link
     integer, intent(in) :: ifam
 
     if (MODELDEF .and. (MODELIS .eq. ifam)) return ! Model is already defined
@@ -283,429 +20,10 @@ contains
       call rexit ("Unrecognised family.")
     end if
 
-    select case (ifam) ! Choice of distribution functions
-    case (0) ! Transformed Gaussian, not really used except mustart
-      logpdfy__     => logpdfy_ga
-      logdffy__     => logdffy_ga
-      logpdfydlnk__ => logpdfydlnk_ga
-      logpdfyhlnk__ => logpdfyhlnk_ga
-      mustart__     => mustart_ga
-      fcntruemu__   => self
-      invtruemu__   => self
-      fcncum__      => fcncum_ga
-      fcncumd2__    => fcncumd2_ga
-      fcncumd3__    => fcncumd3_ga
-    case (1) ! Gaussian response
-      logpdfy__     => logpdfy_ga
-      logdffy__     => logdffy_ga
-      logpdfydlnk__ => logpdfydlnk_ga
-      logpdfyhlnk__ => logpdfyhlnk_ga
-      mustart__     => mustart_ga
-      fcntruemu__   => self
-      invtruemu__   => self
-      fcncum__      => fcncum_ga
-      fcncumd2__    => fcncumd2_ga
-      fcncumd3__    => fcncumd3_ga
-    case (2,-2,3,4,5,10,11,-11) ! Binomial response
-      logpdfy__     => logpdfy_bi
-      logdffy__     => logdffy_bi
-      logpdfydlnk__ => logpdfydlnk_bi
-      logpdfyhlnk__ => logpdfyhlnk_bi
-      mustart__     => mustart_bi
-      fcntruemu__   => sexp
-      invtruemu__   => slog
-      fcncum__      => fcncum_bi
-      fcncumd2__    => fcncumd2_bi
-      fcncumd3__    => fcncumd3_bi
-    case (6,7,-7) ! Poisson response
-      logpdfy__     => logpdfy_po
-      logdffy__     => logdffy_po
-      logpdfydlnk__ => logpdfydlnk_po
-      logpdfyhlnk__ => logpdfyhlnk_po
-      mustart__     => mustart_po
-      fcntruemu__   => sexp
-      invtruemu__   => slog
-      fcncum__      => fcncum_po
-      fcncumd2__    => fcncumd2_po
-      fcncumd3__    => fcncumd3_po
-    case (8,9) ! Gamma repsponse
-      logpdfy__     => logpdfy_gm
-      logdffy__     => logdffy_gm
-      logpdfydlnk__ => logpdfydlnk_gm
-      logpdfyhlnk__ => logpdfyhlnk_gm
-      fcntruemu__   => sexp
-      invtruemu__   => slog
-      fcncum__      => fcncum_gm
-      fcncumd2__    => fcncumd2_gm
-      fcncumd3__    => fcncumd3_gm
-    case default
-      call rexit("Model code not used.")
-    end select
-
-    select case (ifam) ! Link functions
-    case (0) ! Transformed Gaussian
-      flink__       => flink_ga
-      invlink__     => invlink_ga
-      invlinkdz__   => invlinkdz_ga
-      invlinkhz__   => invlinkhz_ga
-      invlink3z__   => invlink3z_ga
-      invlinkdn__   => invlinkdn_ga
-      invlinkhn__   => invlinkhn_ga
-      invlinkdzdn__ => invlinkdzdn_ga
-      invlinkhzdn__ => invlinkhzdn_ga
-      invlinkdzhn__ => invlinkdzhn_ga
-    case (1) ! Gaussian boxcox
-      flink__       => flink_ga
-      invlink__     => invlink_ga
-      invlinkdz__   => invlinkdz_ga
-      invlinkhz__   => invlinkhz_ga
-      invlink3z__   => invlink3z_ga
-      invlinkdn__   => invlinkdn_ga
-      invlinkhn__   => invlinkhn_ga
-      invlinkdzdn__ => invlinkdzdn_ga
-      invlinkhzdn__ => invlinkhzdn_ga
-      invlinkdzhn__ => invlinkdzhn_ga
-    case (2,-2) ! Robit
-      flink__       => flink_robit
-      invlink__     => invlink_robit
-      invlinkdz__   => invlinkdz_robit
-      invlinkhz__   => invlinkhz_robit
-      invlink3z__   => invlink3z_robit
-      invlinkdn__   => invlinkdn_robit
-      invlinkhn__   => invlinkhn_robit
-      invlinkdzdn__ => invlinkdzdn_robit
-      invlinkhzdn__ => invlinkhzdn_robit
-      invlinkdzhn__ => invlinkdzhn_robit
-    case (3) ! Logit
-      flink__       => flink_logit
-      invlink__     => invlink_logit
-      invlinkdz__   => invlinkdz_logit
-      invlinkhz__   => invlinkhz_logit
-      invlink3z__   => invlink3z_logit
-      invlinkdn__   => invlinkdn_logit
-      invlinkhn__   => invlinkhn_logit
-      invlinkdzdn__ => invlinkdzdn_logit
-      invlinkhzdn__ => invlinkhzdn_logit
-      invlinkdzhn__ => invlinkdzhn_logit
-    case (4) ! Probit
-      flink__       => flink_probit
-      invlink__     => invlink_probit
-      invlinkdz__   => invlinkdz_probit
-      invlinkhz__   => invlinkhz_probit
-      invlink3z__   => invlink3z_probit
-      invlinkdn__   => invlinkdn_probit
-      invlinkhn__   => invlinkhn_probit
-      invlinkdzdn__ => invlinkdzdn_probit
-      invlinkhzdn__ => invlinkhzdn_probit
-      invlinkdzhn__ => invlinkdzhn_probit
-    case (5) ! Wallace
-      flink__       => flink_wallace
-      invlink__     => invlink_wallace
-      invlinkdz__   => invlinkdz_wallace
-      invlinkhz__   => invlinkhz_wallace
-      invlink3z__   => invlink3z_wallace
-      invlinkdn__   => invlinkdn_wallace
-      invlinkhn__   => invlinkhn_wallace
-      invlinkdzdn__ => invlinkdzdn_wallace
-      invlinkhzdn__ => invlinkhzdn_wallace
-      invlinkdzhn__ => invlinkdzhn_wallace
-    case (6,8) ! Modified boxcox
-      flink__       => flink_modbc
-      invlink__     => invlink_modbc
-      invlinkdz__   => invlinkdz_modbc
-      invlinkhz__   => invlinkhz_modbc
-      invlink3z__   => invlink3z_modbc
-      invlinkdn__   => invlinkdn_modbc
-      invlinkhn__   => invlinkhn_modbc
-      invlinkdzdn__ => invlinkdzdn_modbc
-      invlinkhzdn__ => invlinkhzdn_modbc
-      invlinkdzhn__ => invlinkdzhn_modbc
-    case (7,-7,9) ! Standard boxcox
-      flink__       => flink_boxcox
-      invlink__     => invlink_boxcox
-      invlinkdz__   => invlinkdz_boxcox
-      invlinkhz__   => invlinkhz_boxcox
-      invlink3z__   => invlink3z_boxcox
-      invlinkdn__   => invlinkdn_boxcox
-      invlinkhn__   => invlinkhn_boxcox
-      invlinkdzdn__ => invlinkdzdn_boxcox
-      invlinkhzdn__ => invlinkhzdn_boxcox
-      invlinkdzhn__ => invlinkdzhn_boxcox
-    case (10) ! Binomial modifiedGEV
-      flink__       => flink_modgev
-      invlink__     => invlink_modgev
-      invlinkdz__   => invlinkdz_modgev
-      invlinkhz__   => invlinkhz_modgev
-      invlink3z__   => invlink3z_modgev
-      invlinkdn__   => invlinkdn_modgev
-      invlinkhn__   => invlinkhn_modgev
-      invlinkdzdn__ => invlinkdzdn_modgev
-      invlinkhzdn__ => invlinkhzdn_modgev
-      invlinkdzhn__ => invlinkdzhn_modgev
-    case (11,-11) ! Binomial GEV
-      flink__       => flink_gev
-      invlink__     => invlink_gev
-      invlinkdz__   => invlinkdz_gev
-      invlinkhz__   => invlinkhz_gev
-      invlink3z__   => invlink3z_gev
-      invlinkdn__   => invlinkdn_gev
-      invlinkhn__   => invlinkhn_gev
-      invlinkdzdn__ => invlinkdzdn_gev
-      invlinkhzdn__ => invlinkhzdn_gev
-      invlinkdzhn__ => invlinkdzhn_gev
-    case default
-      call rexit("Model code not used.")
-    end select
-
-    select case (ifam) ! Transformation workaround
-    case (0) ! Transformed Gaussian
-      transfw__     => identity
-      invtrw__      => identity
-      invtrwdz__    => constant
-      invtrwhz__    => zero
-      invtrw3z__    => zero
-      invtrwdn__    => zero
-      invtrwhn__    => zero
-      invtrwdzdn__  => zero
-      invtrwhzdn__  => zero
-      invtrwdzhn__  => zero
-    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
-      transfw__     => identity
-      invtrw__      => identity
-      invtrwdz__    => constant
-      invtrwhz__    => zero
-      invtrw3z__    => zero
-      invtrwdn__    => zero
-      invtrwhn__    => zero
-      invtrwdzdn__  => zero
-      invtrwhzdn__  => zero
-      invtrwdzhn__  => zero
-    case (-2) ! Binomial robit workaround
-      transfw__     => flink_wallace
-      invtrw__      => invlink_wallace
-      invtrwdz__    => invlinkdz_wallace
-      invtrwhz__    => invlinkhz_wallace
-      invtrw3z__    => invlink3z_wallace
-      invtrwdn__    => invlinkdn_wallace
-      invtrwhn__    => invlinkhn_wallace
-      invtrwdzdn__  => invlinkdzdn_wallace
-      invtrwhzdn__  => invlinkhzdn_wallace
-      invtrwdzhn__  => invlinkdzhn_wallace
-    case (-7) ! Poisson boxcox workaround
-      transfw__     => flink_modbc
-      invtrw__      => invlink_modbc
-      invtrwdz__    => invlinkdz_modbc
-      invtrwhz__    => invlinkhz_modbc
-      invtrw3z__    => invlink3z_modbc
-      invtrwdn__    => invlinkdn_modbc
-      invtrwhn__    => invlinkhn_modbc
-      invtrwdzdn__  => invlinkdzdn_modbc
-      invtrwhzdn__  => invlinkhzdn_modbc
-      invtrwdzhn__  => invlinkdzhn_modbc
-    case (-11) ! Binomial GEV workaround
-      transfw__     => flink_modgev
-      invtrw__      => invlink_modgev
-      invtrwdz__    => invlinkdz_modgev
-      invtrwhz__    => invlinkhz_modgev
-      invtrw3z__    => invlink3z_modgev
-      invtrwdn__    => invlinkdn_modgev
-      invtrwhn__    => invlinkhn_modgev
-      invtrwdzdn__  => invlinkdzdn_modgev
-      invtrwhzdn__  => invlinkhzdn_modgev
-      invtrwdzhn__  => invlinkdzhn_modgev
-    case default
-      call rexit("Model code not used.")
-    end select
-
     MODELIS = ifam
     MODELDEF = .true.
   end subroutine create_model
 
-  elemental double precision function logpdfy (y1, y2, par)
-    double precision, intent(in) :: y1, y2, par
-    !if (associated(logpdfy__))
-    logpdfy = logpdfy__(y1, y2, par)
-  end function logpdfy
-
-  elemental double precision function logdffy (y1, y2, p1, p2)
-    double precision, intent(in) :: y1, y2, p1, p2
-    !if (associated(logdffy__))
-    logdffy = logdffy__(y1, y2, p1, p2)
-  end function logdffy
-
-  elemental double precision function logpdfydlnk (y1, y2, par)
-    double precision, intent(in) :: y1, y2, par
-    !if (associated(logpdfydlnk__))
-    logpdfydlnk = logpdfydlnk__(y1, y2, par)
-  end function logpdfydlnk
-
-  elemental double precision function logpdfyhlnk (y1, y2, par)
-    double precision, intent(in) :: y1, y2, par
-    !if (associated(logpdfyhlnk__))
-    logpdfyhlnk = logpdfyhlnk__(y1, y2, par)
-  end function logpdfyhlnk
-
-  elemental double precision function mustart (y1, y2)
-    double precision, intent(in) :: y1, y2
-    !if (associated(mustart__))
-    mustart = mustart__(y1, y2)
-  end function mustart
-
-  elemental double precision function fcntruemu (w)
-    double precision, intent(in) :: w
-    !if (associated(fcntruemu__))
-    fcntruemu = fcntruemu__(w)
-  end function fcntruemu
-
-  elemental double precision function invtruemu (mu)
-    double precision, intent(in) :: mu
-    !if (associated(invtruemu__))
-    invtruemu = invtruemu__(mu)
-  end function invtruemu
-
-  elemental double precision function fcncum (mu)
-    double precision, intent(in) :: mu
-    !if (associated(fcncum__))
-    fcncum = fcncum__(mu)
-  end function fcncum
-
-  elemental double precision function fcncumd2 (mu)
-    double precision, intent(in) :: mu
-    !if (associated(fcncumd2__))
-    fcncumd2 = fcncumd2__(mu)
-  end function fcncumd2
-
-  elemental double precision function fcncumd3 (mu)
-    double precision, intent(in) :: mu
-    !if (associated(fcncumd3__))
-    fcncumd3 = fcncumd3__(mu)
-  end function fcncumd3
-
-  elemental double precision function flink (w, d)
-    double precision, intent(in) :: w, d
-    !if (associated(flink__))
-    flink = flink__(w, d)
-  end function flink
-
-  elemental double precision function invlink (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invlink__))
-    invlink = invlink__(z, d)
-  end function invlink
-
-  elemental double precision function invlinkdz (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invlinkdz__))
-    invlinkdz = invlinkdz__(z, d)
-  end function invlinkdz
-
-  elemental double precision function invlinkhz (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invlinkhz__))
-    invlinkhz = invlinkhz__(z, d)
-  end function invlinkhz
-
-  elemental double precision function invlink3z (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invlink3z__))
-    invlink3z = invlink3z__(z, d)
-  end function invlink3z
-
-  elemental double precision function invlinkdn (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invlinkdn__))
-    invlinkdn = invlinkdn__(z, d)
-  end function invlinkdn
-
-  elemental double precision function invlinkhn (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invlinkhn__))
-    invlinkhn = invlinkhn__(z, d)
-  end function invlinkhn
-
-  elemental double precision function invlinkdzdn (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invlinkdzdn__))
-    invlinkdzdn = invlinkdzdn__(z, d)
-  end function invlinkdzdn
-
-  elemental double precision function invlinkhzdn (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invlinkhzdn__))
-    invlinkhzdn = invlinkhzdn__(z, d)
-  end function invlinkhzdn
-
-  elemental double precision function invlinkdzhn (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invlinkdzhn__))
-    invlinkdzhn = invlinkdzhn__(z, d)
-  end function invlinkdzhn
-
-  elemental double precision function transfw (w,d)
-    double precision, intent(in) :: w, d
-    !if (associated(transfw__))
-    transfw = transfw__(w, d)
-  end function transfw
-
-  elemental double precision function invtrw (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invtrw__))
-    invtrw = invtrw__(z, d)
-  end function invtrw
-
-  elemental double precision function invtrwdz (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invtrwdz__))
-    invtrwdz = invtrwdz__(z, d)
-  end function invtrwdz
-
-  elemental double precision function invtrwhz (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invtrwhz__))
-    invtrwhz = invtrwhz__(z, d)
-  end function invtrwhz
-
-  elemental double precision function invtrw3z (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invtrw3z__))
-    invtrw3z = invtrw3z__(z, d)
-  end function invtrw3z
-
-  elemental double precision function invtrwdn (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invtrwdn__))
-    invtrwdn = invtrwdn__(z, d)
-  end function invtrwdn
-
-  elemental double precision function invtrwhn (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invtrwhn__))
-    invtrwhn = invtrwhn__(z, d)
-  end function invtrwhn
-
-  elemental double precision function invtrwdzdn (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invtrwdzdn__))
-    invtrwdzdn = invtrwdzdn__(z, d)
-  end function invtrwdzdn
-
-  elemental double precision function invtrwhzdn (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invtrwhzdn__))
-    invtrwhzdn = invtrwhzdn__(z, d)
-  end function invtrwhzdn
-
-  elemental double precision function invtrwdzhn (z,d)
-    double precision, intent(in) :: z, d
-    !if (associated(invtrwdzhn__))
-    invtrwdzhn = invtrwdzhn__(z, d)
-  end function invtrwdzhn
-
-!   TODO
-!   elemental double precision function logilinkdz (z,d)
-!     double precision, intent(in) :: z, d
-!     if (associated(logilinkdz__)) logilinkdz = logilinkdz__(z, d)
-!   end function logilinkdz
 
   elemental double precision function logilinkdz (z,d)
     double precision, intent(in) :: z, d
@@ -869,7 +187,7 @@ contains
     jointyz = lfz + lfy
   end function jointyz
 
-  function condymu (n, y1, y2, mu, tsq)
+  pure function condymu (n, y1, y2, mu, tsq)
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: y1(n), y2(n), mu(n), tsq
@@ -930,19 +248,652 @@ contains
     hs = hs/tsq
   end subroutine logcondyzhs
 
-  pure double precision function self (x)
-    double precision, intent(in) :: x
-    self = x
-  end function self
 
-  pure double precision function slog (x)
-    double precision, intent(in) :: x
-    slog = log(x)
-  end function slog
+  ! Distribution functions
 
-  pure double precision function sexp (x)
-    double precision, intent(in) :: x
-    sexp = exp(x)
-  end function sexp
+  elemental double precision function logpdfy (y1, y2, par)
+    use modelfcns_pdfy
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian, not really used except mustart
+      logpdfy = logpdfy_ga(y1,y2,par)
+    case (1) ! Gaussian response
+      logpdfy = logpdfy_ga(y1,y2,par)
+    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+      logpdfy = logpdfy_bi(y1,y2,par)
+    case (6,7,-7) ! Poisson response
+      logpdfy = logpdfy_po(y1,y2,par)
+    case (8,9) ! Gamma repsponse
+      logpdfy = logpdfy_gm(y1,y2,par)
+    end select
+  end function logpdfy
 
+  elemental double precision function logdffy (y1, y2, p1, p2)
+    use modelfcns_pdfy
+    implicit none
+    double precision, intent(in) :: y1, y2, p1, p2
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian, not really used except mustart
+      logdffy = logdffy_ga(y1,y2,p1,p2)
+    case (1) ! Gaussian response
+      logdffy = logdffy_ga(y1,y2,p1,p2)
+    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+      logdffy = logdffy_bi(y1,y2,p1,p2)
+    case (6,7,-7) ! Poisson response
+      logdffy = logdffy_po(y1,y2,p1,p2)
+    case (8,9) ! Gamma repsponse
+      logdffy = logdffy_gm(y1,y2,p1,p2)
+    end select
+  end function logdffy
+
+  elemental double precision function logpdfydlnk (y1, y2, par)
+    use modelfcns_pdfy
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian, not really used except mustart
+      logpdfydlnk = logpdfydlnk_ga(y1,y2,par)
+    case (1) ! Gaussian response
+      logpdfydlnk = logpdfydlnk_ga(y1,y2,par)
+    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+      logpdfydlnk = logpdfydlnk_bi(y1,y2,par)
+    case (6,7,-7) ! Poisson response
+      logpdfydlnk = logpdfydlnk_po(y1,y2,par)
+    case (8,9) ! Gamma repsponse
+      logpdfydlnk = logpdfydlnk_gm(y1,y2,par)
+    end select
+  end function logpdfydlnk
+
+  elemental double precision function logpdfyhlnk (y1, y2, par)
+    use modelfcns_pdfy
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian, not really used except mustart
+      logpdfyhlnk = logpdfyhlnk_ga(y1,y2,par)
+    case (1) ! Gaussian response
+      logpdfyhlnk = logpdfyhlnk_ga(y1,y2,par)
+    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+      logpdfyhlnk = logpdfyhlnk_bi(y1,y2,par)
+    case (6,7,-7) ! Poisson response
+      logpdfyhlnk = logpdfyhlnk_po(y1,y2,par)
+    case (8,9) ! Gamma repsponse
+      logpdfyhlnk = logpdfyhlnk_gm(y1,y2,par)
+    end select
+  end function logpdfyhlnk
+
+  elemental double precision function mustart (y1, y2)
+    use modelfcns_pdfy
+    implicit none
+    double precision, intent(in) :: y1, y2
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian, not really used except mustart
+      mustart = mustart_ga(y1,y2)
+    case (1) ! Gaussian response
+      mustart = mustart_ga(y1,y2)
+    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+      mustart = mustart_bi(y1,y2)
+    case (6,7,-7) ! Poisson response
+      mustart = mustart_po(y1,y2)
+    case (8,9) ! Gamma repsponse
+      mustart = mustart_gm(y1,y2)
+    end select
+  end function mustart
+
+  elemental double precision function fcntruemu (x)
+    use modelfcns_pdfy
+    implicit none
+    double precision, intent(in) :: x
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian, not really used except mustart
+      fcntruemu = x
+    case (1) ! Gaussian response
+      fcntruemu = x
+    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+      fcntruemu = exp(x)
+    case (6,7,-7) ! Poisson response
+      fcntruemu = exp(x)
+    case (8,9) ! Gamma repsponse
+      fcntruemu = exp(x)
+    end select
+  end function fcntruemu
+
+  elemental double precision function invtruemu (x)
+    use modelfcns_pdfy
+    implicit none
+    double precision, intent(in) :: x
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian, not really used except mustart
+      invtruemu = x
+    case (1) ! Gaussian response
+      invtruemu = x
+    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+      invtruemu = log(x)
+    case (6,7,-7) ! Poisson response
+      invtruemu = log(x)
+    case (8,9) ! Gamma repsponse
+      invtruemu = log(x)
+    end select
+  end function invtruemu
+
+  elemental double precision function fcncum (x)
+    use modelfcns_pdfy
+    implicit none
+    double precision, intent(in) :: x
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian, not really used except mustart
+      fcncum = fcncum_ga(x)
+    case (1) ! Gaussian response
+      fcncum = fcncum_ga(x)
+    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+      fcncum = fcncum_bi(x)
+    case (6,7,-7) ! Poisson response
+      fcncum = fcncum_po(x)
+    case (8,9) ! Gamma repsponse
+      fcncum = fcncum_gm(x)
+    end select
+  end function fcncum
+
+  elemental double precision function fcncumd2 (x)
+    use modelfcns_pdfy
+    implicit none
+    double precision, intent(in) :: x
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian, not really used except mustart
+      fcncumd2 = fcncumd2_ga(x)
+    case (1) ! Gaussian response
+      fcncumd2 = fcncumd2_ga(x)
+    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+      fcncumd2 = fcncumd2_bi(x)
+    case (6,7,-7) ! Poisson response
+      fcncumd2 = fcncumd2_po(x)
+    case (8,9) ! Gamma repsponse
+      fcncumd2 = fcncumd2_gm(x)
+    end select
+  end function fcncumd2
+
+  elemental double precision function fcncumd3 (x)
+    use modelfcns_pdfy
+    implicit none
+    double precision, intent(in) :: x
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian, not really used except mustart
+      fcncumd3 = fcncumd3_ga(x)
+    case (1) ! Gaussian response
+      fcncumd3 = fcncumd3_ga(x)
+    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+      fcncumd3 = fcncumd3_bi(x)
+    case (6,7,-7) ! Poisson response
+      fcncumd3 = fcncumd3_po(x)
+    case (8,9) ! Gamma repsponse
+      fcncumd3 = fcncumd3_gm(x)
+    end select
+  end function fcncumd3
+
+
+  ! Link functions
+
+  elemental double precision function flink (w, d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      flink = flink_ga(w,d)
+    case (1) ! Gaussian boxcox
+      flink = flink_ga(w,d)
+    case (2,-2) ! Robit
+      flink = flink_robit(w,d)
+    case (3) ! Logit
+      flink = flink_logit(w,d)
+    case (4) ! Probit
+      flink = flink_probit(w,d)
+    case (5) ! Wallace
+      flink = flink_wallace(w,d)
+    case (6,8) ! Modified boxcox
+      flink = flink_modbc(w,d)
+    case (7,-7,9) ! Standard boxcox
+      flink = flink_boxcox(w,d)
+    case (10) ! Binomial modifiedGEV
+      flink = flink_modgev(w,d)
+    case (11,-11) ! Binomial GEV
+      flink = flink_gev(w,d)
+    end select
+  end function flink
+
+  elemental double precision function invlink (w, d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invlink = invlink_ga(w,d)
+    case (1) ! Gaussian boxcox
+      invlink = invlink_ga(w,d)
+    case (2,-2) ! Robit
+      invlink = invlink_robit(w,d)
+    case (3) ! Logit
+      invlink = invlink_logit(w,d)
+    case (4) ! Probit
+      invlink = invlink_probit(w,d)
+    case (5) ! Wallace
+      invlink = invlink_wallace(w,d)
+    case (6,8) ! Modified boxcox
+      invlink = invlink_modbc(w,d)
+    case (7,-7,9) ! Standard boxcox
+      invlink = invlink_boxcox(w,d)
+    case (10) ! Binomial modifiedGEV
+      invlink = invlink_modgev(w,d)
+    case (11,-11) ! Binomial GEV
+      invlink = invlink_gev(w,d)
+    end select
+  end function invlink
+
+  elemental double precision function invlinkdz (w, d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invlinkdz = invlinkdz_ga(w,d)
+    case (1) ! Gaussian boxcox
+      invlinkdz = invlinkdz_ga(w,d)
+    case (2,-2) ! Robit
+      invlinkdz = invlinkdz_robit(w,d)
+    case (3) ! Logit
+      invlinkdz = invlinkdz_logit(w,d)
+    case (4) ! Probit
+      invlinkdz = invlinkdz_probit(w,d)
+    case (5) ! Wallace
+      invlinkdz = invlinkdz_wallace(w,d)
+    case (6,8) ! Modified boxcox
+      invlinkdz = invlinkdz_modbc(w,d)
+    case (7,-7,9) ! Standard boxcox
+      invlinkdz = invlinkdz_boxcox(w,d)
+    case (10) ! Binomial modifiedGEV
+      invlinkdz = invlinkdz_modgev(w,d)
+    case (11,-11) ! Binomial GEV
+      invlinkdz = invlinkdz_gev(w,d)
+    end select
+  end function invlinkdz
+
+  elemental double precision function invlinkhz (w, d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invlinkhz = invlinkhz_ga(w,d)
+    case (1) ! Gaussian boxcox
+      invlinkhz = invlinkhz_ga(w,d)
+    case (2,-2) ! Robit
+      invlinkhz = invlinkhz_robit(w,d)
+    case (3) ! Logit
+      invlinkhz = invlinkhz_logit(w,d)
+    case (4) ! Probit
+      invlinkhz = invlinkhz_probit(w,d)
+    case (5) ! Wallace
+      invlinkhz = invlinkhz_wallace(w,d)
+    case (6,8) ! Modified boxcox
+      invlinkhz = invlinkhz_modbc(w,d)
+    case (7,-7,9) ! Standard boxcox
+      invlinkhz = invlinkhz_boxcox(w,d)
+    case (10) ! Binomial modifiedGEV
+      invlinkhz = invlinkhz_modgev(w,d)
+    case (11,-11) ! Binomial GEV
+      invlinkhz = invlinkhz_gev(w,d)
+    end select
+  end function invlinkhz
+
+  elemental double precision function invlink3z (w, d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invlink3z = invlink3z_ga(w,d)
+    case (1) ! Gaussian boxcox
+      invlink3z = invlink3z_ga(w,d)
+    case (2,-2) ! Robit
+      invlink3z = invlink3z_robit(w,d)
+    case (3) ! Logit
+      invlink3z = invlink3z_logit(w,d)
+    case (4) ! Probit
+      invlink3z = invlink3z_probit(w,d)
+    case (5) ! Wallace
+      invlink3z = invlink3z_wallace(w,d)
+    case (6,8) ! Modified boxcox
+      invlink3z = invlink3z_modbc(w,d)
+    case (7,-7,9) ! Standard boxcox
+      invlink3z = invlink3z_boxcox(w,d)
+    case (10) ! Binomial modifiedGEV
+      invlink3z = invlink3z_modgev(w,d)
+    case (11,-11) ! Binomial GEV
+      invlink3z = invlink3z_gev(w,d)
+    end select
+  end function invlink3z
+
+  elemental double precision function invlinkdn (w, d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invlinkdn = invlinkdn_ga(w,d)
+    case (1) ! Gaussian boxcox
+      invlinkdn = invlinkdn_ga(w,d)
+    case (2,-2) ! Robit
+      invlinkdn = invlinkdn_robit(w,d)
+    case (3) ! Logit
+      invlinkdn = invlinkdn_logit(w,d)
+    case (4) ! Probit
+      invlinkdn = invlinkdn_probit(w,d)
+    case (5) ! Wallace
+      invlinkdn = invlinkdn_wallace(w,d)
+    case (6,8) ! Modified boxcox
+      invlinkdn = invlinkdn_modbc(w,d)
+    case (7,-7,9) ! Standard boxcox
+      invlinkdn = invlinkdn_boxcox(w,d)
+    case (10) ! Binomial modifiedGEV
+      invlinkdn = invlinkdn_modgev(w,d)
+    case (11,-11) ! Binomial GEV
+      invlinkdn = invlinkdn_gev(w,d)
+    end select
+  end function invlinkdn
+
+  elemental double precision function invlinkhn (w, d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invlinkhn = invlinkhn_ga(w,d)
+    case (1) ! Gaussian boxcox
+      invlinkhn = invlinkhn_ga(w,d)
+    case (2,-2) ! Robit
+      invlinkhn = invlinkhn_robit(w,d)
+    case (3) ! Logit
+      invlinkhn = invlinkhn_logit(w,d)
+    case (4) ! Probit
+      invlinkhn = invlinkhn_probit(w,d)
+    case (5) ! Wallace
+      invlinkhn = invlinkhn_wallace(w,d)
+    case (6,8) ! Modified boxcox
+      invlinkhn = invlinkhn_modbc(w,d)
+    case (7,-7,9) ! Standard boxcox
+      invlinkhn = invlinkhn_boxcox(w,d)
+    case (10) ! Binomial modifiedGEV
+      invlinkhn = invlinkhn_modgev(w,d)
+    case (11,-11) ! Binomial GEV
+      invlinkhn = invlinkhn_gev(w,d)
+    end select
+  end function invlinkhn
+
+  elemental double precision function invlinkdzdn (w, d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invlinkdzdn = invlinkdzdn_ga(w,d)
+    case (1) ! Gaussian boxcox
+      invlinkdzdn = invlinkdzdn_ga(w,d)
+    case (2,-2) ! Robit
+      invlinkdzdn = invlinkdzdn_robit(w,d)
+    case (3) ! Logit
+      invlinkdzdn = invlinkdzdn_logit(w,d)
+    case (4) ! Probit
+      invlinkdzdn = invlinkdzdn_probit(w,d)
+    case (5) ! Wallace
+      invlinkdzdn = invlinkdzdn_wallace(w,d)
+    case (6,8) ! Modified boxcox
+      invlinkdzdn = invlinkdzdn_modbc(w,d)
+    case (7,-7,9) ! Standard boxcox
+      invlinkdzdn = invlinkdzdn_boxcox(w,d)
+    case (10) ! Binomial modifiedGEV
+      invlinkdzdn = invlinkdzdn_modgev(w,d)
+    case (11,-11) ! Binomial GEV
+      invlinkdzdn = invlinkdzdn_gev(w,d)
+    end select
+  end function invlinkdzdn
+
+  elemental double precision function invlinkhzdn (w, d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invlinkhzdn = invlinkhzdn_ga(w,d)
+    case (1) ! Gaussian boxcox
+      invlinkhzdn = invlinkhzdn_ga(w,d)
+    case (2,-2) ! Robit
+      invlinkhzdn = invlinkhzdn_robit(w,d)
+    case (3) ! Logit
+      invlinkhzdn = invlinkhzdn_logit(w,d)
+    case (4) ! Probit
+      invlinkhzdn = invlinkhzdn_probit(w,d)
+    case (5) ! Wallace
+      invlinkhzdn = invlinkhzdn_wallace(w,d)
+    case (6,8) ! Modified boxcox
+      invlinkhzdn = invlinkhzdn_modbc(w,d)
+    case (7,-7,9) ! Standard boxcox
+      invlinkhzdn = invlinkhzdn_boxcox(w,d)
+    case (10) ! Binomial modifiedGEV
+      invlinkhzdn = invlinkhzdn_modgev(w,d)
+    case (11,-11) ! Binomial GEV
+      invlinkhzdn = invlinkhzdn_gev(w,d)
+    end select
+  end function invlinkhzdn
+
+  elemental double precision function invlinkdzhn (w, d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invlinkdzhn = invlinkdzhn_ga(w,d)
+    case (1) ! Gaussian boxcox
+      invlinkdzhn = invlinkdzhn_ga(w,d)
+    case (2,-2) ! Robit
+      invlinkdzhn = invlinkdzhn_robit(w,d)
+    case (3) ! Logit
+      invlinkdzhn = invlinkdzhn_logit(w,d)
+    case (4) ! Probit
+      invlinkdzhn = invlinkdzhn_probit(w,d)
+    case (5) ! Wallace
+      invlinkdzhn = invlinkdzhn_wallace(w,d)
+    case (6,8) ! Modified boxcox
+      invlinkdzhn = invlinkdzhn_modbc(w,d)
+    case (7,-7,9) ! Standard boxcox
+      invlinkdzhn = invlinkdzhn_boxcox(w,d)
+    case (10) ! Binomial modifiedGEV
+      invlinkdzhn = invlinkdzhn_modgev(w,d)
+    case (11,-11) ! Binomial GEV
+      invlinkdzhn = invlinkdzhn_gev(w,d)
+    end select
+  end function invlinkdzhn
+
+
+  ! Transformation
+
+  elemental double precision function transfw (w,d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      transfw = w
+    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+      transfw = w
+    case (-2) ! Binomial robit workaround
+      transfw = flink_wallace(w,d)
+    case (-7) ! Poisson boxcox workaround
+      transfw = flink_modbc(w,d)
+    case (-11) ! Binomial GEV workaround
+      transfw = flink_modgev(w,d)
+    end select
+  end function transfw
+
+  elemental double precision function invtrw (w,d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invtrw = w
+    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+      invtrw = w
+    case (-2) ! Binomial robit workaround
+      invtrw = invlink_wallace(w,d)
+    case (-7) ! Poisson boxcox workaround
+      invtrw = invlink_modbc(w,d)
+    case (-11) ! Binomial GEV workaround
+      invtrw = invlink_modgev(w,d)
+    end select
+  end function invtrw
+
+  elemental double precision function invtrwdz (w,d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invtrwdz = 1d0
+    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+      invtrwdz = 1d0
+    case (-2) ! Binomial robit workaround
+      invtrwdz = invlinkdz_wallace(w,d)
+    case (-7) ! Poisson boxcox workaround
+      invtrwdz = invlinkdz_modbc(w,d)
+    case (-11) ! Binomial GEV workaround
+      invtrwdz = invlinkdz_modgev(w,d)
+    end select
+  end function invtrwdz
+
+  elemental double precision function invtrwhz (w,d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invtrwhz = 0d0
+    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+      invtrwhz = 0d0
+    case (-2) ! Binomial robit workaround
+      invtrwhz = invlinkhz_wallace(w,d)
+    case (-7) ! Poisson boxcox workaround
+      invtrwhz = invlinkhz_modbc(w,d)
+    case (-11) ! Binomial GEV workaround
+      invtrwhz = invlinkhz_modgev(w,d)
+    end select
+  end function invtrwhz
+
+  elemental double precision function invtrw3z (w,d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invtrw3z = 0d0
+    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+      invtrw3z = 0d0
+    case (-2) ! Binomial robit workaround
+      invtrw3z = invlink3z_wallace(w,d)
+    case (-7) ! Poisson boxcox workaround
+      invtrw3z = invlink3z_modbc(w,d)
+    case (-11) ! Binomial GEV workaround
+      invtrw3z = invlink3z_modgev(w,d)
+    end select
+  end function invtrw3z
+
+  elemental double precision function invtrwdn (w,d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invtrwdn = 0d0
+    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+      invtrwdn = 0d0
+    case (-2) ! Binomial robit workaround
+      invtrwdn = invlinkdn_wallace(w,d)
+    case (-7) ! Poisson boxcox workaround
+      invtrwdn = invlinkdn_modbc(w,d)
+    case (-11) ! Binomial GEV workaround
+      invtrwdn = invlinkdn_modgev(w,d)
+    end select
+  end function invtrwdn
+
+  elemental double precision function invtrwhn (w,d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invtrwhn = 0d0
+    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+      invtrwhn = 0d0
+    case (-2) ! Binomial robit workaround
+      invtrwhn = invlinkhn_wallace(w,d)
+    case (-7) ! Poisson boxcox workaround
+      invtrwhn = invlinkhn_modbc(w,d)
+    case (-11) ! Binomial GEV workaround
+      invtrwhn = invlinkhn_modgev(w,d)
+    end select
+  end function invtrwhn
+
+  elemental double precision function invtrwdzdn (w,d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invtrwdzdn = 0d0
+    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+      invtrwdzdn = 0d0
+    case (-2) ! Binomial robit workaround
+      invtrwdzdn = invlinkdzdn_wallace(w,d)
+    case (-7) ! Poisson boxcox workaround
+      invtrwdzdn = invlinkdzdn_modbc(w,d)
+    case (-11) ! Binomial GEV workaround
+      invtrwdzdn = invlinkdzdn_modgev(w,d)
+    end select
+  end function invtrwdzdn
+
+  elemental double precision function invtrwhzdn (w,d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invtrwhzdn = 0d0
+    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+      invtrwhzdn = 0d0
+    case (-2) ! Binomial robit workaround
+      invtrwhzdn = invlinkhzdn_wallace(w,d)
+    case (-7) ! Poisson boxcox workaround
+      invtrwhzdn = invlinkhzdn_modbc(w,d)
+    case (-11) ! Binomial GEV workaround
+      invtrwhzdn = invlinkhzdn_modgev(w,d)
+    end select
+  end function invtrwhzdn
+
+  elemental double precision function invtrwdzhn (w,d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      invtrwdzhn = 0d0
+    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+      invtrwdzhn = 0d0
+    case (-2) ! Binomial robit workaround
+      invtrwdzhn = invlinkdzhn_wallace(w,d)
+    case (-7) ! Poisson boxcox workaround
+      invtrwdzhn = invlinkdzhn_modbc(w,d)
+    case (-11) ! Binomial GEV workaround
+      invtrwdzhn = invlinkdzhn_modgev(w,d)
+    end select
+  end function invtrwdzhn
 end module modelfcns
