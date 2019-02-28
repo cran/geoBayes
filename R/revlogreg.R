@@ -10,7 +10,7 @@
 ##'   the ith sample when all samples are put together evaluated
 ##'   at the jth parameter value.
 ##' @param N A vector of length ncol(lglk) or a scalar corresponding to
-##'   the sample sizes from each model. Must sum(N) == nrow(lglk). The 
+##'   the sample sizes from each model. Must sum(N) == nrow(lglk). The
 ##'   first N[1] samples come from model corresponding to the first set
 ##'   of parameters, then (N[1]+1):N[2] are from the model corresponding
 ##'   to the second set of parameters, and so on.
@@ -18,7 +18,11 @@
 ##'   of the logarithm of the Bayes factors.
 ##'   The first set of parameters is taken as the reference model so its
 ##'   estimate is always 0.
-##' @export 
+##' @references Geyer, C. J. (1994). Estimating normalizing constants
+##'   and reweighting mixtures in Markov chain Monte Carlo. Technical
+##'   Report 568, School of Statistics, University of Minnesota.
+##' @importFrom stats optim
+##' @export
 revlogreg <- function(lglk, N)
 {
   ## Purpose: Reverse logistic regression
@@ -60,7 +64,7 @@ revlogreg <- function(lglk, N)
     -out
   }
 
-  op <- optim(log(N/Ntot), fun, gun, method = "BFGS")
-  out <- op$par
+  op <- stats::optim(log(N/Ntot), fun, gun, method = "BFGS")
+  out <- op$par - log(N/Ntot)
   out[1] - out
 }

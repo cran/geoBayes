@@ -3,9 +3,8 @@
 
 module modelfcns
 
-  integer, parameter :: &                             ! Models
-     MODELCODES(14) = (/1,2,-2,3,4,5,6,7,-7,8,9,10,11,-11/)
-  private :: MODELCODES
+  integer, private, parameter :: &                 ! Models
+     MODELCODES(15) = (/1,2,-2,3,4,5,6,7,-7,8,9,10,11,12,-12/)
   logical, private :: MODELDEF = .false.
   integer, private :: MODELIS = 0
 
@@ -13,39 +12,12 @@ contains
 
   subroutine create_model (ifam)
     integer, intent(in) :: ifam
-
     if (MODELDEF .and. (MODELIS .eq. ifam)) return ! Model is already defined
-
-    if (.not. ((ifam .eq. 0) .or. any(ifam .eq. MODELCODES))) then
-      call rexit ("Unrecognised family.")
-    end if
-
+    if (.not. ((ifam .eq. 0) .or. any(ifam .eq. MODELCODES))) &
+       call rexit ("Unrecognised family.")
     MODELIS = ifam
     MODELDEF = .true.
   end subroutine create_model
-
-
-  elemental double precision function logilinkdz (z,d)
-    double precision, intent(in) :: z, d
-    double precision, parameter :: bigneg = -huge(1d0)
-    logilinkdz = invlinkdz(z, d)
-    if (logilinkdz .gt. 0d0) then
-      logilinkdz = log(logilinkdz)
-    else
-      logilinkdz = bigneg
-    end if
-  end function logilinkdz
-
-  elemental double precision function logitrwdz (z,d)
-    double precision, intent(in) :: z, d
-    double precision, parameter :: bigneg = -huge(1d0)
-    logitrwdz = invtrwdz(z, d)
-    if (logitrwdz .gt. 0d0) then
-      logitrwdz = log(logitrwdz)
-    else
-      logitrwdz = bigneg
-    end if
-  end function logitrwdz
 
   elemental double precision function logitrwhz (z,d)
     double precision, intent(in) :: z, d
@@ -59,6 +31,7 @@ contains
   end function logitrwhz
 
   function logpdfz(n, z, Ups, ldh_Ups, xi, lmxi, ssqdfsc, modeldfh)
+!! log-pdf of z after integrating out beta and ssq.
     implicit none
     logical, intent(in) :: lmxi
     integer, intent(in) :: n
@@ -117,25 +90,6 @@ contains
     logpdfz_hz = alpha*modeldfh*UzzU
   end function logpdfz_hz
 
-  subroutine logpdfzdz (fc, gr, z, Ups, ldh_Ups, xi, lmxi, ssq, n)
-!! log-pdf of z and its derivative after integrating out beta. The 2*pi
-!! constant is removed.
-    implicit none
-    integer, intent(in) :: n
-    logical, intent(in) :: lmxi
-    double precision, intent(in) :: z(n), Ups(n,n), ldh_Ups, xi(n), ssq
-    double precision, intent(out) :: fc, gr(n)
-    double precision zmxi(n)
-    if (lmxi) then
-      zmxi = z - xi
-    else
-      zmxi = z
-    end if
-    call dsymv ('u',n,1d0,Ups,n,zmxi,1,0d0,gr,1) ! gr = Ups*(z-xi)
-    gr = -gr/ssq ! gr = -Ups*(z-x)/ssq
-    fc = -.5d0*n*log(ssq) + ldh_Ups + .5d0*dot_product(zmxi,gr)
-  end subroutine logpdfzdz
-
   function logpdfmu (n, mu, Ups, ldh_Ups, nu, xi, lmxi, ssqdfsc, modeldfh)
     implicit none
     logical, intent(in) :: lmxi
@@ -153,7 +107,7 @@ contains
     logpdfmu = logpdfz(n, z, Ups, ldh_Ups, xi, lmxi, ssqdfsc, modeldfh)
     ! Jacobian
     do i = 1, n
-      logpdfmu = logpdfmu - logilinkdz(z(i),nu)
+      logpdfmu = logpdfmu - loginvlinkdz(z(i),nu)
     end do
   end function logpdfmu
 
@@ -215,39 +169,6 @@ contains
     jointymu = lfmu + lfy
   end function jointymu
 
-  subroutine logcondyzdz (fc, gr, nu, y1, y2, z, n, tsq)
-!! log-pdf of y|z and its derivative w.r.t. z.
-    integer, intent(in) :: n
-    double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
-    double precision, intent(out) :: fc, gr(n)
-    integer i
-    double precision par, pardz
-    fc = 0d0
-    do i = 1, n
-      par = invlink(z(i),nu)
-      pardz = invlinkdz(z(i),nu)
-      fc = fc + logpdfy(y1(i),y2(i),par)
-      gr(i) = logpdfydlnk(y1(i),y2(i),par) * pardz
-    end do
-    fc = fc/tsq
-    gr = gr/tsq
-  end subroutine logcondyzdz
-
-  subroutine logcondyzhs (hs, nu, y1, y2, z, n, tsq)
-!! Component used in the calculation of the Hessian
-    integer, intent(in) :: n
-    double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
-    double precision, intent(out) :: hs(n)
-    integer i
-    double precision par, pardz
-    do i = 1, n
-      par = invlink(z(i),nu)
-      pardz = invlinkdz(z(i),nu)
-      hs(i) = logpdfyhlnk(y1(i),y2(i),par) * pardz*pardz
-    end do
-    hs = hs/tsq
-  end subroutine logcondyzhs
-
 
   ! Distribution functions
 
@@ -260,7 +181,7 @@ contains
       logpdfy = logpdfy_ga(y1,y2,par)
     case (1) ! Gaussian response
       logpdfy = logpdfy_ga(y1,y2,par)
-    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+    case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
       logpdfy = logpdfy_bi(y1,y2,par)
     case (6,7,-7) ! Poisson response
       logpdfy = logpdfy_po(y1,y2,par)
@@ -278,7 +199,7 @@ contains
       logdffy = logdffy_ga(y1,y2,p1,p2)
     case (1) ! Gaussian response
       logdffy = logdffy_ga(y1,y2,p1,p2)
-    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+    case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
       logdffy = logdffy_bi(y1,y2,p1,p2)
     case (6,7,-7) ! Poisson response
       logdffy = logdffy_po(y1,y2,p1,p2)
@@ -296,7 +217,7 @@ contains
       logpdfydlnk = logpdfydlnk_ga(y1,y2,par)
     case (1) ! Gaussian response
       logpdfydlnk = logpdfydlnk_ga(y1,y2,par)
-    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+    case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
       logpdfydlnk = logpdfydlnk_bi(y1,y2,par)
     case (6,7,-7) ! Poisson response
       logpdfydlnk = logpdfydlnk_po(y1,y2,par)
@@ -314,7 +235,7 @@ contains
       logpdfyhlnk = logpdfyhlnk_ga(y1,y2,par)
     case (1) ! Gaussian response
       logpdfyhlnk = logpdfyhlnk_ga(y1,y2,par)
-    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+    case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
       logpdfyhlnk = logpdfyhlnk_bi(y1,y2,par)
     case (6,7,-7) ! Poisson response
       logpdfyhlnk = logpdfyhlnk_po(y1,y2,par)
@@ -322,6 +243,24 @@ contains
       logpdfyhlnk = logpdfyhlnk_gm(y1,y2,par)
     end select
   end function logpdfyhlnk
+
+  elemental double precision function logpdfy3lnk (y1, y2, par)
+    use modelfcns_pdfy
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian, not really used except mustart
+      logpdfy3lnk = logpdfy3lnk_ga(y1,y2,par)
+    case (1) ! Gaussian response
+      logpdfy3lnk = logpdfy3lnk_ga(y1,y2,par)
+    case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
+      logpdfy3lnk = logpdfy3lnk_bi(y1,y2,par)
+    case (6,7,-7) ! Poisson response
+      logpdfy3lnk = logpdfy3lnk_po(y1,y2,par)
+    case (8,9) ! Gamma repsponse
+      logpdfy3lnk = logpdfy3lnk_gm(y1,y2,par)
+    end select
+  end function logpdfy3lnk
 
   elemental double precision function mustart (y1, y2)
     use modelfcns_pdfy
@@ -332,7 +271,7 @@ contains
       mustart = mustart_ga(y1,y2)
     case (1) ! Gaussian response
       mustart = mustart_ga(y1,y2)
-    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+    case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
       mustart = mustart_bi(y1,y2)
     case (6,7,-7) ! Poisson response
       mustart = mustart_po(y1,y2)
@@ -350,7 +289,7 @@ contains
       fcntruemu = x
     case (1) ! Gaussian response
       fcntruemu = x
-    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+    case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
       fcntruemu = exp(x)
     case (6,7,-7) ! Poisson response
       fcntruemu = exp(x)
@@ -368,7 +307,7 @@ contains
       invtruemu = x
     case (1) ! Gaussian response
       invtruemu = x
-    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+    case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
       invtruemu = log(x)
     case (6,7,-7) ! Poisson response
       invtruemu = log(x)
@@ -386,7 +325,7 @@ contains
       fcncum = fcncum_ga(x)
     case (1) ! Gaussian response
       fcncum = fcncum_ga(x)
-    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+    case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
       fcncum = fcncum_bi(x)
     case (6,7,-7) ! Poisson response
       fcncum = fcncum_po(x)
@@ -404,7 +343,7 @@ contains
       fcncumd2 = fcncumd2_ga(x)
     case (1) ! Gaussian response
       fcncumd2 = fcncumd2_ga(x)
-    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+    case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
       fcncumd2 = fcncumd2_bi(x)
     case (6,7,-7) ! Poisson response
       fcncumd2 = fcncumd2_po(x)
@@ -422,7 +361,7 @@ contains
       fcncumd3 = fcncumd3_ga(x)
     case (1) ! Gaussian response
       fcncumd3 = fcncumd3_ga(x)
-    case (2,-2,3,4,5,10,11,-11) ! Binomial response
+    case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
       fcncumd3 = fcncumd3_bi(x)
     case (6,7,-7) ! Poisson response
       fcncumd3 = fcncumd3_po(x)
@@ -457,8 +396,10 @@ contains
       flink = flink_boxcox(w,d)
     case (10) ! Binomial modifiedGEV
       flink = flink_modgev(w,d)
-    case (11,-11) ! Binomial GEV
+    case (12,-12) ! Binomial GEV
       flink = flink_gev(w,d)
+    case (11) ! Binomial modifiedGEV
+      flink = flink_modgevns(w,d)
     end select
   end function flink
 
@@ -485,8 +426,10 @@ contains
       invlink = invlink_boxcox(w,d)
     case (10) ! Binomial modifiedGEV
       invlink = invlink_modgev(w,d)
-    case (11,-11) ! Binomial GEV
+    case (12,-12) ! Binomial GEV
       invlink = invlink_gev(w,d)
+    case (11) ! Binomial modifiedGEV
+      invlink = invlink_modgevns(w,d)
     end select
   end function invlink
 
@@ -513,10 +456,42 @@ contains
       invlinkdz = invlinkdz_boxcox(w,d)
     case (10) ! Binomial modifiedGEV
       invlinkdz = invlinkdz_modgev(w,d)
-    case (11,-11) ! Binomial GEV
+    case (12,-12) ! Binomial GEV
       invlinkdz = invlinkdz_gev(w,d)
+    case (11) ! Binomial modifiedGEV
+      invlinkdz = invlinkdz_modgevns(w,d)
     end select
   end function invlinkdz
+
+  elemental double precision function loginvlinkdz (w, d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      loginvlinkdz = loginvlinkdz_ga(w,d)
+    case (1) ! Gaussian boxcox
+      loginvlinkdz = loginvlinkdz_ga(w,d)
+    case (2,-2) ! Robit
+      loginvlinkdz = loginvlinkdz_robit(w,d)
+    case (3) ! Logit
+      loginvlinkdz = loginvlinkdz_logit(w,d)
+    case (4) ! Probit
+      loginvlinkdz = loginvlinkdz_probit(w,d)
+    case (5) ! Wallace
+      loginvlinkdz = loginvlinkdz_wallace(w,d)
+    case (6,8) ! Modified boxcox
+      loginvlinkdz = loginvlinkdz_modbc(w,d)
+    case (7,-7,9) ! Standard boxcox
+      loginvlinkdz = loginvlinkdz_boxcox(w,d)
+    case (10) ! Binomial modifiedGEV
+      loginvlinkdz = loginvlinkdz_modgev(w,d)
+    case (12,-12) ! Binomial GEV
+      loginvlinkdz = loginvlinkdz_gev(w,d)
+    case (11) ! Binomial modifiedGEV
+      loginvlinkdz = loginvlinkdz_modgevns(w,d)
+    end select
+  end function loginvlinkdz
 
   elemental double precision function invlinkhz (w, d)
     use modelfcns_link
@@ -541,8 +516,10 @@ contains
       invlinkhz = invlinkhz_boxcox(w,d)
     case (10) ! Binomial modifiedGEV
       invlinkhz = invlinkhz_modgev(w,d)
-    case (11,-11) ! Binomial GEV
+    case (12,-12) ! Binomial GEV
       invlinkhz = invlinkhz_gev(w,d)
+    case (11) ! Binomial modifiedGEV
+      invlinkhz = invlinkhz_modgevns(w,d)
     end select
   end function invlinkhz
 
@@ -569,8 +546,10 @@ contains
       invlink3z = invlink3z_boxcox(w,d)
     case (10) ! Binomial modifiedGEV
       invlink3z = invlink3z_modgev(w,d)
-    case (11,-11) ! Binomial GEV
+    case (12,-12) ! Binomial GEV
       invlink3z = invlink3z_gev(w,d)
+    case (11) ! Binomial modifiedGEV
+      invlink3z = invlink3z_modgevns(w,d)
     end select
   end function invlink3z
 
@@ -597,8 +576,10 @@ contains
       invlinkdn = invlinkdn_boxcox(w,d)
     case (10) ! Binomial modifiedGEV
       invlinkdn = invlinkdn_modgev(w,d)
-    case (11,-11) ! Binomial GEV
+    case (12,-12) ! Binomial GEV
       invlinkdn = invlinkdn_gev(w,d)
+    case (11) ! Binomial modifiedGEV
+      invlinkdn = invlinkdn_modgevns(w,d)
     end select
   end function invlinkdn
 
@@ -625,8 +606,10 @@ contains
       invlinkhn = invlinkhn_boxcox(w,d)
     case (10) ! Binomial modifiedGEV
       invlinkhn = invlinkhn_modgev(w,d)
-    case (11,-11) ! Binomial GEV
+    case (12,-12) ! Binomial GEV
       invlinkhn = invlinkhn_gev(w,d)
+    case (11) ! Binomial modifiedGEV
+      invlinkhn = invlinkhn_modgevns(w,d)
     end select
   end function invlinkhn
 
@@ -653,8 +636,10 @@ contains
       invlinkdzdn = invlinkdzdn_boxcox(w,d)
     case (10) ! Binomial modifiedGEV
       invlinkdzdn = invlinkdzdn_modgev(w,d)
-    case (11,-11) ! Binomial GEV
+    case (12,-12) ! Binomial GEV
       invlinkdzdn = invlinkdzdn_gev(w,d)
+    case (11) ! Binomial modifiedGEV
+      invlinkdzdn = invlinkdzdn_modgevns(w,d)
     end select
   end function invlinkdzdn
 
@@ -681,8 +666,10 @@ contains
       invlinkhzdn = invlinkhzdn_boxcox(w,d)
     case (10) ! Binomial modifiedGEV
       invlinkhzdn = invlinkhzdn_modgev(w,d)
-    case (11,-11) ! Binomial GEV
+    case (12,-12) ! Binomial GEV
       invlinkhzdn = invlinkhzdn_gev(w,d)
+    case (11) ! Binomial modifiedGEV
+      invlinkhzdn = invlinkhzdn_modgevns(w,d)
     end select
   end function invlinkhzdn
 
@@ -709,8 +696,10 @@ contains
       invlinkdzhn = invlinkdzhn_boxcox(w,d)
     case (10) ! Binomial modifiedGEV
       invlinkdzhn = invlinkdzhn_modgev(w,d)
-    case (11,-11) ! Binomial GEV
+    case (12,-12) ! Binomial GEV
       invlinkdzhn = invlinkdzhn_gev(w,d)
+    case (11) ! Binomial modifiedGEV
+      invlinkdzhn = invlinkdzhn_modgevns(w,d)
     end select
   end function invlinkdzhn
 
@@ -724,13 +713,13 @@ contains
     select case (MODELIS)
     case (0) ! Transformed Gaussian
       transfw = w
-    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+    case (1,2,3,4,5,6,7,8,9,10,11,12) ! No transformation
       transfw = w
     case (-2) ! Binomial robit workaround
       transfw = flink_wallace(w,d)
     case (-7) ! Poisson boxcox workaround
       transfw = flink_modbc(w,d)
-    case (-11) ! Binomial GEV workaround
+    case (-12) ! Binomial GEV workaround
       transfw = flink_modgev(w,d)
     end select
   end function transfw
@@ -742,13 +731,13 @@ contains
     select case (MODELIS)
     case (0) ! Transformed Gaussian
       invtrw = w
-    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+    case (1,2,3,4,5,6,7,8,9,10,11,12) ! No transformation
       invtrw = w
     case (-2) ! Binomial robit workaround
       invtrw = invlink_wallace(w,d)
     case (-7) ! Poisson boxcox workaround
       invtrw = invlink_modbc(w,d)
-    case (-11) ! Binomial GEV workaround
+    case (-12) ! Binomial GEV workaround
       invtrw = invlink_modgev(w,d)
     end select
   end function invtrw
@@ -760,16 +749,34 @@ contains
     select case (MODELIS)
     case (0) ! Transformed Gaussian
       invtrwdz = 1d0
-    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+    case (1,2,3,4,5,6,7,8,9,10,11,12) ! No transformation
       invtrwdz = 1d0
     case (-2) ! Binomial robit workaround
       invtrwdz = invlinkdz_wallace(w,d)
     case (-7) ! Poisson boxcox workaround
       invtrwdz = invlinkdz_modbc(w,d)
-    case (-11) ! Binomial GEV workaround
+    case (-12) ! Binomial GEV workaround
       invtrwdz = invlinkdz_modgev(w,d)
     end select
   end function invtrwdz
+
+  elemental double precision function loginvtrwdz (w,d)
+    use modelfcns_link
+    implicit none
+    double precision, intent(in) :: w, d
+    select case (MODELIS)
+    case (0) ! Transformed Gaussian
+      loginvtrwdz = 0d0
+    case (1,2,3,4,5,6,7,8,9,10,11,12) ! No transformation
+      loginvtrwdz = 0d0
+    case (-2) ! Binomial robit workaround
+      loginvtrwdz = loginvlinkdz_wallace(w,d)
+    case (-7) ! Poisson boxcox workaround
+      loginvtrwdz = loginvlinkdz_modbc(w,d)
+    case (-12) ! Binomial GEV workaround
+      loginvtrwdz = loginvlinkdz_modgev(w,d)
+    end select
+  end function loginvtrwdz
 
   elemental double precision function invtrwhz (w,d)
     use modelfcns_link
@@ -778,13 +785,13 @@ contains
     select case (MODELIS)
     case (0) ! Transformed Gaussian
       invtrwhz = 0d0
-    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+    case (1,2,3,4,5,6,7,8,9,10,11,12) ! No transformation
       invtrwhz = 0d0
     case (-2) ! Binomial robit workaround
       invtrwhz = invlinkhz_wallace(w,d)
     case (-7) ! Poisson boxcox workaround
       invtrwhz = invlinkhz_modbc(w,d)
-    case (-11) ! Binomial GEV workaround
+    case (-12) ! Binomial GEV workaround
       invtrwhz = invlinkhz_modgev(w,d)
     end select
   end function invtrwhz
@@ -796,13 +803,13 @@ contains
     select case (MODELIS)
     case (0) ! Transformed Gaussian
       invtrw3z = 0d0
-    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+    case (1,2,3,4,5,6,7,8,9,10,11,12) ! No transformation
       invtrw3z = 0d0
     case (-2) ! Binomial robit workaround
       invtrw3z = invlink3z_wallace(w,d)
     case (-7) ! Poisson boxcox workaround
       invtrw3z = invlink3z_modbc(w,d)
-    case (-11) ! Binomial GEV workaround
+    case (-12) ! Binomial GEV workaround
       invtrw3z = invlink3z_modgev(w,d)
     end select
   end function invtrw3z
@@ -814,13 +821,13 @@ contains
     select case (MODELIS)
     case (0) ! Transformed Gaussian
       invtrwdn = 0d0
-    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+    case (1,2,3,4,5,6,7,8,9,10,11,12) ! No transformation
       invtrwdn = 0d0
     case (-2) ! Binomial robit workaround
       invtrwdn = invlinkdn_wallace(w,d)
     case (-7) ! Poisson boxcox workaround
       invtrwdn = invlinkdn_modbc(w,d)
-    case (-11) ! Binomial GEV workaround
+    case (-12) ! Binomial GEV workaround
       invtrwdn = invlinkdn_modgev(w,d)
     end select
   end function invtrwdn
@@ -832,13 +839,13 @@ contains
     select case (MODELIS)
     case (0) ! Transformed Gaussian
       invtrwhn = 0d0
-    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+    case (1,2,3,4,5,6,7,8,9,10,11,12) ! No transformation
       invtrwhn = 0d0
     case (-2) ! Binomial robit workaround
       invtrwhn = invlinkhn_wallace(w,d)
     case (-7) ! Poisson boxcox workaround
       invtrwhn = invlinkhn_modbc(w,d)
-    case (-11) ! Binomial GEV workaround
+    case (-12) ! Binomial GEV workaround
       invtrwhn = invlinkhn_modgev(w,d)
     end select
   end function invtrwhn
@@ -850,13 +857,13 @@ contains
     select case (MODELIS)
     case (0) ! Transformed Gaussian
       invtrwdzdn = 0d0
-    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+    case (1,2,3,4,5,6,7,8,9,10,11,12) ! No transformation
       invtrwdzdn = 0d0
     case (-2) ! Binomial robit workaround
       invtrwdzdn = invlinkdzdn_wallace(w,d)
     case (-7) ! Poisson boxcox workaround
       invtrwdzdn = invlinkdzdn_modbc(w,d)
-    case (-11) ! Binomial GEV workaround
+    case (-12) ! Binomial GEV workaround
       invtrwdzdn = invlinkdzdn_modgev(w,d)
     end select
   end function invtrwdzdn
@@ -868,13 +875,13 @@ contains
     select case (MODELIS)
     case (0) ! Transformed Gaussian
       invtrwhzdn = 0d0
-    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+    case (1,2,3,4,5,6,7,8,9,10,11,12) ! No transformation
       invtrwhzdn = 0d0
     case (-2) ! Binomial robit workaround
       invtrwhzdn = invlinkhzdn_wallace(w,d)
     case (-7) ! Poisson boxcox workaround
       invtrwhzdn = invlinkhzdn_modbc(w,d)
-    case (-11) ! Binomial GEV workaround
+    case (-12) ! Binomial GEV workaround
       invtrwhzdn = invlinkhzdn_modgev(w,d)
     end select
   end function invtrwhzdn
@@ -886,13 +893,13 @@ contains
     select case (MODELIS)
     case (0) ! Transformed Gaussian
       invtrwdzhn = 0d0
-    case (1,2,3,4,5,6,7,8,9,10,11) ! No transformation
+    case (1,2,3,4,5,6,7,8,9,10,11,12) ! No transformation
       invtrwdzhn = 0d0
     case (-2) ! Binomial robit workaround
       invtrwdzhn = invlinkdzhn_wallace(w,d)
     case (-7) ! Poisson boxcox workaround
       invtrwdzhn = invlinkdzhn_modbc(w,d)
-    case (-11) ! Binomial GEV workaround
+    case (-12) ! Binomial GEV workaround
       invtrwdzhn = invlinkdzhn_modgev(w,d)
     end select
   end function invtrwdzhn

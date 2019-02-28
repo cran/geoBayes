@@ -12,7 +12,7 @@ module covfun
   private :: covmat_a, covmat_l, covmat_v
   public :: spcor, spcor_dh, spcor_dk, spcor_hh, spcor_hk, &
      spcor_dhdk, upper_tri
-  integer, parameter, private :: CORCODES(3) = (/1,2,3/)
+  integer, parameter, private :: CORCODES(5) = (/1,2,3,4,5/)
   logical, private :: CORDEF = .false.
   integer, private :: CORIS = 0, DIMSP = 0
   logical, private, pointer :: lup(:,:) => null()
@@ -23,12 +23,6 @@ module covfun
   end interface covmat
 
 contains
-
-  function upper_tri () result (lup_)
-    logical, pointer :: lup_(:,:)
-    allocate(lup_(DIMSP,DIMSP))
-    lup_ = lup
-  end function upper_tri
 
   subroutine create_spcor (icf,n)
     use cor_fcns
@@ -56,9 +50,13 @@ contains
         end do
       end if
     end if
-
   end subroutine create_spcor
 
+  function upper_tri () result (lup_)
+    logical, pointer :: lup_(:,:)
+    allocate(lup_(DIMSP,DIMSP))
+    lup_ = lup
+  end function upper_tri
 
   elemental double precision function spcor (h,k)
     implicit none
@@ -70,6 +68,10 @@ contains
       spcor = cor_spher(h,k)
     case (3) ! Power exponential
       spcor = cor_powexp(h,k)
+    case (4) ! Exponential
+      spcor = cor_exp(h,k)
+    case (5) ! Gaussian
+      spcor = cor_gaussian(h,k)
     end select
   end function spcor
 
@@ -83,6 +85,10 @@ contains
       spcor_dh = cor_dh_spher(h,k)
     case (3) ! Power exponential
       spcor_dh = cor_dh_powexp(h,k)
+    case (4) ! Exponential
+      spcor_dh = cor_dh_exp(h,k)
+    case (5) ! Gaussian
+      spcor_dh = cor_dh_gaussian(h,k)
     end select
   end function spcor_dh
 
@@ -96,6 +102,10 @@ contains
       spcor_dk = cor_dk_spher(h,k)
     case (3) ! Power exponential
       spcor_dk = cor_dk_powexp(h,k)
+    case (4) ! Exponential
+      spcor_dk = cor_dk_exp(h,k)
+    case (5) ! Gaussian
+      spcor_dk = cor_dk_gaussian(h,k)
     end select
   end function spcor_dk
 
@@ -109,6 +119,10 @@ contains
       spcor_hh = cor_hh_spher(h,k)
     case (3) ! Power exponential
       spcor_hh = cor_hh_powexp(h,k)
+    case (4) ! Exponential
+      spcor_hh = cor_hh_exp(h,k)
+    case (5) ! Gaussian
+      spcor_hh = cor_hh_gaussian(h,k)
     end select
   end function spcor_hh
 
@@ -122,6 +136,10 @@ contains
       spcor_hk = cor_hk_spher(h,k)
     case (3) ! Power exponential
       spcor_hk = cor_hk_powexp(h,k)
+    case (4) ! Exponential
+      spcor_hk = cor_hk_exp(h,k)
+    case (5) ! Gaussian
+      spcor_hk = cor_hk_gaussian(h,k)
     end select
   end function spcor_hk
 
@@ -135,27 +153,31 @@ contains
       spcor_dhdk = cor_dhdk_spher(h,k)
     case (3) ! Power exponential
       spcor_dhdk = cor_dhdk_powexp(h,k)
+    case (4) ! Exponential
+      spcor_dhdk = cor_dhdk_exp(h,k)
+    case (5) ! Gaussian
+      spcor_dhdk = cor_dhdk_gaussian(h,k)
     end select
   end function spcor_dhdk
 
 
 
-  subroutine calc_cov (phi,nsq,dm,F,betQ0, &
+  subroutine calc_cov (phi,omg,dm,F,betQ0, &
      kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
     implicit none
     integer, intent(in) :: n, p
-    double precision, intent(in) :: phi, nsq, dm(n,n), &
+    double precision, intent(in) :: phi, omg, dm(n,n), &
        F(n,p), betQ0(p,p), kappa
     double precision, intent(out) :: T(n,n), FTF(p,p), Ups(n,n), &
        ldh_Ups, TiF(n,p)
     integer i, j
-    double precision nsqp1, Tih(n,n), TFFT(n,p), ldh_T, ldh_FTF
+    double precision omgp1, Tih(n,n), TFFT(n,p), ldh_T, ldh_FTF
 
-    nsqp1 = nsq + 1d0
+    omgp1 = omg + 1d0
     T = dm
     call covmat_l(T,phi,kappa,n,n,lup)
     do i = 1, n
-      T(i,i) = nsqp1
+      T(i,i) = omgp1
     end do
     Tih = T
     call oppdf(n,Tih,ldh_T) ! Tih is uppertri s.t. Tih*Tih' = T^{-1}
@@ -181,39 +203,39 @@ contains
   end subroutine calc_cov
 
   subroutine calc_cov_pred (z0_ups, TC, FCTF, &
-     phi, nsq, dmdm0, F, F0, kappa,  T, n, n0, p)
+     phi, omg, dmdm0, F, F0, kappa,  T, n, n0, p)
     implicit none
     integer, intent(in) :: n, n0, p
-    double precision, intent(in) :: phi, nsq, dmdm0(n,n0), F(n,p), &
+    double precision, intent(in) :: phi, omg, dmdm0(n,n0), F(n,p), &
        F0(n0,p), kappa, T(n,n)
     double precision, intent(out) :: z0_ups(n0), TC(n,n0), FCTF(n0,p)
-    double precision C(n,n0), nsqp1
+    double precision C(n,n0), omgp1
 
-    nsqp1 = nsq + 1d0
+    omgp1 = omg + 1d0
     C = dmdm0
     call covmat_a (C,phi,kappa,n,n0)
     call dsymm ('l','u',n,n0,1d0,T,n,C,n,0d0,TC,n)
-    z0_ups = sqrt(nsqp1 - sum(TC*C,1))
+    z0_ups = sqrt(omgp1 - sum(TC*C,1))
     FCTF = F0
     call dgemm ('t','n',n0,p,n,-1d0,TC,n,F,n,1d0,FCTF,n0)
   end subroutine calc_cov_pred
 
 
-  subroutine covlist (kg,philist,nsqlist,n,p,betQ0,F,dm,kappa, &
+  subroutine covlist (kg,philist,omglist,n,p,betQ0,F,dm,kappa, &
      Ulist,ldh_Ulist)
 !!! Compute list of relevant covariance matrices
 
     implicit none
 
     integer, intent(in) :: kg, n, p
-    double precision, intent(in) :: philist(kg), betQ0(p,p), nsqlist(kg), &
+    double precision, intent(in) :: philist(kg), betQ0(p,p), omglist(kg), &
        F(n,p), dm(n,n), kappa
     double precision, intent(out) :: ldh_Ulist(kg), Ulist(n,n,kg)
     integer i
     double precision FTF(p,p), T(n,n), TiF(n,p)
 
     do i = 1, kg
-      call calc_cov(philist(i),nsqlist(i),dm,F,betQ0,&
+      call calc_cov(philist(i),omglist(i),dm,F,betQ0,&
          kappa,n,p,T,TiF,FTF,Ulist(:,:,i),ldh_Ulist(i))
     end do
   end subroutine covlist

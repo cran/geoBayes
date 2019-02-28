@@ -29,11 +29,11 @@
 ##' ssqsc <- 1
 ##' betm0 <- 0
 ##' betQ0 <- .01
-##' linkp <- "probit"
+##' family <- "binomial.probit"
 ##' ### Skeleton points
 ##' philist <- c(100, 140, 180)
 ##' omglist <- c(.5, 1)
-##' parlist <- expand.grid(phi=philist, linkp=linkp, omg=omglist, kappa = kappa)
+##' parlist <- expand.grid(linkp=0, phi=philist, omg=omglist, kappa = kappa)
 ##' ### MCMC sizes
 ##' Nout <- 100
 ##' Nthin <- 1
@@ -41,14 +41,15 @@
 ##' ### Take MCMC samples
 ##' runs <- list()
 ##' for (i in 1:NROW(parlist)) {
-##'   runs[[i]] <- mcsglmm(Infected ~ 1, 'binomial', rhizoctonia, weights = Total,
+##'   runs[[i]] <- mcsglmm(Infected ~ 1, family, rhizoctonia, weights = Total,
 ##'                        atsample = ~ Xcoord + Ycoord,
 ##'                        Nout = Nout, Nthin = Nthin, Nbi = Nbi,
 ##'                        betm0 = betm0, betQ0 = betQ0,
 ##'                        ssqdf = ssqdf, ssqsc = ssqsc,
-##'                        phistart = parlist$phi[i], omgstart = parlist$omg[i],
+##'                        phi = parlist$phi[i], omg = parlist$omg[i],
 ##'                        linkp = parlist$linkp[i], kappa = parlist$kappa[i],
-##'                        corrfcn = corrf, phisc = 0, omgsc = 0)
+##'                        corrfcn = corrf,
+##'                        corrtuning=list(phi = 0, omg = 0, kappa = 0))
 ##' }
 ##' bf <- bf1skel(runs)
 ##' bfall <- bf2new(bf, phi = seq(100, 200, 10), omg = seq(0, 2, .2))
@@ -184,7 +185,7 @@ overflow. Control variates corrections will not be used.")
   maxid <- arrayInd(which.max(logbf), c(n_nu, n_phi, n_omg, n_kappa))
   out <- list(logbf = logbf, linkp = nu, phi = phi,
               omg = omg, corrfcn = corrfcn, kappa = kappa, indmax = maxid)
-  class(out) <- c("bfsp", "list")
+  ## class(out) <- c("bfsp", "list")
   out
 }
 
@@ -215,11 +216,11 @@ overflow. Control variates corrections will not be used.")
 ##' ssqsc <- 1
 ##' betm0 <- 0
 ##' betQ0 <- .01
-##' linkp <- "probit"
+##' family <- "binomial.probit"
 ##' ### Skeleton points
 ##' philist <- c(100, 140, 180)
 ##' omglist <- c(.5, 1)
-##' parlist <- expand.grid(phi=philist, linkp=linkp, omg=omglist, kappa = kappa)
+##' parlist <- expand.grid(linkp=0, phi=philist, omg=omglist, kappa = kappa)
 ##' ### MCMC sizes
 ##' Nout <- 100
 ##' Nthin <- 1
@@ -227,14 +228,15 @@ overflow. Control variates corrections will not be used.")
 ##' ### Take MCMC samples
 ##' runs <- list()
 ##' for (i in 1:NROW(parlist)) {
-##'   runs[[i]] <- mcsglmm(Infected ~ 1, 'binomial', rhizoctonia, weights = Total,
+##'   runs[[i]] <- mcsglmm(Infected ~ 1, family, rhizoctonia, weights = Total,
 ##'                        atsample = ~ Xcoord + Ycoord,
 ##'                        Nout = Nout, Nthin = Nthin, Nbi = Nbi,
 ##'                        betm0 = betm0, betQ0 = betQ0,
 ##'                        ssqdf = ssqdf, ssqsc = ssqsc,
-##'                        phistart = parlist$phi[i], omgstart = parlist$omg[i],
+##'                        phi = parlist$phi[i], omg = parlist$omg[i],
 ##'                        linkp = parlist$linkp[i], kappa = parlist$kappa[i],
-##'                        corrfcn = corrf, phisc = 0, omgsc = 0)
+##'                        corrfcn = corrf,
+##'                        corrtuning=list(phi = 0, omg = 0, kappa = 0))
 ##' }
 ##' bf <- bf1skel(runs)
 ##' bfall <- bf2new(bf, phi = seq(100, 200, 10), omg = seq(0, 2, .2))
@@ -356,11 +358,11 @@ plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
 ##' ssqsc <- 1
 ##' betm0 <- 0
 ##' betQ0 <- .01
-##' linkp <- "probit"
+##' family <- "binomial.probit"
 ##' ### Skeleton points
 ##' philist <- c(100, 140, 180)
 ##' omglist <- c(.5, 1)
-##' parlist <- expand.grid(phi=philist, linkp=linkp, omg=omglist, kappa = kappa)
+##' parlist <- expand.grid(linkp=0, phi=philist, omg=omglist, kappa = kappa)
 ##' ### MCMC sizes
 ##' Nout <- 100
 ##' Nthin <- 1
@@ -368,26 +370,31 @@ plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
 ##' ### Take MCMC samples
 ##' runs <- list()
 ##' for (i in 1:NROW(parlist)) {
-##'   runs[[i]] <- mcsglmm(Infected ~ 1, 'binomial', rhizoctonia, weights = Total,
+##'   runs[[i]] <- mcsglmm(Infected ~ 1, family, rhizoctonia, weights = Total,
 ##'                        atsample = ~ Xcoord + Ycoord,
-##'                        Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+##'                        Nout = Nout*c(.8,.2), Nthin = Nthin, Nbi = Nbi,
 ##'                        betm0 = betm0, betQ0 = betQ0,
 ##'                        ssqdf = ssqdf, ssqsc = ssqsc,
-##'                        phistart = parlist$phi[i], omgstart = parlist$omg[i],
+##'                        phi = parlist$phi[i], omg = parlist$omg[i],
 ##'                        linkp = parlist$linkp[i], kappa = parlist$kappa[i],
-##'                        corrfcn = corrf, phisc = 0, omgsc = 0)
+##'                        corrfcn = corrf,
+##'                        corrtuning=list(phi = 0, omg = 0, kappa = 0))
 ##' }
 ##' bf <- bf1skel(runs)
-##' est <- bf2optim(bf, list(linkp = linkp, phi = c(100, 200), omg = c(0, 2)))
+##' est <- bf2optim(bf, list(phi = c(100, 200), omg = c(0, 2)))
 ##' est
 ##' }
-##' @importFrom stats optim
+##' @importFrom stats optim optimHess
+##' @importFrom optimr optimr
 ##' @useDynLib geoBayes calcb_no_st calcb_mu_st calcb_wo_st calcb_tr_st
 ##' @useDynLib geoBayes calcb_no_cv calcb_mu_cv calcb_wo_cv calcb_tr_cv
 ##' @useDynLib geoBayes calcbd_no calcbd_mu calcbd_wo calcbd_tr
 ##' @export
 bf2optim <- function (bf1obj, paroptim, useCV = TRUE,
                       control = list()) {
+
+  log.phi <- FALSE
+  log.omg <- FALSE
 
   ## Logical input
   useCV <- isTRUE(useCV)
@@ -424,11 +431,14 @@ bf2optim <- function (bf1obj, paroptim, useCV = TRUE,
 
   ## Check paroptim
   ## parnmall <- c("linkp", "phi", "omg", "kappa")
+  paroptim.orig <- paroptim
   paroptim <- getparoptim(paroptim, ifam, icf)
   pstart <- as.double(paroptim$pstart)
   lower <- paroptim$lower
   upper <- paroptim$upper
   estim <- paroptim$estim
+  log.phi <- log.phi && estim[2]
+  log.omg <- log.omg && estim[3]
 
   ## Check for non-finite values in control variates
   if (useCV && any(!is.finite(zcv))) {
@@ -450,19 +460,22 @@ overflow. Control variates corrections will not be used.")
     fn <- function (par) {
       parin <- pstart
       parin[estim] <- par
-      parin[2:4] <- exp(parin[2:4])
-      RUN <- .Fortran(froutine, 0,
-                      parin[2], parin[1], parin[3], parin[4],
-                      as.integer(icf), 1L, 1L, as.integer(Ntot),
-                      as.double(sample), as.double(isweights),
-                      as.double(QRin),
-                      as.integer(n), as.integer(p),
-                      as.double(betm0),
-                      as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
-                      max(tsqdf, 0), as.double(tsq), as.double(y),
-                      as.double(l), as.double(F), as.double(dm),
-                      as.integer(ifam), as.integer(itr),
-                      PACKAGE = "geoBayes")
+      if (log.phi) parin[2] <- exp(parin[2])
+      if (log.omg) parin[3] <- exp(parin[3])
+      RUN <- try(
+        .Fortran(froutine, 0,
+                 parin[2], parin[1], parin[3], parin[4],
+                 as.integer(icf), 1L, 1L, as.integer(Ntot),
+                 as.double(sample), as.double(isweights),
+                 as.double(QRin),
+                 as.integer(n), as.integer(p),
+                 as.double(betm0),
+                 as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
+                 max(tsqdf, 0), as.double(tsq), as.double(y),
+                 as.double(l), as.double(F), as.double(dm),
+                 as.integer(ifam), as.integer(itr),
+                 PACKAGE = "geoBayes"), silent = TRUE)
+      if (class(RUN) == "try-error") return (NA)
       -RUN[[1]][1]
     }
   } else {
@@ -471,18 +484,21 @@ overflow. Control variates corrections will not be used.")
     fn <- function (par) {
       parin <- pstart
       parin[estim] <- par
-      parin[2:4] <- exp(parin[2:4])
-      RUN <- .Fortran(froutine, 0,
-                      parin[2], parin[1], parin[3], parin[4],
-                      as.integer(icf), 1L, 1L,
-                      as.integer(Ntot), as.double(sample),
-                      as.double(isweights), as.integer(n), as.integer(p),
-                      as.double(betm0),
-                      as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
-                      max(tsqdf, 0), as.double(tsq), as.double(y), as.double(l),
-                      as.double(F), as.double(dm),
-                      as.integer(ifam), as.integer(itr),
-                      PACKAGE = "geoBayes")
+      if (log.phi) parin[2] <- exp(parin[2])
+      if (log.omg) parin[3] <- exp(parin[3])
+      RUN <- try(
+        .Fortran(froutine, 0,
+                 parin[2], parin[1], parin[3], parin[4],
+                 as.integer(icf), 1L, 1L,
+                 as.integer(Ntot), as.double(sample),
+                 as.double(isweights), as.integer(n), as.integer(p),
+                 as.double(betm0),
+                 as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
+                 max(tsqdf, 0), as.double(tsq), as.double(y), as.double(l),
+                 as.double(F), as.double(dm),
+                 as.integer(ifam), as.integer(itr),
+                 PACKAGE = "geoBayes"), silent = TRUE)
+      if (class(RUN) == "try-error") return (NA)
       -RUN[[1]][1]
     }
   }
@@ -491,21 +507,25 @@ overflow. Control variates corrections will not be used.")
   gr <- function (par) {
     parin <- pstart
     parin[estim] <- par
-    parin[2:4] <- exp(parin[2:4])
-    RUN <- .Fortran(groutine, 0, 0, 0, 0, 0,
-                    parin[2], parin[1], parin[3], parin[4],
-                    as.integer(icf), as.integer(Ntot), as.double(sample),
-                    as.double(isweights),
-                    as.double(QRin),
-                    as.integer(n), as.integer(p),
-                    as.double(betm0),
-                    as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
-                    max(tsqdf, 0), as.double(tsq), as.double(y), as.double(l),
-                    as.double(F), as.double(dm),
-                    as.integer(ifam), as.integer(itr), as.integer(useCV),
-                    PACKAGE = "geoBayes")
-    gg <- -do.call("c", RUN[2:5])*c(1, parin[2:4])
-    gg[estim]
+    d1 <- c(1, 1, 1, 1)
+    if (log.phi) d1[2] <- parin[2] <- exp(parin[2])
+    if (log.omg) d1[3] <- parin[3] <- exp(parin[3])
+    RUN <- try(
+      .Fortran(groutine, 0, 0, 0, 0, 0,
+               parin[2], parin[1], parin[3], parin[4],
+               as.integer(icf), as.integer(Ntot), as.double(sample),
+               as.double(isweights),
+               as.double(QRin),
+               as.integer(n), as.integer(p),
+               as.double(betm0),
+               as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
+               max(tsqdf, 0), as.double(tsq), as.double(y), as.double(l),
+               as.double(F), as.double(dm),
+               as.integer(ifam), as.integer(itr), as.integer(useCV),
+               PACKAGE = "geoBayes"), silent = TRUE)
+    if (class(RUN) == "try-error") return (rep.int(NA, sum(estim)))
+    gg <- -do.call("c", RUN[2:5])[estim] * d1[estim]
+    gg
   }
 
 
@@ -516,12 +536,20 @@ overflow. Control variates corrections will not be used.")
                       wbf)
   i <- is.na(pstart) & estim
   pstart[i] <- pmax(pmin(upper[i], pstart.d[i]), lower[i])
-  scale <- control$parscale; if (is.null(scale)) scale <- 1
-  pstart[2:4] <- log(pstart[2:4])
-  lower[2:4] <- log(lower[2:4])
-  upper[2:4] <- log(upper[2:4])
+  if (log.phi) {
+    pstart[2] <- log(pstart[2])
+    lower[2] <- log(lower[2])
+    upper[2] <- log(upper[2])
+  }
+  if (log.omg) {
+    pstart[3] <- log(pstart[3])
+    lower[3] <- log(lower[3])
+    upper[3] <- log(upper[3])
+  }
   method <- "L-BFGS-B"
+  method <- "nlminb"
   if (isTRUE(control$fnscale < 0)) control$fnscale <- -control$fnscale
+  if (isTRUE(control$maximize)) control$maximize <- FALSE
 ###   op <- stats::nlminb(pstart[estim], fn, gr, scale = scale,
 ###                       control = control,
 ###                       lower = lower[estim], upper = upper[estim])
@@ -530,15 +558,23 @@ overflow. Control variates corrections will not be used.")
 ###   op <- optimx::optimx(pstart[estim], fn, gr, method = method,
 ###                        lower = lower[estim], upper = upper[estim],
 ###                        control = control, hessian = TRUE)
-  op <- stats::optim(pstart[estim], fn, gr, method = method,
-                     lower = lower[estim], upper = upper[estim],
-                     control = control, hessian = TRUE)
+###   op <- stats::optim(pstart[estim], fn, gr, method = method,
+###                      lower = lower[estim], upper = upper[estim],
+###                      control = control, hessian = TRUE)
+  op <- optimr::optimr(pstart[estim], fn, gr, method = method,
+                       lower = lower[estim], upper = upper[estim],
+                       control = control, hessian = FALSE)
+  op$gradient <- gr(op$par)
+  op$hessian <- stats::optimHess(op$par, fn, gr, control = control)
   op$value <- -op$value + bf1obj$logbf[1]
   parout <- pstart
   parout[estim] <- op$par
-  names(parout) <- c("linkp", "phi", "omg", "kappa")
-  op$par <- c(parout[1], exp(parout[2:4]))
-  op$hessian <- op$hessian*tcrossprod(c(1, op$par[2:4])[estim])
+  d1 <- c(1, 1, 1, 1)
+  names(parout) <- names(d1) <- c("linkp", "phi", "omg", "kappa")
+  if (log.phi) parout[2] <- d1[2] <- exp(parout[2])
+  if (log.omg) parout[3] <- d1[3] <- exp(parout[3])
+  op$par <- parout
+  op$hessian <- op$hessian*tcrossprod(d1[estim])
   op$fixed <- !estim
   op
 }

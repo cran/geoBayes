@@ -35,6 +35,26 @@
 ##'   observations to be used in the fitting process.
 ##' @param atsample A formula in the form \code{~ x1 + x2 + ... + xd}
 ##'   with the coordinates of the sampled locations.
+##' @param corrfcn Spatial correlation function. See
+##'   \code{\link{geoBayes_correlation}} for details.
+##' @param linkp Parameter of the link function. A scalar value.
+##' @param phi Optional starting value for the MCMC for the
+##'   spatial range parameter \code{phi}. Defaults to the mean of its
+##'   prior. If \code{corrtuning[["phi"]]} is 0, then this argument is required and
+##'   it corresponds to the fixed value of \code{phi}. This can be a
+##'   vector of the same length as Nout.
+##' @param omg Optional starting value for the MCMC for the
+##'   relative nugget parameter \code{omg}. Defaults to the mean of
+##'   its prior. If \code{corrtuning[["omg"]]} is 0, then this argument is required
+##'   and it corresponds to the fixed value of \code{omg}. This can be
+##'   a vector of the same length as Nout.
+##' @param kappa Optional starting value for the MCMC for the
+##'   spatial correlation parameter \code{kappa} (Matern smoothness or
+##'   exponential power). Defaults to the mean of
+##'   its prior. If \code{corrtuning[["kappa"]]} is 0 and it is needed for
+##'   the chosen correlation function, then this argument is required
+##'   and it corresponds to the fixed value of \code{kappa}. This can be
+##'   a vector of the same length as Nout.
 ##' @param Nout Number of MCMC samples to return. This can be a vector
 ##'   for running independent chains.
 ##' @param Nthin The thinning of the MCMC algorithm.
@@ -48,40 +68,20 @@
 ##'   prior for the partial sill parameter.
 ##' @param ssqsc Scale for the scaled inverse chi-square prior for the
 ##'   partial sill parameter.
-##' @param phipars Parameters for the generalized inverse gamma prior
-##'   for the spatial range parameter \code{phi}. A four dimensional
-##'   vector with parameters scale, shape, exponent, location in that
-##'   order. See Details.
-##' @param omgpars Parameters for the generalized inverse gamma prior
-##'   for the relative nugget parameter \code{omg}. A four dimensional
-##'   vector with parameters scale, shape, exponent, location in that
-##'   order. See Details.
-##' @param corrfcn Spatial correlation function. See
-##'   \code{\link{geoBayes_correlation}} for details.
-##' @param kappa Spatial correlation parameter. Smoothness parameter
-##'   for Matern, exponent for the power family.
-##' @param linkp Parameter of the link function. For binomial, a
-##'   positive number for the degrees of freedom of the robit family
-##'   or "logit" or "probit". For the other families any number for
-##'   the exponent of the Box-Cox transformation.
-##' @param phisc Random walk parameter for \code{phi}. Smaller values
+##' @param corrpriors A list with the components \code{phi},
+##'   \code{omg} and \code{kappa} as needed. These correspond to the
+##'   prior distribution parameters. For \code{phi} and \code{omg} it
+##'   must be a vector of length 4. The generalized inverse gamma
+##'   prior is assumed and the input corresponds to the parameters
+##'   scale, shape, exponent, location in that order (see Details).
+##'   For \code{kappa} it must be a vector of length 2. A uniform
+##'   prior is assumed and the input corresponds to the lower and
+##'   upper bounds in that order.
+##' @param corrtuning A vector or list with the components \code{phi},
+##'   \code{omg} and \code{kappa} as needed. These correspond to the
+##'   random walk parameter for the Metropolis-Hastings step. Smaller values
 ##'   increase the acceptance ratio. Set this to 0 for fixed
-##'   \code{phi}. In this case the fixed value is given in the
-##'   argument \code{phistart}.
-##' @param omgsc Random walk parameter for \code{omg}. Smaller values
-##'   increase the acceptance ratio. Set this to 0 for fixed
-##'   \code{omg}. In this case the fixed value is given in the
-##'   argument \code{omgstart}.
-##' @param phistart Optional starting value for the MCMC for the
-##'   spatial range parameter \code{phi}. Defaults to the mean of its
-##'   prior. If \code{phisc} is 0, then this argument is required and
-##'   it corresponds to the fixed value of \code{phi}. This can be a
-##'   vector of the same length as Nout.
-##' @param omgstart Optional starting value for the MCMC for the
-##'   relative nugget parameter \code{omg}. Defaults to the mean of
-##'   its prior. If \code{omgsc} is 0, then this argument is required
-##'   and itcorresponds to the fixed value of \code{omg}. This can be
-##'   a vector of the same length as Nout.
+##'   parameter value.
 ##' @param dispersion The fixed dispersion parameter.
 ##' @param longlat How to compute the distance between locations. If
 ##'   \code{FALSE}, Euclidean distance, if \code{TRUE} Great Circle
@@ -93,8 +93,9 @@
 ##'   and \code{omgsc} parameters in order to achive 20 to 30\%
 ##'   acceptance. Set this to a positive number to change the default
 ##'   100. No thinning or burn-in are done when testing.
-##' @return A list containing the MCMC samples and other variables as
-##' follows:
+##' @return A list containing the objects \code{MODEL}, \code{DATA},
+##'   \code{FIXED}, \code{MCMC} and \code{call}. The MCMC samples are
+##'   stored in the object \code{MCMC} as follows:
 ##' \itemize{
 ##'  \item \code{z} A matrix containing the MCMC samples for the
 ##' spatial random field. Each column is one sample.
@@ -103,36 +104,21 @@
 ##'  \item \code{beta} A matrix containing the MCMC samples for the
 ##' regressor coefficients. Each column is one sample.
 ##'  \item \code{ssq} A vector with the MCMC samples for the partial
-##' sill parameter.
+## sill parameter.
 ##'  \item \code{phi} A vector with the MCMC samples for the spatial
-##' range parameter.
+##' range parameter, if sampled.
 ##'  \item \code{omg} A vector with the MCMC samples for the relative
-##' nugget parameter.
-##'  \item \code{nu} The link function parameter translated to
-##' numeric code used internally.
+##' nugget parameter, if sampled.
 ##'  \item \code{logLik} A vector containing the value of the
 ##' log-likelihood evaluated at each sample.
 ##'  \item \code{acc_ratio} The acceptance ratio for the joint update
-##' of the parameters \code{phi} and \code{omg}.
+##' of the parameters \code{phi} and \code{omg}, if sampled.
 ##'  \item \code{sys_time} The total computing time for the MCMC sampling.
 ##'  \item \code{Nout}, \code{Nbi},  \code{Nthin} As in input. Used
 ##' internally in other functions.
-##'  \item \code{response} The value of the response variable at the
-##' observed locations. Used internally in other functions.
-##'  \item \code{weights} The response weights at the observed
-##' locations. Used internally in other functions.
-##'  \item \code{modelmatrix} The model matrix at the observed
-##' locations. Used internally in other functions.
-##'  \item \code{family} As in input. Used internally in other functions.
-##'  \item \code{betm0}, \code{betQ0}, \code{ssqdf}, \code{ssqsc},
-##' \code{corrfcn}, \code{kappa}, \code{dispersion} As in
-##' input. Used internally in other functions.
-##'  \item \code{locations} Coordinates of the observed locations.
-##' Used internally in other functions.
-##'  \item \code{whichobs} A logical vector indicated which rows in
-##' the data and in the MCMC samples for the spatial random field
-##' correspond to the observed locations.
 ##' }
+##' The other objects contain input variables. The object \code{call}
+##'   contains the function call.
 ##' @examples \dontrun{
 ##' data(rhizoctonia)
 ##'
@@ -142,9 +128,10 @@
 ##'
 ##' ### Combine observed and prediction locations
 ##' rhizdata <- stackdata(rhizoctonia, predgrid$grid)
-##'
+##' ##'
 ##' ### Define the model
 ##' corrf <- "spherical"
+##' family <- "binomial.probit"
 ##' kappa <- 0
 ##' ssqdf <- 1
 ##' ssqsc <- 1
@@ -154,37 +141,28 @@
 ##' phisc <- 3
 ##' omgprior <- c(2, 1, 1, 0)        # Exp(mean = 2)
 ##' omgsc <- .1
-##' linkp <- "probit"
-##'
+##' ##'
 ##' ### MCMC sizes
 ##' Nout <- 100
 ##' Nthin <- 1
 ##' Nbi <- 0
 ##'
 ##' ### Trial run
-##' emt <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
+##' emt <- mcsglmm(Infected ~ 1, family, rhizdata, weights = Total,
 ##'                atsample = ~ Xcoord + Ycoord,
 ##'                Nout = Nout, Nthin = Nthin, Nbi = Nbi,
 ##'                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-##'                phipars = phiprior, omgpars = omgprior, linkp = linkp,
-##'                corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc,
+##'                corrpriors = list(phi = phiprior, omg = omgprior), 
+##'                corrfcn = corrf, kappa = kappa,
+##'                corrtuning = list(phi = phisc, omg = omgsc, kappa = 0),
 ##'                dispersion = 1, test = 10)
 ##'
 ##' ### Full run
-##' emc <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
-##'                atsample = ~ Xcoord + Ycoord,
-##'                Nout = Nout, Nthin = Nthin, Nbi = Nbi,
-##'                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-##'                phipars = phiprior, omgpars = omgprior, linkp = linkp,
-##'                corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc,
-##'                dispersion = 1, test = FALSE)
-##'
-##'
-##' plot.ts(cbind(phi = emc$phi, omg = emc$omg, beta = c(emc$beta),
-##'               ssq = emc$ssq), nc = 2)
+##' emc <- update(emt, test = FALSE)
 ##'
 ##' emcmc <- mcmcmake(emc)
 ##' summary(emcmc[, c("phi", "omg", "beta", "ssq")])
+##' plot(emcmc[, c("phi", "omg", "beta", "ssq")])
 ##' }
 ##' @importFrom sp spDists
 ##' @importFrom stats model.matrix model.response model.weights
@@ -192,12 +170,12 @@
 ##' @useDynLib geoBayes mcspsamtry mcspsample
 ##' @export
 mcsglmm <- function (formula, family = "gaussian",
-                     data, weights, subset, atsample,
+                     data, weights, subset, atsample, corrfcn = "matern",
+                     linkp, phi, omg, kappa,
                      Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc,
-                     phipars, omgpars, corrfcn = "matern",
-                     kappa, linkp, phisc, omgsc,
-                     phistart, omgstart,
+                     corrpriors, corrtuning,
                      dispersion = 1, longlat = FALSE, test = FALSE) {
+  cl <- match.call()
   ## Family
   ifam <- .geoBayes_family(family)
   if (ifam) {
@@ -205,11 +183,17 @@ mcsglmm <- function (formula, family = "gaussian",
   } else {
     stop ("This family has not been implemented.")
   }
+  if (.geoBayes_models$needlinkp[ifam]) {
+    if (missing(linkp))
+      stop ("Missing input linkp.")
+  } else {
+    linkp <- 0
+  }
 
   ## Correlation function
   icf <- .geoBayes_correlation(corrfcn)
   corrfcn <- .geoBayes_corrfcn$corrfcn[icf]
-  kappa <- .geoBayes_getkappa(kappa, icf)
+  needkappa <- .geoBayes_corrfcn$needkappa[icf]
 
   ## Design matrix and data
   if (missing(data)) data <- environment(formula)
@@ -279,59 +263,9 @@ grater than 3.")
   if (ssqsc <= 0) stop ("Argument ssqsc must > 0")
 
   ## Prior for beta
-  if (all(is.finite(betQ0[upper.tri(betQ0)]))) {
-    if (length(betQ0) == 1 && betQ0[1] == 0) {
-      ## Uniform prior
-      betQ0 <- matrix(0, p, p)
-      betm0 <- rep(0, p)
-    } else if (length(betQ0) == 1 || length(betQ0) == p) {
-      if (any(betQ0 <= 0)) stop ('betQ0 not > 0')
-      betQ0 <- diag(c(betQ0), p, p)
-      betm0 <- rep(as.double(betm0), length.out = p)
-      modeldf <- as.double(k + ssqdf)
-    } else if (length(betQ0) == p*p) {
-      betQ0 <- matrix(as.double(betQ0), p, p)
-      betQ0[lower.tri(betQ0)] <- 0
-      betQ0eig <- eigen(t(betQ0), 1, 1)$values
-      if (any (betQ0eig < sqrt(.Machine$double.eps))) {
-        stop ('betQ0 not > 0 within tolerance')
-      }
-      betm0 <- rep(as.double(betm0), length.out = p)
-      modeldf <- as.double(k + ssqdf)
-    } else stop ('Bad betQ0')
-  } else stop ('Non-finite betQ0')
-
-  ## phi and omg
-  phisc <- as.double(phisc)
-  if (phisc < 0) stop ("Argument phisc must be non-negative")
-  omgsc <- as.double(omgsc)
-  if (omgsc < 0) stop ("Argument omgsc must be non-negative")
-  if (phisc > 0) {
-    if (missing(phipars)) stop ("Argument phipars not provided")
-    phipars <- as.double(phipars)
-    if (length(phipars) != 4) {
-      stop ("Argument phipars must be a vector of length 4")
-    }
-    if (!all(is.finite(phipars))) stop ("Non-finite values in phipars")
-    if (phipars[1] <= 0 || phipars[4] < 0 || phipars[2]*phipars[3] <= 0) {
-      stop ("Invalid values in phipars")
-    }
-  } else {
-    phipars <- rep.int(0, 4)
-  }
-  if (omgsc > 0) {
-    if (missing(omgpars)) stop ("Argument omgpars not provided")
-    omgpars <- as.double(omgpars)
-    if (length(omgpars) != 4) {
-      stop ("Argument omgpars must be a vector of length 4")
-    }
-    if (!all(is.finite(omgpars))) stop ("Non-finite values in omgpars")
-    if (any(omgpars[1:3] <= 0) || omgpars[4] < 0) {
-      stop ("Invalid values in omgpars")
-    }
-  } else {
-    omgpars <- rep.int(0, 4)
-  }
+  betaprior <- getbetaprior(betm0, betQ0, p)
+  betm0 <- betaprior$betm0
+  betQ0 <- betaprior$betQ0
 
   ## Other fixed parameters
   dispersion <- as.double(dispersion)
@@ -352,13 +286,17 @@ grater than 3.")
   z0 <- matrix(0, k0, Nout)
   beta <- matrix(0, p, Nout)
   ssq <- numeric(Nout)
-  phi <- numeric(Nout)
-  omg <- numeric(Nout)
 
-  ## Starting values
-  if (missing(phistart)) {
+  ## Starting values for correlation parameters
+  phisc <- corrtuning[["phi"]]
+  if (is.null(phisc) || !is.numeric(phisc) || phisc < 0)
+    stop ("Invalid tuning parameter for phi.")
+  if (phisc > 0) {
+    phipars <- check_gengamma_prior(corrpriors[["phi"]])
+  } else phipars <- rep.int(0, 4)
+  if (missing(phi)) {
     if (phisc == 0) {
-      stop ("Argument phistart needed for fixed phi")
+      stop ("Argument phi needed for fixed phi")
     } else {
       if(phipars[2] == -1) {
         tmp <- .1/abs(phipars[3])
@@ -369,15 +307,23 @@ grater than 3.")
         gamma(phipars[2]/phipars[3])
     }
   } else {
-    phistart <- as.double(phistart)
+    phistart <- as.double(phi)
     if (phisc > 0 && phistart <= phipars[4]) {
       stop ("Starting value for phi not in the support of its prior")
     }
   }
+  phi <- numeric(Nout)
   phi[cumsum(c(1, Nmc[-nch]))] <- phistart
-  if (missing(omgstart)) {
+
+  omgsc <- corrtuning[["omg"]]
+  if (is.null(omgsc) || !is.numeric(omgsc) || omgsc < 0)
+    stop ("Invalid tuning parameter for omg.")
+  if (omgsc > 0) {
+    omgpars <- check_gengamma_prior(corrpriors[["omg"]])
+  } else omgpars <- rep.int(0, 4)
+  if (missing(omg)) {
     if (omgsc == 0) {
-      stop ("Argument omgstart needed for fixed omg")
+      stop ("Argument omg needed for fixed omg")
     } else {
       if(omgpars[2] == -1) {
         tmp <- .1/abs(omgpars[3])
@@ -388,12 +334,43 @@ grater than 3.")
         gamma(omgpars[2]/omgpars[3])
     }
   } else {
-    omgstart <- as.double(omgstart)
+    omgstart <- as.double(omg)
     if (omgsc > 0 && omgstart <= omgpars[4]) {
       stop ("Starting value for omg not in the support of its prior")
     }
   }
+  omg <- numeric(Nout)
   omg[cumsum(c(1, Nmc[-nch]))] <- omgstart
+
+  if (needkappa) {
+    kappasc <- corrtuning[["kappa"]]
+  } else {
+    kappasc <- 0
+    kappa <- 0
+  }
+  if (is.null(kappasc) || !is.numeric(kappasc) || kappasc < 0)
+    stop ("Invalid tuning parameter for kappa.")
+  if (kappasc > 0) {
+    kappapars <- check_unif_prior(corrpriors[["kappa"]])
+  } else kappapars <- c(0, 0)
+  if (missing(kappa)) {
+    if (kappasc == 0) {
+      stop ("Argument kappa needed for fixed kappa")
+    } else {
+      kappastart <- (kappapars[1] + kappapars[2])*.5
+    }
+  } else {
+    kappastart <- as.double(kappa)
+  }
+  if (kappasc > 0) {
+    kappastart <- .geoBayes_getkappa(kappastart, icf)
+    kappapars <- .geoBayes_getkappa(kappapars, icf)
+    if (kappastart >= kappapars[2] || kappastart <= kappapars[1]) {
+      stop ("Starting value for kappa not in the support of its prior")
+    }
+  }
+  kappa <- numeric(Nout)
+  kappa[cumsum(c(1, Nmc[-nch]))] <- kappastart
 
   ## Run code
   if (test > 0) { # Running a test
@@ -402,12 +379,14 @@ grater than 3.")
     acc <- 0L
     tm <- system.time({
       RUN <- .Fortran("mcspsamtry", ll = lglk, z = z, phi = phi, omg = omg,
+                      kappa = kappa,
                       acc = acc,
                       as.double(y), as.double(l), as.double(F),
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
-                      as.double(ssqsc), as.double(phipars), as.double(phisc),
-                      as.double(omgpars),
-                      as.double(omgsc), as.double(kappa), as.integer(icf),
+                      as.double(ssqsc), as.double(phipars),
+                      as.double(omgpars), as.double(kappapars),
+                      as.double(phisc), as.double(omgsc), as.double(kappasc),
+                      as.integer(icf),
                       as.double(nu), as.double(dispersion), as.double(dm),
                       as.integer(Nout), as.integer(test), as.integer(k),
                       as.integer(p), as.integer(ifam),
@@ -417,34 +396,39 @@ grater than 3.")
     ll <- RUN$ll
     zz0 <- matrix(NA, NROW(yy), Nout)
     zz0[ii, ] <- RUN$z
+    mm0 <- NULL
     beta <- NULL
     ssq <- NULL
     phi <- RUN$phi
-    attr(phi, 'fixed') <- phisc == 0
+###     attr(phi, 'fixed') <- phisc == 0
     omg <- RUN$omg
-    attr(omg, 'fixed') <- omgsc == 0
-    attr(nu, 'fixed') <- TRUE
+###     attr(omg, 'fixed') <- omgsc == 0
+###     attr(nu, 'fixed') <- TRUE
+    kappa <- RUN$kappa
     acc_ratio <- RUN$acc/Nout
-    out <- list(z = zz0, beta = beta, ssq = ssq, phi = phi, omg = omg, nu = nu,
-                logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
-                Nout = Nout, Nbi = Nbi, Nthin = Nthin,
-                response = y, weights = l, modelmatrix = F, family = family,
-                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-                corrfcn = corrfcn, kappa = kappa,
-                dispersion = dispersion, locations = loc[ii, , drop = FALSE],
-                longlat = longlat, whichobs = ii)
+    Nthin <- 1
+    Nbi <- 0
+###     out <- list(z = zz0, beta = beta, ssq = ssq, phi = phi, omg = omg, nu = nu,
+###                 logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
+###                 Nout = Nout, Nbi = Nbi, Nthin = Nthin,
+###                 response = y, weights = l, modelmatrix = F, family = family,
+###                 betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
+###                 corrfcn = corrfcn, kappa = kappa,
+###                 dispersion = dispersion, locations = loc[ii, , drop = FALSE],
+###                 longlat = longlat, whichobs = ii)
   } else {
     acc <- integer(nch)
     tm <- system.time({
       RUN <- .Fortran("mcspsample", ll = lglk, z = z, z0 = z0,
                       mu = z, mu0 = z0,
                       beta = beta, ssq = ssq,
-                      phi = phi, omg = omg, acc = acc,
+                      phi = phi, omg = omg, kappa = kappa, acc = acc,
                       as.double(y), as.double(l), as.double(F), as.double(F0),
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
-                      as.double(ssqsc), as.double(phipars), as.double(phisc),
-                      as.double(omgpars),
-                      as.double(omgsc), as.double(kappa), as.integer(icf),
+                      as.double(ssqsc), as.double(phipars), as.double(omgpars),
+                      as.double(kappapars),
+                      as.double(phisc), as.double(omgsc), as.double(kappasc),
+                      as.integer(icf),
                       as.double(nu), as.double(dispersion), as.double(dm),
                       as.double(dmdm0), as.integer(nch), as.integer(Nmc),
                       as.integer(Nout), as.integer(Nbi),
@@ -462,21 +446,66 @@ grater than 3.")
     beta <- RUN$beta
     ssq <- RUN$ssq
     phi <- RUN$phi
-    attr(phi, 'fixed') <- phisc == 0
+###    attr(phi, 'fixed') <- phisc == 0
     omg <- RUN$omg
-    attr(omg, 'fixed') <- omgsc == 0
-    attr(nu, 'fixed') <- TRUE
+###    attr(omg, 'fixed') <- omgsc == 0
+###    attr(nu, 'fixed') <- TRUE
+    kappa <- RUN$kappa
     acc_ratio <- RUN$acc/(Nmc*Nthin + max(Nthin, Nbi))
-    out <- list(z = zz0, mu = mm0,
-                beta = beta, ssq = ssq, phi = phi, omg = omg, nu = nu,
-                logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
-                Nout = Nout, Nbi = Nbi, Nthin = Nthin,
-                response = y, weights = l, modelmatrix = F, family = family,
-                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-                corrfcn = corrfcn, kappa = kappa,
-                dispersion = dispersion, locations = loc[ii, , drop = FALSE],
-                longlat = longlat, whichobs = ii)
+###     out <- list(z = zz0, mu = mm0,
+###                 beta = beta, ssq = ssq, phi = phi, omg = omg, nu = nu,
+###                 logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
+###                 Nout = Nout, Nbi = Nbi, Nthin = Nthin,
+###                 response = y, weights = l, modelmatrix = F, family = family,
+###                 betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
+###                 corrfcn = corrfcn, kappa = kappa,
+###                 dispersion = dispersion, locations = loc[ii, , drop = FALSE],
+###                 longlat = longlat, whichobs = ii)
   }
+  MCMC <- FIXED <- MODEL <- DATA <- list()
+  MCMC$z <- zz0
+  MCMC$mu <- mm0
+  MCMC$beta <- beta
+  MCMC$ssq <- ssq
+  FIXED$linkp <- as.vector(linkp)
+  FIXED$linkp_num <- nu
+  if (phisc == 0) {
+    FIXED$phi <- phi[1]
+  } else {
+    MCMC$phi <- phi
+  }
+  if (omgsc == 0) {
+    FIXED$omg <- omg[1]
+  } else {
+    MCMC$omg <- omg
+  }
+  if (kappasc == 0) {
+    FIXED$kappa <- kappa[1]
+  } else {
+    MCMC$kappa <- kappa
+  }
+  MCMC$logLik <- ll
+  MCMC$acc_ratio <- acc_ratio
+  MCMC$sys_time <- tm
+  MCMC$Nout <- Nout
+  MCMC$Nbi <- Nbi
+  MCMC$Nthin <- Nthin
+  MCMC$whichobs <- ii
+  DATA$response <- y
+  DATA$weights <- l
+  DATA$modelmatrix <- F
+  DATA$locations <- loc[ii, , drop = FALSE]
+  DATA$longlat <- longlat
+  MODEL$family <- family
+  MODEL$corrfcn <- corrfcn
+  MODEL$betm0 <- betm0
+  MODEL$betQ0 <- betQ0
+  MODEL$ssqdf <- ssqdf
+  MODEL$ssqsc <- ssqsc
+  MODEL$phipars <- phipars
+  MODEL$omgpars <- omgpars
+  MODEL$dispersion <- dispersion
+  out <- list(MODEL = MODEL, DATA = DATA, FIXED = FIXED, MCMC = MCMC, call = cl)
   class(out) <- "geomcmc"
   out
 }
@@ -502,6 +531,26 @@ grater than 3.")
 ##' observations to be used in the fitting process.
 ##' @param atsample A formula in the form \code{~ x1 + x2 + ... + xd}
 ##' with the coordinates of the sampled locations.
+##' @param corrfcn Spatial correlation function. See
+##' \code{\link{geoBayes_correlation}} for details.
+##' @param linkp Parameter of the link function. A scalar value.
+##' @param phi Optional starting value for the MCMC for the
+##'   spatial range parameter \code{phi}. Defaults to the mean of its
+##'   prior. If \code{corrtuning[["phi"]]} is 0, then this argument is required and
+##'   it corresponds to the fixed value of \code{phi}. This can be a
+##'   vector of the same length as Nout.
+##' @param omg Optional starting value for the MCMC for the
+##'   relative nugget parameter \code{omg}. Defaults to the mean of
+##'   its prior. If \code{corrtuning[["omg"]]} is 0, then this argument is required
+##'   and it corresponds to the fixed value of \code{omg}. This can be
+##'   a vector of the same length as Nout.
+##' @param kappa Optional starting value for the MCMC for the
+##'   spatial correlation parameter \code{kappa} (Matern smoothness or
+##'   exponential power). Defaults to the mean of
+##'   its prior. If \code{corrtuning[["kappa"]]} is 0 and it is needed for
+##'   the chosen correlation function, then this argument is required
+##'   and it corresponds to the fixed value of \code{kappa}. This can be
+##'   a vector of the same length as Nout.
 ##' @param Nout Number of MCMC samples to return. This can be a vector
 ##'   for running independent chains.
 ##' @param Nthin The thinning of the MCMC algorithm.
@@ -519,37 +568,20 @@ grater than 3.")
 ##' prior for the measurement error parameter.
 ##' @param tsqsc Scale for the scaled inverse chi-square prior for the
 ##' measurement error parameter.
-##' @param phipars Parameters for the generalized inverse gamma prior
-##' for the range parameter \code{phi}. A four dimensional vector with
-##' parameters scale, shape, exponent, location in that order. See
-##' \code{\link{mcsglmm}}.
-##' @param omgpars Parameters for the generalized inverse gamma prior
-##' for the relative nugget parameter \code{omg}. A four dimensional
-##' vector with parameters scale, shape, exponent, location in that
-##' order. See \code{\link{mcsglmm}}.
-##' @param corrfcn Spatial correlation function. See
-##' \code{\link{geoBayes_correlation}} for details.
-##' @param kappa Spatial correlation parameter. Smoothness parameter
-##' for Matern, exponent for the power family.
-##' @param linkp The exponent of the Box-Cox transformation.
-##' @param phisc Random walk parameter for \code{phi}. Smaller values
-##' increase the acceptance ratio. Set this to 0 for fixed \code{phi}.
-##' In this case the fixed value is given in the argument
-##' \code{phistart}.
-##' @param omgsc Random walk parameter for \code{omg}. Smaller values
-##' increase the acceptance ratio. Set this to 0 for fixed \code{omg}.
-##' In this case the fixed value is given in the argument
-##' \code{omgstart}.
-##' @param phistart Optional starting value for the MCMC for the
-##'   spatial range parameter \code{phi}. Defaults to the mean of its
-##'   prior. If \code{phisc} is 0, then this argument is required and
-##'   it corresponds to the fixed value of \code{phi}. This can be a
-##'   vector of the same length as Nout.
-##' @param omgstart Optional starting value for the MCMC for the
-##'   relative nugget parameter \code{omg}. Defaults to the mean of
-##'   its prior. If \code{omgsc} is 0, then this argument is required
-##'   and itcorresponds to the fixed value of \code{omg}. This can be
-##'   a vector of the same length as Nout.
+##' @param corrpriors A list with the components \code{phi},
+##'   \code{omg} and \code{kappa} as needed. These correspond to the
+##'   prior distribution parameters. For \code{phi} and \code{omg} it
+##'   must be a vector of length 4. The generalized inverse gamma
+##'   prior is assumed and the input corresponds to the parameters
+##'   scale, shape, exponent, location in that order (see Details).
+##'   For \code{kappa} it must be a vector of length 2. A uniform
+##'   prior is assumed and the input corresponds to the lower and
+##'   upper bounds in that order.
+##' @param corrtuning A vector or list with the components \code{phi},
+##'   \code{omg} and \code{kappa} as needed. These correspond to the
+##'   random walk parameter for the Metropolis-Hastings step. Smaller values
+##'   increase the acceptance ratio. Set this to 0 for fixed
+##'   parameter value.
 ##' @param longlat How to compute the distance between locations. If
 ##' \code{FALSE}, Euclidean distance, if \code{TRUE} Great Circle
 ##' distance. See \code{\link[sp]{spDists}}.
@@ -560,8 +592,9 @@ grater than 3.")
 ##' \code{omgsc} parameters in order to achive 20 to 30\% acceptance.
 ##' Set this to a positive number to change the default 100. No
 ##' thinning or burn-in are done when testing.
-##' @return A list containing the MCMC samples and other variables as
-##' follows:
+##' @return A list containing the objects \code{MODEL}, \code{DATA},
+##'   \code{FIXED}, \code{MCMC} and \code{call}. The MCMC samples are
+##'   stored in the object \code{MCMC} as follows:
 ##' \itemize{
 ##'  \item \code{z} A matrix containing the MCMC samples for the
 ##' spatial random field. Each column is one sample.
@@ -574,35 +607,19 @@ grater than 3.")
 ##'  \item \code{tsq} A vector with the MCMC samples for the
 ##' measurement error variance.
 ##'  \item \code{phi} A vector with the MCMC samples for the spatial
-##' range parameter.
+##' range parameter, if sampled.
 ##'  \item \code{omg} A vector with the MCMC samples for the relative
-##' nugget parameter.
-##'  \item \code{nu} The link function parameter translated to
-##' numeric code used internally.
+##' nugget parameter, if sampled.
 ##'  \item \code{logLik} A vector containing the value of the
 ##' log-likelihood evaluated at each sample.
 ##'  \item \code{acc_ratio} The acceptance ratio for the joint update
-##' of the parameters \code{phi} and \code{omg}.
+##' of the parameters \code{phi} and \code{omg}, if sampled.
 ##'  \item \code{sys_time} The total computing time for the MCMC sampling.
 ##'  \item \code{Nout}, \code{Nbi},  \code{Nthin} As in input. Used
 ##' internally in other functions.
-##'  \item \code{response} The average of the response variable at the
-##' observed locations, i.e. its value divided by the corresponding
-##' weight. Used internally in other functions.
-##'  \item \code{weights} The response weights at the observed
-##' locations. Used internally in other functions.
-##'  \item \code{modelmatrix} The model matrix at the observed
-##' locations. Used internally in other functions.
-##'  \item \code{family} As in input. Used internally in other functions.
-##'  \item \code{betm0}, \code{betQ0}, \code{ssqdf}, \code{ssqsc},
-##' \code{corrfcn}, \code{kappa}, \code{tsqdf}, \code{tsqsc} As in
-##' input. Used internally in other functions.
-##'  \item \code{locations} Coordinates of the observed locations.
-##' Used internally in other functions.
-##'  \item \code{whichobs} A logical vector indicated which rows in
-##' the data and in the MCMC samples for the spatial random field
-##' correspond to the observed locations.
 ##' }
+##' The other objects contain input variables. The object \code{call}
+##'   contains the function call.
 ##' @examples \dontrun{
 ##' ### Load the data
 ##' data(rhizoctonia)
@@ -635,19 +652,12 @@ grater than 3.")
 ##'                   Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
 ##'                   ssqdf = ssqdf, ssqsc = ssqsc,
 ##'                   tsqdf = tsqdf, tsqsc = tsqsc,
-##'                   phipars = phiprior, omgpars = omgprior,
+##'                   corrprior = list(phi = phiprior, omg = omgprior),
 ##'                   linkp = linkp,
-##'                   phisc = phisc, omgsc = omgsc, test=10)
+##'                   corrtuning = list(phi = phisc, omg = omgsc, kappa = 0),
+##'                   test=10)
 ##'
-##' sample <- mcstrga(Yield ~ IR, data = rhiz,
-##'                   atsample = ~ Xcoord + Ycoord, corrf = corrf,
-##'                   Nout = Nout, Nthin = Nthin,
-##'                   Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
-##'                   ssqdf = ssqdf, ssqsc = ssqsc,
-##'                   tsqdf = tsqdf, tsqsc = tsqsc,
-##'                   phipars = phiprior, omgpars = omgprior,
-##'                   linkp = linkp,
-##'                   phisc = phisc, omgsc = omgsc, test=FALSE)
+##' sample <- update(samplt, test = FALSE)
 ##' }
 ##' @importFrom sp spDists
 ##' @importFrom stats model.matrix model.response model.weights
@@ -655,20 +665,21 @@ grater than 3.")
 ##' @useDynLib geoBayes trgasamtry trgasample
 ##' @export
 mcstrga <- function (formula,
-                     data, weights, subset, atsample,
+                     data, weights, subset, atsample, corrfcn = "matern",
+                     linkp, phi, omg, kappa,
                      Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc,
-                     tsqdf, tsqsc, phipars, omgpars,
-                     corrfcn = "matern",
-                     kappa, linkp, phisc, omgsc,
-                     phistart, omgstart, longlat = FALSE,
+                     tsqdf, tsqsc,
+                     corrpriors, corrtuning,
+                     longlat = FALSE,
                      test = FALSE) {
+  cl <- match.call()
 
   family <- "transformed.gaussian"
 
   ## Correlation function
   icf <- .geoBayes_correlation(corrfcn)
   corrfcn <- .geoBayes_corrfcn$corrfcn[icf]
-  kappa <- .geoBayes_getkappa(kappa, icf)
+  needkappa <- .geoBayes_corrfcn$needkappa[icf]
 
   ## Design matrix and data
   if (missing(data)) data <- environment(formula)
@@ -736,27 +747,9 @@ grater than 3.")
   if (ssqsc <= 0) stop ("Argument ssqsc must > 0")
 
   ## Prior for beta
-  if (all(is.finite(betQ0[upper.tri(betQ0)]))) {
-    if (length(betQ0) == 1 && betQ0[1] == 0) {
-      ## Uniform prior
-      betQ0 <- matrix(0, p, p)
-      betm0 <- rep(0, p)
-    } else if (length(betQ0) == 1 || length(betQ0) == p) {
-      if (any(betQ0 <= 0)) stop ('betQ0 not > 0')
-      betQ0 <- diag(betQ0, p, p)
-      betm0 <- rep(as.double(betm0), length.out = p)
-      modeldf <- as.double(k + ssqdf)
-    } else if (length(betQ0) == p*p) {
-      betQ0 <- matrix(as.double(betQ0), p, p)
-      betQ0[lower.tri(betQ0)] <- 0
-      betQ0eig <- eigen(t(betQ0), 1, 1)$values
-      if (any (betQ0eig < sqrt(.Machine$double.eps))) {
-        stop ('betQ0 not > 0 within tolerance')
-      }
-      betm0 <- rep(as.double(betm0), length.out = p)
-      modeldf <- as.double(k + ssqdf)
-    } else stop ('Bad betQ0')
-  } else stop ('Non-finite betQ0')
+  betaprior <- getbetaprior(betm0, betQ0, p)
+  betm0 <- betaprior$betm0
+  betQ0 <- betaprior$betQ0
 
   ## Prior for tsq
   tsqdf <- as.double(tsqdf)
@@ -764,39 +757,9 @@ grater than 3.")
   tsqsc <- as.double(tsqsc)
   if (tsqsc <= 0) stop ("Argument tsqsc must > 0")
 
-  ## phi and omg
-  phisc <- as.double(phisc)
-  if (phisc < 0) stop ("Argument phisc must be non-negative")
-  omgsc <- as.double(omgsc)
-  if (omgsc < 0) stop ("Argument omgsc must be non-negative")
-  if (phisc > 0) {
-    if (missing(phipars)) stop ("Argument phipars not provided")
-    phipars <- as.double(phipars)
-    if (length(phipars) != 4) {
-      stop ("Argument phipars must be a vector of length 4")
-    }
-    if (!all(is.finite(phipars))) stop ("Non-finite values in phipars")
-    if (phipars[1] <= 0 || phipars[4] < 0 || phipars[2]*phipars[3] <= 0) {
-      stop ("Invalid values in phipars")
-    }
-  } else {
-    phipars <- rep.int(0, 4)
-  }
-  if (omgsc > 0) {
-    if (missing(omgpars)) stop ("Argument omgpars not provided")
-    omgpars <- as.double(omgpars)
-    if (length(omgpars) != 4) {
-      stop ("Argument omgpars must be a vector of length 4")
-    }
-    if (!all(is.finite(omgpars))) stop ("Non-finite values in omgpars")
-    if (any(omgpars[1:3] <= 0) || omgpars[4] < 0) {
-      stop ("Invalid values in omgpars")
-    }
-  } else {
-    omgpars <- rep.int(0, 4)
-  }
-
-  nu <- as.double(linkp)
+  if (missing(linkp))
+    stop ("Missing input linkp.")
+  nu <- .geoBayes_getlinkp(linkp, family)
 
   ## MCMC samples
   Nout <- as.integer(Nout)
@@ -806,20 +769,22 @@ grater than 3.")
   Nout <- sum(Nout)           # Total MCMC size
   Nbi <- as.integer(Nbi)
   Nthin <- as.integer(Nthin)
+  lglk <- numeric(Nout)
   z <- matrix(0, k, Nout)
   z0 <- matrix(0, k0, Nout)
   beta <- matrix(0, p, Nout)
-  ssq <- numeric(Nout)
-  tsq <- numeric(Nout)
-  phi <- numeric(Nout)
-  omg <- numeric(Nout)
-  acc <- 0L
-  lglk <- numeric(Nout)
+  ssq <- tsq <- numeric(Nout)
 
-  ## Starting values
-  if (missing(phistart)) {
+  ## Starting values for correlation parameters
+  phisc <- corrtuning[["phi"]]
+  if (is.null(phisc) || !is.numeric(phisc) || phisc < 0)
+    stop ("Invalid tuning parameter for phi.")
+  if (phisc > 0) {
+    phipars <- check_gengamma_prior(corrpriors[["phi"]])
+  } else phipars <- rep.int(0, 4)
+  if (missing(phi)) {
     if (phisc == 0) {
-      stop ("Argument phistart needed for fixed phi")
+      stop ("Argument phi needed for fixed phi")
     } else {
       if(phipars[2] == -1) {
         tmp <- .1/abs(phipars[3])
@@ -830,12 +795,23 @@ grater than 3.")
         gamma(phipars[2]/phipars[3])
     }
   } else {
-    phistart <- as.double(phistart)
+    phistart <- as.double(phi)
+    if (phisc > 0 && phistart <= phipars[4]) {
+      stop ("Starting value for phi not in the support of its prior")
+    }
   }
+  phi <- numeric(Nout)
   phi[cumsum(c(1, Nmc[-nch]))] <- phistart
-  if (missing(omgstart)) {
+
+  omgsc <- corrtuning[["omg"]]
+  if (is.null(omgsc) || !is.numeric(omgsc) || omgsc < 0)
+    stop ("Invalid tuning parameter for omg.")
+  if (omgsc > 0) {
+    omgpars <- check_gengamma_prior(corrpriors[["omg"]])
+  } else omgpars <- rep.int(0, 4)
+  if (missing(omg)) {
     if (omgsc == 0) {
-      stop ("Argument omgstart needed for fixed omg")
+      stop ("Argument omg needed for fixed omg")
     } else {
       if(omgpars[2] == -1) {
         tmp <- .1/abs(omgpars[3])
@@ -846,23 +822,59 @@ grater than 3.")
         gamma(omgpars[2]/omgpars[3])
     }
   } else {
-    omgstart <- as.double(omgstart)
+    omgstart <- as.double(omg)
+    if (omgsc > 0 && omgstart <= omgpars[4]) {
+      stop ("Starting value for omg not in the support of its prior")
+    }
   }
+  omg <- numeric(Nout)
   omg[cumsum(c(1, Nmc[-nch]))] <- omgstart
+
+  if (needkappa) {
+    kappasc <- corrtuning[["kappa"]]
+  } else {
+    kappasc <- 0
+    kappa <- 0
+  }
+  if (is.null(kappasc) || !is.numeric(kappasc) || kappasc < 0)
+    stop ("Invalid tuning parameter for kappa.")
+  if (kappasc > 0) {
+    kappapars <- check_unif_prior(corrpriors[["kappa"]])
+  } else kappapars <- c(0, 0)
+  if (missing(kappa)) {
+    if (kappasc == 0) {
+      stop ("Argument kappa needed for fixed kappa")
+    } else {
+      kappastart <- (kappapars[1] + kappapars[2])*.5
+    }
+  } else {
+    kappastart <- as.double(kappa)
+  }
+  if (kappasc > 0) {
+    kappastart <- .geoBayes_getkappa(kappastart, icf)
+    kappapars <- .geoBayes_getkappa(kappapars, icf)
+    if (kappastart >= kappapars[2] || kappastart <= kappapars[1]) {
+      stop ("Starting value for kappa not in the support of its prior")
+    }
+  }
+  kappa <- numeric(Nout)
+  kappa[cumsum(c(1, Nmc[-nch]))] <- kappastart
 
   ## Run code
   if (test > 0) { # Running a test
     if (is.logical(test)) test <- 100
     test <- as.integer(test)
+    acc <- 0L
     tm <- system.time({
       RUN <- .Fortran("trgasamtry", ll = lglk, z = z, phi = phi, omg = omg,
-                      acc = acc,
+                      kappa = kappa, acc = acc,
                       as.double(ybar), as.double(l), as.double(F),
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
                       as.double(ssqsc), as.double(tsqdf), as.double(tsqsc),
-                      as.double(phipars),
-                      as.double(phisc), as.double(omgpars), as.double(omgsc),
-                      as.double(kappa), as.integer(icf),
+                      as.double(phipars), as.double(omgpars),
+                      as.double(kappapars),
+                      as.double(phisc), as.double(omgsc),
+                      as.double(kappasc), as.integer(icf),
                       as.double(nu), as.double(dm), as.integer(Nout),
                       as.integer(test), as.integer(k), as.integer(p),
                       PACKAGE = "geoBayes")
@@ -871,37 +883,43 @@ grater than 3.")
     ll <- RUN$ll
     zz0 <- matrix(NA, NROW(yy), Nout)
     zz0[ii, ] <- RUN$z
+    mm0 <- NULL
     beta <- NULL
     ssq <- NULL
     phi <- RUN$phi
-    attr(phi, 'fixed') <- phisc == 0
+###     attr(phi, 'fixed') <- phisc == 0
     omg <- RUN$omg
-    attr(omg, 'fixed') <- omgsc == 0
-    attr(nu, 'fixed') <- TRUE
+###     attr(omg, 'fixed') <- omgsc == 0
+###     attr(nu, 'fixed') <- TRUE
+    kappa <- RUN$kappa
     acc_ratio <- RUN$acc/Nout
-    out <- list(z = zz0, beta = beta, ssq = ssq, phi = phi, omg = omg, nu = nu,
-                logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
-                Nout = Nout, Nbi = Nbi, Nthin = Nthin,
-                response = y, weights = l, modelmatrix = F, family = family,
-                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-                corrfcn = corrfcn, kappa = kappa,
-                tsqdf = tsqdf, tsqsc = tsqsc,
-                locations = loc[ii, , drop = FALSE],
-                longlat = longlat, whichobs = ii)
+    Nthin <- 1
+    Nbi <- 0
+###     out <- list(z = zz0, beta = beta, ssq = ssq, phi = phi, omg = omg, nu = nu,
+###                 logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
+###                 Nout = Nout, Nbi = Nbi, Nthin = Nthin,
+###                 response = y, weights = l, modelmatrix = F, family = family,
+###                 betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
+###                 corrfcn = corrfcn, kappa = kappa,
+###                 tsqdf = tsqdf, tsqsc = tsqsc,
+###                 locations = loc[ii, , drop = FALSE],
+###                 longlat = longlat, whichobs = ii)
   } else {
     acc <- integer(nch)
     tm <- system.time({
       RUN <- .Fortran("trgasample", ll = lglk, z = z, z0 = z0,
                       mu = z, mu0 = z0, beta = beta, ssq = ssq,
-                      tsq = tsq, phi = phi, omg = omg, acc = acc,
+                      tsq = tsq, phi = phi, omg = omg,
+                      kappa = kappa, acc = acc,
                       as.double(ybar),
                       as.double(l), as.double(F), as.double(F0),
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
                       as.double(ssqsc), as.double(tsqdf), as.double(tsqsc),
-                      as.double(phipars), as.double(phisc),
-                      as.double(omgpars), as.double(omgsc), as.double(kappa),
+                      as.double(phipars), as.double(omgpars),
+                      as.double(kappapars),
+                      as.double(phisc), as.double(omgsc), as.double(kappasc),
                       as.integer(icf),
-                      as.double(linkp), as.double(dm), as.double(dmdm0),
+                      as.double(nu), as.double(dm), as.double(dmdm0),
                       as.integer(nch), as.integer(Nmc),
                       as.integer(Nout), as.integer(Nbi), as.integer(Nthin),
                       as.integer(k), as.integer(k0), as.integer(p),
@@ -918,22 +936,69 @@ grater than 3.")
     ssq <- RUN$ssq
     tsq <- RUN$tsq
     phi <- RUN$phi
-    attr(phi, 'fixed') <- phisc == 0
+###     attr(phi, 'fixed') <- phisc == 0
     omg <- RUN$omg
-    attr(omg, 'fixed') <- omgsc == 0
-    attr(nu, 'fixed') <- TRUE
+###     attr(omg, 'fixed') <- omgsc == 0
+###     attr(nu, 'fixed') <- TRUE
+    kappa <- RUN$kappa
     acc_ratio <- RUN$acc/(Nmc*Nthin + max(Nthin, Nbi))
-    out <- list(z = zz0, mu = mm0, beta = beta, ssq = ssq, tsq = tsq,
-                phi = phi, omg = omg, nu = nu,
-                logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
-                Nout = Nout, Nbi = Nbi, Nthin = Nthin,
-                response = ybar, weights = l, modelmatrix = F, family = family,
-                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-                corrfcn = corrfcn, kappa = kappa,
-                tsqdf = tsqdf, tsqsc = tsqsc,
-                locations = loc[ii, , drop = FALSE],
-                longlat = longlat, whichobs = ii)
+###     out <- list(z = zz0, mu = mm0, beta = beta, ssq = ssq, tsq = tsq,
+###                 phi = phi, omg = omg, nu = nu,
+###                 logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
+###                 Nout = Nout, Nbi = Nbi, Nthin = Nthin,
+###                 response = ybar, weights = l, modelmatrix = F, family = family,
+###                 betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
+###                 corrfcn = corrfcn, kappa = kappa,
+###                 tsqdf = tsqdf, tsqsc = tsqsc,
+###                 locations = loc[ii, , drop = FALSE],
+###                 longlat = longlat, whichobs = ii)
   }
+  MCMC <- FIXED <- MODEL <- DATA <- list()
+  MCMC$z <- zz0
+  MCMC$mu <- mm0
+  MCMC$beta <- beta
+  MCMC$ssq <- ssq
+  MCMC$tsq <- tsq
+  FIXED$linkp <- linkp
+  FIXED$linkp_num <- nu
+  if (phisc == 0) {
+    FIXED$phi <- phi[1]
+  } else {
+    MCMC$phi <- phi
+  }
+  if (omgsc == 0) {
+    FIXED$omg <- omg[1]
+  } else {
+    MCMC$omg <- omg
+  }
+  if (kappasc == 0) {
+    FIXED$kappa <- kappa[1]
+  } else {
+    MCMC$kappa <- kappa
+  }
+  MCMC$logLik <- ll
+  MCMC$acc_ratio <- acc_ratio
+  MCMC$sys_time <- tm
+  MCMC$Nout <- Nout
+  MCMC$Nbi <- Nbi
+  MCMC$Nthin <- Nthin
+  MCMC$whichobs <- ii
+  DATA$response <- ybar
+  DATA$weights <- l
+  DATA$modelmatrix <- F
+  DATA$locations <- loc[ii, , drop = FALSE]
+  DATA$longlat <- longlat
+  MODEL$family <- family
+  MODEL$corrfcn <- corrfcn
+  MODEL$betm0 <- betm0
+  MODEL$betQ0 <- betQ0
+  MODEL$ssqdf <- ssqdf
+  MODEL$ssqsc <- ssqsc
+  MODEL$tsqdf <- tsqdf
+  MODEL$tsqsc <- tsqsc
+  MODEL$phipars <- phipars
+  MODEL$omgpars <- omgpars
+  out <- list(MODEL = MODEL, DATA = DATA, FIXED = FIXED, MCMC = MCMC, call = cl)
   class(out) <- "geomcmc"
   out
 }
@@ -946,7 +1011,7 @@ grater than 3.")
 ##' returns an \code{\link[coda]{mcmc}} object or an
 ##' \code{\link[coda]{mcmc.list}} object for coda. The function
 ##' requires the \code{coda} package to be installed.
-
+##'
 ##' The spatial random field components are assigned the names
 ##' \code{z_*} where \code{*} is a number beginning at 1. Similarly,
 ##' the regressor coefficients are assigned the names \code{beta_*} if
@@ -958,13 +1023,12 @@ grater than 3.")
 ##' @param ... Output(s) from the functions mentioned in the Details.
 ##' @return An mcmc object.
 ##' @examples \dontrun{
-##' ### Load the data
+##'  ### Load the data
 ##' data(rhizoctonia)
 ##' rhiz <- na.omit(rhizoctonia)
 ##' rhiz$IR <- rhiz$Infected/rhiz$Total # Incidence rate of the
 ##'                               # rhizoctonia disease
-##'
-##' ### Define the model
+##'  ### Define the model
 ##' corrf <- "spherical"
 ##' ssqdf <- 1
 ##' ssqsc <- 1
@@ -977,23 +1041,21 @@ grater than 3.")
 ##' omgprior <- c(3, 1, 1000, 0) # U(0, 3)
 ##' omgsc <- 1.3
 ##' linkp <- 1
-##'
 ##' ## MCMC parameters
 ##' Nout <- 100
 ##' Nbi <- 0
 ##' Nthin <- 1
-##'
-##' ### Run MCMC
+##'  ### Run MCMC
 ##' sample <- mcstrga(Yield ~ IR, data = rhiz,
 ##'                   atsample = ~ Xcoord + Ycoord, corrf = corrf,
 ##'                   Nout = Nout, Nthin = Nthin,
 ##'                   Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
 ##'                   ssqdf = ssqdf, ssqsc = ssqsc,
 ##'                   tsqdf = tsqdf, tsqsc = tsqsc,
-##'                   phipars = phiprior, omgpars = omgprior,
 ##'                   linkp = linkp,
-##'                   phisc = phisc, omgsc = omgsc, test=FALSE)
-##'
+##'                   corrprior = list(phi = phiprior, omg = omgprior), 
+##'                   corrtuning = list(phi = phisc, omg = omgsc, kappa = 0),
+##'                   test = FALSE)
 ##' mcsample <- mcmcmake(sample)
 ##' plot(mcsample[, c("phi", "omg", "beta_1", "beta_2", "ssq", "tsq")],
 ##'      density = FALSE)
@@ -1009,36 +1071,29 @@ mcmcmake <- function (...) {
   ### This function takes as input the output from function mcmcrun
   ### and returns an mcmc object or an mcmc.list object for coda. The
   ### function requires the coda package to be installed.
-  varnm <- function(x,prefix) {
-    # Function to determine variable name.
-    if (is.null(x)) return ()
-    dx <- dim(x)
-    if (length(dx) >= 2) {
-      dnmx2 <- dimnames(x)[[2]]
-      if (is.null(dnmx2)) {
-        out <- if (dx[2] > 1) paste(prefix,'_',seq(dx[2]),sep='') else prefix
-      } else {
-        out <- dnmx2
-      }
-    } else out <- prefix
-    out
-  }
-  vnm <- c('z','beta','ssq','tsq','phi','omg')
+  vnm <- c('z','beta','ssq','tsq','phi','omg', 'kappa')
   input <- list(...)
   nruns <- length(input)
   mcl <- list(); length(mcl) <- nruns
   for (j in seq_len(nruns)) {
-    chain <- input[[j]][vnm]
+    chain <- input[[j]]$MCMC[vnm]
     names(chain) <- vnm
     if (is.matrix(chain$z)) chain$z <- t(chain$z)
-    if (is.matrix(chain$z0)) chain$z0 <- t(chain$z0)
+    if(isTRUE(ncol(chain$z) > 1)) {
+      colnames(chain$z) <- paste0('z_', 1:ncol(chain$z))
+    } else {
+      chain$z <- as.vector(chain$z)
+    }
     if (is.matrix(chain$beta)) chain$beta <- t(chain$beta)
-    dnm <- unlist(sapply(seq_along(vnm),function(i) varnm(chain[[i]],vnm[i])))
-    thin <- max(1, input[[j]]$Nthin)
-    start <- max(thin, input[[j]]$Nbi)
-    mcl[[j]] <- coda::mcmc(matrix(unlist(chain),ncol = length(dnm),
-                                  dimnames = list(NULL,dnm)),
-                           start = start, thin = thin)
+    if(isTRUE(ncol(chain$beta) > 1)) {
+      colnames(chain$beta) <- paste0('beta_', 1:ncol(chain$beta))
+    } else {
+      chain$beta <- as.vector(chain$beta)
+    }
+    chain <- do.call("cbind", chain)
+    thin <- max(1, input[[j]]$MCMC$Nthin)
+    start <- max(thin, input[[j]]$MCMC$Nbi) + 1
+    mcl[[j]] <- coda::mcmc(chain, start = start, thin = thin)
   }
   if (nruns == 1) {
     return (mcl[[1]])
@@ -1062,15 +1117,15 @@ subset.geomcmc <- function (x, subset, ...) {
   if (class(x) != "geomcmc") stop ("Wrong class of object x.")
   subset <- as.vector(subset)
   if (is.logical(subset)) subset <- subset & !is.na(subset)
-  nm_vec <- c("ssq", "phi", "omg", "logLik")
+  nm_vec <- c("ssq", "tsq", "phi", "omg", "kappa", "logLik")
   nm_mat <- c("z", "mu", "beta")
   out <- x
   for (nm in nm_vec) {
-    out[[nm]] <- x[[nm]][subset]
+    out$MCMC[[nm]] <- x$MCMC[[nm]][subset]
   }
   for (nm in nm_mat) {
-    out[[nm]] <- x[[nm]][, subset, drop = FALSE]
+    out$MCMC[[nm]] <- x$MCMC[[nm]][, subset, drop = FALSE]
   }
-  out$Nout <- length(out[[nm_vec[1]]])
+  out$MCMC$Nout <- length(out$MCMC[[nm_vec[1]]])
   out
 }

@@ -1,6 +1,6 @@
 
 !! Sample z0 many times when the covariance parameters change.
-subroutine mcspz0mc (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
+subroutine mcspz0mc (z0, Ns, z, beta, ssq, phi, omg, F, F0, &
    betQ0, kappa, icf, dm, dmdm0, Nout, n, n0, p)
 
   use interfaces, only: rngini, rngend, randnorm
@@ -9,7 +9,7 @@ subroutine mcspz0mc (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
   integer, intent(in) :: Nout, n, n0, p, icf, Ns
   double precision, intent(in) :: F(n,p), F0(n0,p), &
      dm(n,n), dmdm0(n,n0), betQ0(p,p), kappa, ssq(Nout), &
-     z(n,Nout), phi(Nout), nsq(Nout), beta(p, Nout)
+     z(n,Nout), phi(Nout), omg(Nout), beta(p, Nout)
   double precision, intent(out) :: z0(n0, Ns, Nout)
   integer i, j, k
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
@@ -21,9 +21,9 @@ subroutine mcspz0mc (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
   do i = 1, Nout
     call rchkusr
     ! Compute covariance
-    call calc_cov (phi(i),nsq(i),dm,F,betQ0, &
+    call calc_cov (phi(i),omg(i),dm,F,betQ0, &
        kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
-    call calc_cov_pred(z0_ups, TC, FCTF, phi(i), nsq(i), dmdm0, F, &
+    call calc_cov_pred(z0_ups, TC, FCTF, phi(i), omg(i), dmdm0, F, &
        F0, kappa,  T, n, n0, p)
     call dgemv ('t',n,n0,1d0,TC,n,z,1,0d0,z0_mean,1) ! z0_mean = C'*T^{-1}*z
     call dgemv ('n',n0,p,1d0,FCTF,n0,beta(:,i),1,1d0,z0_mean,1) ! + (F0-C'T^-1F)*b
@@ -38,7 +38,7 @@ subroutine mcspz0mc (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
 end subroutine mcspz0mc
 
 !! Sample z0 many times when the covariance parameters are the same.
-subroutine mcspz0eb (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
+subroutine mcspz0eb (z0, Ns, z, beta, ssq, phi, omg, F, F0, &
    betQ0, kappa, icf, dm, dmdm0, Nout, n, n0, p)
 
   use interfaces, only: rngini, rngend, randnorm
@@ -47,7 +47,7 @@ subroutine mcspz0eb (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
   integer, intent(in) :: Nout, n, n0, p, icf, Ns
   double precision, intent(in) :: F(n,p), F0(n0,p), &
      dm(n,n), dmdm0(n,n0), betQ0(p,p), kappa, ssq(Nout), &
-     z(n,Nout), phi, nsq, beta(p, Nout)
+     z(n,Nout), phi, omg, beta(p, Nout)
   double precision, intent(out) :: z0(n0, Ns, Nout)
   integer i, j, k
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
@@ -58,9 +58,9 @@ subroutine mcspz0eb (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
 
   call rngini
   ! Compute covariance
-  call calc_cov (phi,nsq,dm,F,betQ0, &
+  call calc_cov (phi,omg,dm,F,betQ0, &
      kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
-  call calc_cov_pred(z0_ups, TC, FCTF, phi, nsq, dmdm0, F, &
+  call calc_cov_pred(z0_ups, TC, FCTF, phi, omg, dmdm0, F, &
      F0, kappa,  T, n, n0, p)
   call dgemv ('t',n,n0,1d0,TC,n,z,1,0d0,z0_mfix,1) ! z0_mean = C'*T^{-1}*z
   do i = 1, Nout
@@ -78,7 +78,7 @@ subroutine mcspz0eb (z0, Ns, z, beta, ssq, phi, nsq, F, F0, &
 end subroutine mcspz0eb
 
 
-subroutine DICmc (DIC, y, l, Ns, z, beta, ssq, phi, nsq, nu, F, F0, &
+subroutine DICmc (DIC, y, l, Ns, z, beta, ssq, phi, omg, nu, F, F0, &
    kappa, icf, tsq, respdfh, dm, dm0, dmdm0, ifam, Nout, n, n0, p)
 
   ! tsq is tsqdfsc for transformed gaussian
@@ -92,12 +92,12 @@ subroutine DICmc (DIC, y, l, Ns, z, beta, ssq, phi, nsq, nu, F, F0, &
   integer, intent(in) :: Nout, n, n0, p, icf, Ns, ifam
   double precision, intent(in) :: y(n0), l(n0), F(n,p), F0(n0,p), &
      dm(n,n), dm0(n0,n0), dmdm0(n,n0), kappa, ssq(Nout), &
-     z(n,Nout), phi(Nout), nsq(Nout), beta(p,Nout), nu, tsq, respdfh
+     z(n,Nout), phi(Nout), omg(Nout), beta(p,Nout), nu, tsq, respdfh
   double precision, intent(out) :: DIC
   integer i, j, k
   logical lup(n,n), lup0(n0,n0)
   double precision T(n,n), TC(n,n0), z0_mean(n0), u(n0), &
-     z0(n0), Dy, T0(n0,n0), nsqp1, cnt, ssqrt, zz(n), alphz, alphz0
+     z0(n0), Dy, T0(n0,n0), omgp1, cnt, ssqrt, zz(n), alphz, alphz0
 
   call create_spcor(icf,0)
 
@@ -130,17 +130,17 @@ subroutine DICmc (DIC, y, l, Ns, z, beta, ssq, phi, nsq, nu, F, F0, &
   do i = 1, Nout
     call rchkusr
     ! Compute covariance
-    nsqp1 = nsq(i) + 1d0
+    omgp1 = omg(i) + 1d0
     T = dm
     call covmat (T, phi(i), kappa, n, n, lup)
     do k = 1, n
-      T(k, k) = nsqp1
+      T(k, k) = omgp1
     end do
     call dpotrf ('u', n, T, n, j)
     T0 = dm0
     call covmat (T0, phi(i), kappa, n0, n0, lup0)
     do k = 1, n0
-      T0(k, k) = nsqp1
+      T0(k, k) = omgp1
     end do
     TC = dmdm0
     call covmat (TC, phi(i), kappa, n, n0)
@@ -179,7 +179,7 @@ subroutine DICmc (DIC, y, l, Ns, z, beta, ssq, phi, nsq, nu, F, F0, &
 end subroutine DICmc
 
 
-subroutine DICeb (DIC, y, l, Ns, z, beta, ssq, phi, nsq, nu, F, F0, &
+subroutine DICeb (DIC, y, l, Ns, z, beta, ssq, phi, omg, nu, F, F0, &
    kappa, icf, tsq, respdfh, dm, dm0, dmdm0, ifam, Nout, n, n0, p)
 
   ! tsq is tsqdfsc for transformed gaussian
@@ -193,12 +193,12 @@ subroutine DICeb (DIC, y, l, Ns, z, beta, ssq, phi, nsq, nu, F, F0, &
   integer, intent(in) :: Nout, n, n0, p, icf, Ns, ifam
   double precision, intent(in) :: y(n0), l(n0), F(n,p), F0(n0,p), &
      dm(n,n), dm0(n0,n0), dmdm0(n,n0), kappa, ssq(Nout), &
-     z(n,Nout), phi, nsq, beta(p,Nout), nu, tsq, respdfh
+     z(n,Nout), phi, omg, beta(p,Nout), nu, tsq, respdfh
   double precision, intent(out) :: DIC
   integer i, j, k
   logical lup(n,n), lup0(n0,n0)
   double precision T(n,n), TC(n,n0), z0_mean(n0), u(n0), &
-     z0(n0), Dy, T0(n0,n0), nsqp1, cnt, zz(n), ssqrt, alphz, alphz0
+     z0(n0), Dy, T0(n0,n0), omgp1, cnt, zz(n), ssqrt, alphz, alphz0
 
   call create_spcor(icf,0)
 
@@ -229,17 +229,17 @@ subroutine DICeb (DIC, y, l, Ns, z, beta, ssq, phi, nsq, nu, F, F0, &
   call rngini
 
   ! Compute covariance
-  nsqp1 = nsq + 1d0
+  omgp1 = omg + 1d0
   T = dm
   call covmat (T, phi, kappa, n, n, lup)
   do k = 1, n
-    T(k, k) = nsqp1
+    T(k, k) = omgp1
   end do
   call dpotrf ('u', n, T, n, j)
   T0 = dm0
   call covmat (T0, phi, kappa, n0, n0, lup0)
   do k = 1, n0
-    T0(k, k) = nsqp1
+    T0(k, k) = omgp1
   end do
   TC = dmdm0
   call covmat (TC, phi, kappa, n, n0)

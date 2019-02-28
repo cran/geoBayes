@@ -2,7 +2,7 @@
 ##'
 ##' Uses the batch means method to compute the standard errors for
 ##' Bayes factors.
-##' @title Computation of standard errors for Bayes factors
+##' @title Batch means, Bayes factors standard errors
 ##' @param pargrid A data frame with components "linkp", "phi", "omg",
 ##'   "kappa". Each row gives a combination of the parameters to
 ##'   compute the new standard errors.
@@ -48,12 +48,16 @@
 ##' @references Roy, V., Tan, A. and Flegal, J. (2018). Estimating
 ##'   standard errors for importance sampling estimators with multiple
 ##'   Markov chains, Statistica Sinica, 28 1079-1101.
+##'
+##' Roy, V., & Evangelou, E. (2018). Selection of proposal
+##'   distributions for generalized importance sampling estimators.
+##'   arXiv preprint arXiv:1805.00829. 
 ##' @useDynLib geoBayes bfse_no bfse_mu bfse_wo bfse_tr
 ##' @export
-bfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
-                 method = c("RL", "MW"),
-                 bvmethod = c("Standard", "TukeyHanning", "Bartlett"),
-                 reference = 1, transf = c("no", "mu", "wo"))
+bmbfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
+                   method = c("RL", "MW"),
+                   bvmethod = c("Standard", "TukeyHanning", "Bartlett"),
+                   reference = 1, transf = c("no", "mu", "wo"))
 {
   ## Method
   method <- match.arg(method)
@@ -75,42 +79,63 @@ bfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
     stop("Argument reference does not correspond to a run in runs")
   }
 
-  ## Extract model
-  modelvars <- c("response", "weights", "modelmatrix", "family",
-                 "betm0", "betQ0", "ssqdf", "ssqsc",
-                 "dispersion", "tsqdf", "tsqsc", "locations",
-                 "longlat", "corrfcn")
-  models <- lapply(runs, "[", modelvars)
-  model <- models[[1]]
-  if (nruns > 1 && !all(sapply(models[2:nruns], identical, model))) {
-    stop("MCMC chains don't all correspond to the same model")
+  ## Check if fixed phi and omg
+  if (!all(sapply(runs, function(x) length(x$FIXED$phi) == 1))) {
+    stop("Each input runs must have a fixed value phi.")
   }
-  y <- model$response
-  n <- length(y)
-  l <- model$weights
-  F <- model$modelmatrix
-  p <- NCOL(F)
-  family <- model$family
-  ifam <- .geoBayes_family(family)
-  betm0 <- model$betm0
-  betQ0 <- model$betQ0
-  ssqdf <- model$ssqdf
-  ssqsc <- model$ssqsc
-  dispersion <- model$dispersion
-  tsqdf <- model$tsqdf
-  tsqsc <- model$tsqsc
-  corrfcn <- model$corrfcn
-  icf <- .geoBayes_correlation(corrfcn)
+  if (!all(sapply(runs, function(x) length(x$FIXED$omg) == 1))) {
+    stop("Each input runs must have a fixed value omg.")
+  }
 
-  ## Extract the parameters from the simulated models
-  phi_pnts <- sapply(runs, function(r) r[["phi"]][1])
-  omg_pnts <- sapply(runs, function(r) r[["omg"]][1])
-  nu_pnts <- sapply(runs, function(r) r[["nu"]][1])
-  kappa_pnts <- sapply(runs, function(r) r[["kappa"]][1])
-  kappa_pnts <- .geoBayes_getkappa(kappa_pnts, icf)
+  ## Extract data and model
+  nm_DATA <- c("response", "weights", "modelmatrix", "locations",
+               "longlat")
+  nm_MODEL <- c("family", "corrfcn", "betm0", "betQ0", "ssqdf", "ssqsc",
+                "tsqdf", "tsqsc", "dispersion")
+  DATA <- runs[[1]]$DATA[nm_DATA]
+  MODEL <- runs[[1]]$MODEL[nm_MODEL]
+  if (nruns > 1) {
+    for (i in 2:nruns) {
+      if (!identical(runs[[i]]$DATA[nm_DATA], DATA)) {
+        stop("MCMC chains don't all correspond to the same data.")
+      }
+      if (!identical(runs[[i]]$MODEL[nm_MODEL], MODEL)) {
+        stop("MCMC chains don't all correspond to the same model.")
+      }
+    }
+  }
+  y <- DATA$response
+  n <- as.integer(length(y))
+  l <- DATA$weights
+  F <- DATA$modelmatrix
+  p <- NCOL(F)
+  loc <- DATA$locations
+  dm <- sp::spDists(loc, longlat = DATA$longlat)
+  family <- MODEL$family
+  ## ifam <- .geoBayes_family(family)
+  corrfcn <- MODEL$corrfcn
+  icf <- .geoBayes_correlation(corrfcn)
+  betm0 <- MODEL$betm0
+  betQ0 <- MODEL$betQ0
+  ssqdf <- MODEL$ssqdf
+  ssqsc <- MODEL$ssqsc
+  tsqdf <- MODEL$tsqdf
+  tsqsc <- MODEL$tsqsc
+  dispersion <- MODEL$dispersion
+
+  ## Skeleton points
+  phi_pnts <- as.double(sapply(runs, function(r) r$FIXED$phi))
+  omg_pnts <- as.double(sapply(runs, function(r) r$FIXED$omg))
+  nu_pnts <- as.double(sapply(runs, function(r) r$FIXED$linkp_num))
+  if (.geoBayes_corrfcn$needkappa[icf]) {
+    kappa_pnts <- sapply(runs, function(r) r$FIXED$kappa)
+    kappa_pnts <- .geoBayes_getkappa(kappa_pnts, icf)
+  } else {
+    kappa_pnts <- rep(0, nruns)
+  }
 
   ## MCMC Sizes
-  Nout <- sapply(runs, "[[", "Nout")
+  Nout <- sapply(runs, function(x) x$MCMC$Nout)
   Nout1 <- getsize(bfsize1, Nout, "*")
   Ntot1 <- sum(Nout1)
   Nout2 <- Nout - Nout1
@@ -121,7 +146,9 @@ bfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
   nb2 <- if(Ntot2 > 0) getsize(nbatch2, Nout2, "^") else rep(0L, nruns)
 
   ## Transformed sample
-  getsample <- transfsample(runs, model, transf)
+  getsample <-
+    transfsample(runs,
+                 list(response = y, family = family), transf)
   sample <- matrix(unlist(getsample$sample), n)
   itr <- getsample$itr
   transf <- getsample$transf
@@ -155,10 +182,6 @@ bfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
     tsqdf <- 0
   }
 
-  ## Spatial correlation
-  loc <- model$locations
-  dm <- sp::spDists(loc, longlat = model$longlat)
-
   ## Output
   SE <- numeric(nnew)
   bf <- numeric(nruns)
@@ -188,212 +211,6 @@ bfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
   out$bfSigma <- matrix(RUN$Sig/Ntot1, nruns - 1)
   out$VT1 <- RUN$VT1/Ntot2
   out$VT2 <- RUN$VT2/Ntot2
-  return (out)
-}
-
-
-## Compute the standard errors for the Bayes factors estimates.
-##
-## Uses the batch means method to compute the standard errors for
-## Bayes factors.
-## @title Computation of standard errors for Bayes factors
-## @param pargrid A data frame with components "linkp", "phi", "omg",
-##   "kappa". Each row gives a combination of the parameters to
-##   compute the new standard errors.
-## @param runs A list with outputs from the function
-##   \code{\link{mcsglmm}} or \code{\link{mcstrga}}.
-## @param nbatches An integer scalar or vector of the same length as
-##   runs indicating the number of batches to create for computing
-##   the variance using the samples of the first stage.
-## @param bfsize1 A scalar or vector of the same length as
-##   \code{runs} with all integer values or all values in (0, 1]. How
-##   many samples (or what proportion of the sample) to use for
-##   estimating the Bayes factors at the first stage. The remaining
-##   sample will be used for estimating the standard errors in the
-##   second stage. Setting it to 1 will perform only the first stage.
-## @param method Which method to use to calculate the Bayes factors:
-## Reverse logistic or Meng-Wong.
-## @param reference Which model goes in the denominator.
-## @param transf Whether to use the transformed sample mu for the
-##   computations. Otherwise it uses z.
-## @param binwo For the binomial family, if use workaround when the
-## untransformed sample is used.
-## @param bmmcse.size Size for computing the batch means Monte-Carlo
-##   variance using the samples of the second stage.
-## @return A list with components
-## \itemize{
-## \item \code{pargrid} The inputted pargrid augmented with the computed standard
-## errors.
-## \item \code{bfEstimate} The estimates of the Bayes factors
-## \item \code{bfSigma} The covariance matrix for the Bayes factors
-## estimates.
-## }
-## @references Roy, V., Tan, A. and Flegal, J. (2015). Estimating
-## standard errors for importance sampling estimators with multiple
-## Markov chains. Technical report, Iowa State University.
-## \url{http://lib.dr.iastate.edu/stat_las_preprints/34}
-bfse2 <- function(pargrid, runs, nbatches, bfsize1 = 0.80,
-                 method = c("RL", "MW"), reference = 1, transf = FALSE,
-                 binwo = TRUE,
-                 bmmcse.size = "sqroot")
-{
-  ## Check input
-  if (any(sapply(runs, class) != "geomcmc")) {
-    stop ("Input runs is not a list with elements of class geomcmc")
-  }
-  nruns <- length(runs)
-  nbatches <- rep(as.integer(nbatches), length.out = length(runs))
-  if (any(nbatches <= 1)) stop ("Argument nbatches must >= 2")
-
-  out <- list() # Function output
-
-  ## Compute Bayes factors
-  if (transf) {
-    transf <- "mu"
-  } else if (binwo) {
-    transf <- "wo"
-  } else {
-    transf <- "no"
-  }
-  bf1call <- bf1skel(runs, bfsize1, method, reference, transf)
-  Nout1 <- bf1call$N1
-  Ntot1 <- sum(Nout1)
-  logbf <- bf1call$logbf
-  dvec <- exp(logbf)
-  runsi <- rep(seq_len(nruns), Nout1)
-  zeta <- -logbf + log(Nout1/Ntot1)
-  logYYnum <- bf1call$logLik1 + matrix(zeta, Ntot1, nruns, TRUE)
-  logYYdff <- logYYnum - apply(logYYnum, 1, max)
-  logYY <- logYYdff - log(rowSums(exp(logYYdff)))
-  YY <- exp(logYY)               # r is columns
-  ## WW <- groupColMeans(YY, runsi) # r is columns
-
-  ## Split to batches
-  batchl <- mapply(function(n, e) {ne <- as.integer(n/e); ner <- n%%e;
-                                   rep(c(ne + 1L, ne), c(ner, e - ner))},
-                   Nout1, nbatches, SIMPLIFY = FALSE, USE.NAMES = FALSE)
-  batchi <- lapply(batchl, function(b) rep(seq_along(b), b))
-  YYbar <- mapply(groupColMeans, split(data.frame(YY), rep(1:nruns, Nout1)),
-                  batchi, SIMPLIFY = FALSE, USE.NAMES = FALSE)
-  WW <- t(sapply(1:nruns, function(i) colSums(YYbar[[i]]*batchl[[i]])/Nout1[i]))
-
-  ## Compute matrix Omega
-  Omglist <- sapply(1:nruns, function(l) {
-    YW <- YYbar[[l]] - matrix(WW[l, ], nbatches[l], nruns, TRUE)
-    rowSums(apply(YW*sqrt(batchl[[l]]), 1, tcrossprod))/(nbatches[l]-1)*
-      (Nout1[l]/Ntot1)}) # k^2 rows
-  Omg <- matrix(rowSums(Omglist), nruns, nruns)
-
-  ## Compute matrix Beta
-  Bet <- diag(colMeans(YY*(1-YY)), nruns, nruns)
-  Bet[lower.tri(Bet)] <- -colMeans(YY[, rep(1:(nruns-1), (nruns-1):1)] *
-                    YY[, unlist(lapply(2:nruns, function(i) seq.int(i, nruns)))])
-  Bet[upper.tri(Bet)] <- t(Bet)[upper.tri(Bet)]
-
-  ## Compute M-P inverse
-  BMP <- chol2inv(chol(Bet + 1/nruns)) - 1/nruns
-
-  ## Compute Sigma
-  BD <- (BMP[, reference] - BMP[, -reference, drop = FALSE]) *
-    matrix(dvec[-reference], nruns, nruns - 1L, TRUE)
-  Sigma <- t(BD) %*% Omg %*% BD
-
-  ## Check for Ntot2 == 0
-  Nout2 <- bf1call$N2
-  Ntot2 <- sum(Nout2)
-  if (Ntot2 == 0) {
-    pargrid$SE <- NA
-    out$pargrid <- pargrid
-    out$bfEstimate <- dvec
-    out$bfSigma <- Sigma
-    return (out)
-  }
-
-  ## Extract the grid for the new parameters
-  family <- bf1call$family
-  corrfcn <- bf1call$corrfcn
-  pargrid <- check_pargrid(pargrid, family, corrfcn)
-  phi <- pargrid$phi
-  omg <- pargrid$omg
-  kappa <- pargrid$kappa
-  nu <- pargrid$nu
-  kg <- NROW(pargrid)
-
-  ## Compute log-posterior for the new grid
-  if (transf) {
-    froutine <- "llikfcnmu"
-  } else {
-    froutine <- "llikfcnz"
-  }
-  sample <- bf1call$sample2
-  y <- bf1call$response
-  l <- bf1call$weights
-  F <- bf1call$modelmatrix
-  dm <- bf1call$distmat
-  betm0 <- bf1call$betm0
-  betQ0 <- bf1call$betQ0
-  ssqdf <- bf1call$ssqdf
-  ssqsc <- bf1call$ssqsc
-  tsqdf <- bf1call$tsqdf
-  tsqsc <- bf1call$tsqsc
-  dispersion <- bf1call$dispersion
-  n <- NROW(F)
-  p <- NCOL(F)
-  icf <- match(corrfcn, c("matern", "spherical", "powerexponential"))
-  ifam <- .geoBayes_family(family)
-  lglk <- matrix(0, Ntot2, kg)
-  tsq <- if (ifam == 0) tsqsc else dispersion
-  fcall <- .Fortran(froutine,
-                    lglk = lglk,
-                    as.double(phi), as.double(omg), as.double(nu),
-                    as.double(kappa),
-                    as.double(sample), as.integer(Ntot2), as.double(y),
-                    as.double(l), as.double(F), as.double(dm),
-                    as.double(betm0), as.double(betQ0), as.double(ssqdf),
-                    as.double(ssqsc), max(tsqdf, 0), as.double(tsq),
-                    as.integer(icf), as.integer(n), as.integer(p),
-                    as.integer(kg), as.integer(ifam), PACKAGE = "geoBayes")
-  lglk <- fcall$lglk
-
-  ## Compute vector V
-  llik2 <- bf1call$logLik2
-  mxll2 <- apply(llik2, 1, max)
-  llik2mm <- llik2 - mxll2
-  logVVden <- log(rowSums(exp(llik2mm + matrix(log(Nout2) - logbf,
-                      Ntot2, nruns, TRUE)))) + mxll2
-  logVVN <- lglk - logVVden   # kg columns
-  VV <- Ntot2*exp(logVVN)     # kg columns
-
-  ## 2nd term in the variance
-  secalc <- tapply(1:Ntot2, rep(1:nruns, Nout2),
-                   function(jj) bmmcse(VV[jj, , drop = FALSE],
-                                       size = bmmcse.size),
-                   simplify = FALSE)
-  semat <- matrix(unlist(secalc), nruns, kg, TRUE)
-  VT2 <- colSums(Nout2*semat^2)/Ntot2
-
-  ## Compute vector C
-  logVhN <- llik2[, -reference, drop = FALSE] - logVVden
-  logCterms <- logVhN[, rep(1:(nruns-1), each = kg), drop = FALSE] +
-    logVVN[, rep(1:kg, nruns - 1), drop = FALSE]
-  logCmx <- apply(logCterms, 2, max)
-  logCCN <- matrix(logCmx + log(colSums(exp(logCterms -
-                   matrix(logCmx, Ntot2, (nruns - 1)*kg, TRUE)))),
-                   nruns - 1, kg, TRUE)
-  CC <- exp(logCCN)*(Nout2[-reference]/dvec[-reference]^2)
-
-  ## 1st term in the variance
-  VT1 <- (Ntot2/Ntot1)*colSums(c(Sigma) *
-          CC[rep(1:(nruns-1), each = nruns-1), , drop = FALSE] *
-          CC[rep(1:(nruns-1), nruns-1), , drop = FALSE])
-
-  ## Return
-  pargrid$SE <- sqrt((VT1 + VT2)/Ntot2)
-  out$pargrid <- pargrid
-  out$bfEstimate <- dvec
-  out$bfSigma <- Sigma/Ntot1
-  out$VT1 <- VT1/Ntot2
-  out$VT2 <- VT2/Ntot2
   return (out)
 }
 

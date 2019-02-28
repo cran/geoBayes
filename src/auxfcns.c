@@ -146,7 +146,13 @@ double F77_SUB(flog1pexp)(double *x)
 
 double F77_SUB(flog1mexp)(double *x)
 {
-  return (*x) - qlogis((*x),0.0,1.0,1,1);
+  //return (*x) - qlogis((*x),0.0,1.0,1,1);
+  double negln2 = -0.69314718055994530941723212145817656807550013436025525412;
+  if ((*x) >= negln2) {
+    return log(-expm1(*x));
+  } else {
+    return log1p(-exp(*x));
+  }
 }
 
 double F77_SUB(flogexpm1)(double *x)

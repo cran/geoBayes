@@ -23,8 +23,9 @@ contains
     use interfaces, only: fbesselkexp
     implicit none
     double precision, intent(in) :: h, k
-    double precision, parameter :: eps = sqrt(epsilon(1d0))
+    double precision eps
     double precision kk
+    eps = sqrt(epsilon(1d0))
     kk = abs(k)
     if (kk .eq. 0d0) then
       c = 0d0
@@ -44,8 +45,9 @@ contains
     use interfaces, only: fbesselkexp
     implicit none
     double precision, intent(in) :: h, k
-    double precision, parameter :: eps = sqrt(sqrt(epsilon(1d0)))
+    double precision eps
     double precision kk
+    eps = sqrt(epsilon(1d0))
     kk = abs(k)
     if (kk .eq. 0d0) then
       c = 0d0
@@ -425,4 +427,138 @@ contains
       c = bigneg
     end if
   end function cor_hk_powexp
+
+!!! Exponential
+  pure double precision function cor_exp (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .eq. 0d0) then
+      c = 1d0
+    else if (h .gt. 0d0) then
+      c = exp(-h)
+    else
+      c = bigneg
+    end if
+  end function cor_exp
+
+  pure double precision function cor_dh_exp (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .eq. 0d0) then
+      c = 0d0
+    else if (h .gt. 0d0) then
+      c = -exp(-h)
+    else
+      c = bigneg
+    end if
+  end function cor_dh_exp
+
+  pure double precision function cor_dk_exp (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .ge. 0d0) then
+      c = 0d0
+    else
+      c = bigneg
+    end if
+  end function cor_dk_exp
+
+  pure double precision function cor_dhdk_exp (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .ge. 0d0) then
+      c = 0d0
+    else
+      c = bigneg
+    end if
+  end function cor_dhdk_exp
+
+  pure double precision function cor_hh_exp (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .eq. 0d0) then
+      c = 0d0
+    else if (h .gt. 0d0) then
+      c = exp(-h)
+    else
+      c = bigneg
+    end if
+  end function cor_hh_exp
+
+  pure double precision function cor_hk_exp (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .ge. 0d0) then
+      c = 0d0
+    else
+      c = bigneg
+    end if
+  end function cor_hk_exp
+
+!!! Gaussian
+  pure double precision function cor_gaussian (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .eq. 0d0) then
+      c = 1d0
+    else if (h .gt. 0d0) then
+      c = exp(-h*h)
+    else
+      c = bigneg
+    end if
+  end function cor_gaussian
+
+  pure double precision function cor_dh_gaussian (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .eq. 0d0) then
+      c = 0d0
+    else if (h .gt. 0d0) then
+      c = -2d0*h*exp(-h*h)
+    else
+      c = bigneg
+    end if
+  end function cor_dh_gaussian
+
+  pure double precision function cor_dk_gaussian (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .ge. 0d0) then
+      c = 0d0
+    else
+      c = bigneg
+    end if
+  end function cor_dk_gaussian
+
+  pure double precision function cor_dhdk_gaussian (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .ge. 0d0) then
+      c = 0d0
+    else
+      c = bigneg
+    end if
+  end function cor_dhdk_gaussian
+
+  pure double precision function cor_hh_gaussian (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .eq. 0d0) then
+      c = 0d0
+    else if (h .gt. 0d0) then
+      c = 2d0*(2d0*h*h-1d0)*exp(-h*h)
+    else
+      c = bigneg
+    end if
+  end function cor_hh_gaussian
+
+  pure double precision function cor_hk_gaussian (h,kappa) result (c)
+    implicit none
+    double precision, intent(in) :: h, kappa
+    if (h .ge. 0d0) then
+      c = 0d0
+    else
+      c = bigneg
+    end if
+  end function cor_hk_gaussian
 end module cor_fcns

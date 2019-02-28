@@ -4,10 +4,10 @@
 \alias{mcstrga}
 \title{MCMC samples from the transformed Gaussian model}
 \usage{
-mcstrga(formula, data, weights, subset, atsample, Nout, Nthin = 1, Nbi = 0,
-  betm0, betQ0, ssqdf, ssqsc, tsqdf, tsqsc, phipars, omgpars,
-  corrfcn = "matern", kappa, linkp, phisc, omgsc, phistart, omgstart,
-  longlat = FALSE, test = FALSE)
+mcstrga(formula, data, weights, subset, atsample, corrfcn = "matern",
+  linkp, phi, omg, kappa, Nout, Nthin = 1, Nbi = 0, betm0, betQ0,
+  ssqdf, ssqsc, tsqdf, tsqsc, corrpriors, corrtuning, longlat = FALSE,
+  test = FALSE)
 }
 \arguments{
 \item{formula}{A representation of the model in the form
@@ -29,6 +29,31 @@ observations to be used in the fitting process.}
 
 \item{atsample}{A formula in the form \code{~ x1 + x2 + ... + xd}
 with the coordinates of the sampled locations.}
+
+\item{corrfcn}{Spatial correlation function. See
+\code{\link{geoBayes_correlation}} for details.}
+
+\item{linkp}{Parameter of the link function. A scalar value.}
+
+\item{phi}{Optional starting value for the MCMC for the
+spatial range parameter \code{phi}. Defaults to the mean of its
+prior. If \code{corrtuning[["phi"]]} is 0, then this argument is required and
+it corresponds to the fixed value of \code{phi}. This can be a
+vector of the same length as Nout.}
+
+\item{omg}{Optional starting value for the MCMC for the
+relative nugget parameter \code{omg}. Defaults to the mean of
+its prior. If \code{corrtuning[["omg"]]} is 0, then this argument is required
+and it corresponds to the fixed value of \code{omg}. This can be
+a vector of the same length as Nout.}
+
+\item{kappa}{Optional starting value for the MCMC for the
+spatial correlation parameter \code{kappa} (Matern smoothness or
+exponential power). Defaults to the mean of
+its prior. If \code{corrtuning[["kappa"]]} is 0 and it is needed for
+the chosen correlation function, then this argument is required
+and it corresponds to the fixed value of \code{kappa}. This can be
+a vector of the same length as Nout.}
 
 \item{Nout}{Number of MCMC samples to return. This can be a vector
 for running independent chains.}
@@ -56,45 +81,21 @@ prior for the measurement error parameter.}
 \item{tsqsc}{Scale for the scaled inverse chi-square prior for the
 measurement error parameter.}
 
-\item{phipars}{Parameters for the generalized inverse gamma prior
-for the range parameter \code{phi}. A four dimensional vector with
-parameters scale, shape, exponent, location in that order. See
-\code{\link{mcsglmm}}.}
+\item{corrpriors}{A list with the components \code{phi},
+\code{omg} and \code{kappa} as needed. These correspond to the
+prior distribution parameters. For \code{phi} and \code{omg} it
+must be a vector of length 4. The generalized inverse gamma
+prior is assumed and the input corresponds to the parameters
+scale, shape, exponent, location in that order (see Details).
+For \code{kappa} it must be a vector of length 2. A uniform
+prior is assumed and the input corresponds to the lower and
+upper bounds in that order.}
 
-\item{omgpars}{Parameters for the generalized inverse gamma prior
-for the relative nugget parameter \code{omg}. A four dimensional
-vector with parameters scale, shape, exponent, location in that
-order. See \code{\link{mcsglmm}}.}
-
-\item{corrfcn}{Spatial correlation function. See
-\code{\link{geoBayes_correlation}} for details.}
-
-\item{kappa}{Spatial correlation parameter. Smoothness parameter
-for Matern, exponent for the power family.}
-
-\item{linkp}{The exponent of the Box-Cox transformation.}
-
-\item{phisc}{Random walk parameter for \code{phi}. Smaller values
-increase the acceptance ratio. Set this to 0 for fixed \code{phi}.
-In this case the fixed value is given in the argument
-\code{phistart}.}
-
-\item{omgsc}{Random walk parameter for \code{omg}. Smaller values
-increase the acceptance ratio. Set this to 0 for fixed \code{omg}.
-In this case the fixed value is given in the argument
-\code{omgstart}.}
-
-\item{phistart}{Optional starting value for the MCMC for the
-spatial range parameter \code{phi}. Defaults to the mean of its
-prior. If \code{phisc} is 0, then this argument is required and
-it corresponds to the fixed value of \code{phi}. This can be a
-vector of the same length as Nout.}
-
-\item{omgstart}{Optional starting value for the MCMC for the
-relative nugget parameter \code{omg}. Defaults to the mean of
-its prior. If \code{omgsc} is 0, then this argument is required
-and itcorresponds to the fixed value of \code{omg}. This can be
-a vector of the same length as Nout.}
+\item{corrtuning}{A vector or list with the components \code{phi},
+\code{omg} and \code{kappa} as needed. These correspond to the
+random walk parameter for the Metropolis-Hastings step. Smaller values
+increase the acceptance ratio. Set this to 0 for fixed
+parameter value.}
 
 \item{longlat}{How to compute the distance between locations. If
 \code{FALSE}, Euclidean distance, if \code{TRUE} Great Circle
@@ -109,8 +110,9 @@ Set this to a positive number to change the default 100. No
 thinning or burn-in are done when testing.}
 }
 \value{
-A list containing the MCMC samples and other variables as
-follows:
+A list containing the objects \code{MODEL}, \code{DATA},
+  \code{FIXED}, \code{MCMC} and \code{call}. The MCMC samples are
+  stored in the object \code{MCMC} as follows:
 \itemize{
  \item \code{z} A matrix containing the MCMC samples for the
 spatial random field. Each column is one sample.
@@ -122,35 +124,19 @@ regressor coefficients. Each column is one sample.
  \item \code{tsq} A vector with the MCMC samples for the
 measurement error variance.
  \item \code{phi} A vector with the MCMC samples for the spatial
-range parameter.
+range parameter, if sampled.
  \item \code{omg} A vector with the MCMC samples for the relative
-nugget parameter.
- \item \code{nu} The link function parameter translated to
-numeric code used internally.
+nugget parameter, if sampled.
  \item \code{logLik} A vector containing the value of the
 log-likelihood evaluated at each sample.
  \item \code{acc_ratio} The acceptance ratio for the joint update
-of the parameters \code{phi} and \code{omg}.
+of the parameters \code{phi} and \code{omg}, if sampled.
  \item \code{sys_time} The total computing time for the MCMC sampling.
  \item \code{Nout}, \code{Nbi},  \code{Nthin} As in input. Used
 internally in other functions.
- \item \code{response} The average of the response variable at the
-observed locations, i.e. its value divided by the corresponding
-weight. Used internally in other functions.
- \item \code{weights} The response weights at the observed
-locations. Used internally in other functions.
- \item \code{modelmatrix} The model matrix at the observed
-locations. Used internally in other functions.
- \item \code{family} As in input. Used internally in other functions.
- \item \code{betm0}, \code{betQ0}, \code{ssqdf}, \code{ssqsc},
-\code{corrfcn}, \code{kappa}, \code{tsqdf}, \code{tsqsc} As in
-input. Used internally in other functions.
- \item \code{locations} Coordinates of the observed locations.
-Used internally in other functions.
- \item \code{whichobs} A logical vector indicated which rows in
-the data and in the MCMC samples for the spatial random field
-correspond to the observed locations.
 }
+The other objects contain input variables. The object \code{call}
+  contains the function call.
 }
 \description{
 Draw MCMC samples from the transformed Gaussian model with known
@@ -192,18 +178,11 @@ samplt <- mcstrga(Yield ~ IR, data = rhiz,
                   Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
                   ssqdf = ssqdf, ssqsc = ssqsc,
                   tsqdf = tsqdf, tsqsc = tsqsc,
-                  phipars = phiprior, omgpars = omgprior,
+                  corrprior = list(phi = phiprior, omg = omgprior),
                   linkp = linkp,
-                  phisc = phisc, omgsc = omgsc, test=10)
+                  corrtuning = list(phi = phisc, omg = omgsc, kappa = 0),
+                  test=10)
 
-sample <- mcstrga(Yield ~ IR, data = rhiz,
-                  atsample = ~ Xcoord + Ycoord, corrf = corrf,
-                  Nout = Nout, Nthin = Nthin,
-                  Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
-                  ssqdf = ssqdf, ssqsc = ssqsc,
-                  tsqdf = tsqdf, tsqsc = tsqsc,
-                  phipars = phiprior, omgpars = omgprior,
-                  linkp = linkp,
-                  phisc = phisc, omgsc = omgsc, test=FALSE)
+sample <- update(samplt, test = FALSE)
 }
 }

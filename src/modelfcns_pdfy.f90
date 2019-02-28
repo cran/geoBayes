@@ -3,6 +3,11 @@ module modelfcns_pdfy
 !! logpdfydlnk is the derivative of the above w.r.t the parameter
 !! logdffy is the difference between two such logpdfs at two different
 !! parameter values
+  implicit none 
+  double precision, parameter :: bigpos = huge(1d0), bigneg = -bigpos, &
+     smallpos = epsilon(1d0), smallneg = -smallpos
+  private bigpos, bigneg, smallpos, smallneg
+
 contains
 
 !   elemental double precision function logpdfy_gt (y1, y2, par)
@@ -93,6 +98,16 @@ contains
     logpdfyhlnk_ga = -y2
   end function logpdfyhlnk_ga
 
+  elemental double precision function logpdfy3lnk_ga (y1, y2, par)
+    ! Gaussian
+    ! y1 :: The total across all realisations
+    ! y2 :: The number of replications
+    ! par :: The mean of a single realisation
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    logpdfy3lnk_ga = 0
+  end function logpdfy3lnk_ga
+
   elemental double precision function mustart_ga (y1,y2)
     implicit none
     double precision, intent(in) :: y1, y2
@@ -132,7 +147,13 @@ contains
     use interfaces, only: flog1mexp
     implicit none
     double precision, intent(in) :: y1, y2, par
-    logpdfy_bi = y1*par + y2*flog1mexp(par)
+    if (y1 .eq. 0d0) then
+      logpdfy_bi = y2*flog1mexp(par)
+    else if (y2 .eq. 0d0) then
+      logpdfy_bi = y1*par
+    else 
+      logpdfy_bi = y1*par + y2*flog1mexp(par)
+    end if
   end function logpdfy_bi
 
   elemental double precision function logdffy_bi (y1, y2, p1, p2)
@@ -144,7 +165,13 @@ contains
     use interfaces, only: flog1mexp
     implicit none
     double precision, intent(in) :: y1, y2, p1, p2
-    logdffy_bi = y1*(p1 - p2) + y2*(flog1mexp(p1) - flog1mexp(p2))
+    if (y1 .eq. 0d0) then
+      logdffy_bi = y2*(flog1mexp(p1) - flog1mexp(p2))
+    else if (y2 .eq. 0d0) then
+      logdffy_bi = y1*(p1 - p2)
+    else
+      logdffy_bi = y1*(p1 - p2) + y2*(flog1mexp(p1) - flog1mexp(p2))
+    end if
   end function logdffy_bi
 
   elemental double precision function logpdfydlnk_bi (y1, y2, par)
@@ -156,7 +183,11 @@ contains
     use interfaces, only: fexpm1
     implicit none
     double precision, intent(in) :: y1, y2, par
-    logpdfydlnk_bi = y1 - y2/fexpm1(-par)
+    if (y2 .eq. 0d0) then
+      logpdfydlnk_bi = y1
+    else
+      logpdfydlnk_bi = y1 - y2/fexpm1(-par)
+    end if
   end function logpdfydlnk_bi
 
   elemental double precision function logpdfyhlnk_bi (y1, y2, par)
@@ -168,9 +199,31 @@ contains
     use interfaces, only: fexpm1
     implicit none
     double precision, intent(in) :: y1, y2, par
-    logpdfyhlnk_bi = 1d0/fexpm1(-par)
-    logpdfyhlnk_bi = -y2*logpdfyhlnk_bi * (1d0+logpdfyhlnk_bi)
+    if (y2 .eq. 0d0) then
+      logpdfyhlnk_bi = 0d0
+    else
+      logpdfyhlnk_bi = 1d0/fexpm1(-par)
+      logpdfyhlnk_bi = -y2*logpdfyhlnk_bi * (1d0+logpdfyhlnk_bi)
+    end if
   end function logpdfyhlnk_bi
+
+  elemental double precision function logpdfy3lnk_bi (y1, y2, par)
+    ! Binomial
+    ! To get the asymmetric version, switch y1 and y2
+    ! y1 :: The number of successes
+    ! y2 :: The number of faillures
+    ! par :: The logartithm of the probability of success
+    use interfaces, only: fexpm1
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    if (y2 .eq. 0d0) then
+      logpdfy3lnk_bi = 0d0
+    else
+      logpdfy3lnk_bi = 1d0/fexpm1(-par)
+      logpdfy3lnk_bi = -y2*logpdfy3lnk_bi * (1d0+logpdfy3lnk_bi) &
+         * (1d0+logpdfy3lnk_bi+logpdfy3lnk_bi)
+    end if
+  end function logpdfy3lnk_bi
 
   elemental double precision function mustart_bi (y1,y2)
     implicit none
@@ -212,7 +265,11 @@ contains
     ! par :: The log(mean) of a single realisation
     implicit none
     double precision, intent(in) :: y1, y2, par
-    logpdfy_po = y1*par - y2*exp(par)
+    if (y1 .eq. 0d0) then
+      logpdfy_po = -y2*exp(par)
+    else
+      logpdfy_po = y1*par - y2*exp(par)
+    end if
   end function logpdfy_po
 
   elemental double precision function logdffy_po (y1, y2, p1, p2)
@@ -222,7 +279,11 @@ contains
     ! p1, p2 :: The log(mean) of a single realisation
     implicit none
     double precision, intent(in) :: y1, y2, p1, p2
-    logdffy_po = y1*(p1 - p2) - y2*(exp(p1) - exp(p2))
+    if (y1 .eq. 0d0) then
+      logdffy_po = -y2*(exp(p1) - exp(p2))
+    else
+      logdffy_po = y1*(p1 - p2) - y2*(exp(p1) - exp(p2))
+    end if
   end function logdffy_po
 
   elemental double precision function logpdfydlnk_po (y1, y2, par)
@@ -244,6 +305,16 @@ contains
     double precision, intent(in) :: y1, y2, par
     logpdfyhlnk_po = -y2*exp(par)
   end function logpdfyhlnk_po
+
+  elemental double precision function logpdfy3lnk_po (y1, y2, par)
+    ! Poisson
+    ! y1 :: The total number of observations
+    ! y2 :: The number of realisations
+    ! par :: The log(mean) of a single realisation
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    logpdfy3lnk_po = -y2*exp(par)
+  end function logpdfy3lnk_po
 
   elemental double precision function mustart_po (y1,y2)
     implicit none
@@ -317,6 +388,16 @@ contains
     double precision, intent(in) :: y1, y2, par
     logpdfyhlnk_gm = -y1*exp(-par)
   end function logpdfyhlnk_gm
+
+  elemental double precision function logpdfy3lnk_gm (y1, y2, par)
+    ! Gamma
+    ! y1 :: The total number of observations
+    ! y2 :: The number of realisations
+    ! par :: The log(mean) of a single realisation
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    logpdfy3lnk_gm = y1*exp(-par)
+  end function logpdfy3lnk_gm
 
   elemental double precision function mustart_gm (y1,y2)
     implicit none

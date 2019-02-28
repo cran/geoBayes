@@ -18,7 +18,8 @@
                "Gamma.modifiedbc",    # 8
                "Gamma.boxcox",        # 9
                "binomial.modifiedGEV",# 10
-               "binomial.GEV"         # 11
+               "binomial.modifiedGEVns",# 11
+               "binomial.GEV"         # 12
                ),
     needlinkp = c(TRUE,               #  1 "gaussian",
                   TRUE,               #  2 "binomial.robit",
@@ -30,7 +31,8 @@
                   TRUE,               #  8 "Gamma.modifiedbc",
                   TRUE,               #  9 "Gamma.boxcox"
                   TRUE,               # 10 "binomial.modifiedGEV"
-                  TRUE                # 11 "binomial.GEV"
+                  TRUE,               # 11 "binomial.modifiedGEVns"
+                  TRUE                # 12 "binomial.GEV"
                   ),
     linkplb = c(-Inf,                 #  1 "gaussian",
                 0,                    #  2 "binomial.robit",
@@ -42,7 +44,8 @@
                 0,                    #  8 "Gamma.modifiedbc",
                 -Inf,                 #  9 "Gamma.boxcox"
                 0,                    # 10 "binomial.modifiedGEV"
-                -Inf                  # 11 "binomial.GEV"
+                0,                    # 11 "binomial.modifiedGEVns"
+                -Inf                  # 12 "binomial.GEV"
                 ),
     incllb = c(NA,                    #  1 "gaussian",
                FALSE,                 #  2 "binomial.robit",
@@ -54,7 +57,8 @@
                TRUE,                  #  8 "Gamma.modifiedbc",
                NA,                    #  9 "Gamma.boxcox"
                TRUE,                  # 10 "binomial.modifiedGEV"
-               NA                     # 11 "binomial.GEV"
+               TRUE,                  # 11 "binomial.modifiedGEVns"
+               NA                     # 12 "binomial.GEV"
                ),
     linkpub = c(Inf,                  #  1 "gaussian",
                 Inf,                  #  2 "binomial.robit",
@@ -66,7 +70,8 @@
                 Inf,                  #  8 "Gamma.modifiedbc",
                 Inf,                  #  9 "Gamma.boxcox"
                 Inf,                  # 10 "binomial.modifiedGEV"
-                Inf                   # 11 "binomial.GEV"
+                Inf,                  # 11 "binomial.modifiedGEVns"
+                Inf                   # 12 "binomial.GEV"
                 ),
     inclub = c(NA,                    #  1 "gaussian",
                NA,                    #  2 "binomial.robit",
@@ -78,7 +83,8 @@
                NA,                    #  8 "Gamma.modifiedbc",
                NA,                    #  9 "Gamma.boxcox"
                NA,                    # 10 "binomial.modifiedGEV"
-               NA                     # 11 "binomial.GEV"
+               NA,                    # 11 "binomial.modifiedGEVns"
+               NA                     # 12 "binomial.GEV"
                ),
     haswo = c(FALSE,                  #  1 "gaussian",
               TRUE,                   #  2 "binomial.robit",
@@ -90,7 +96,8 @@
               FALSE,                  #  8 "Gamma.modifiedbc",
               FALSE,                  #  9 "Gamma.boxcox"
               FALSE,                  # 10 "binomial.modifiedGEV"
-              TRUE                    # 11 "binomial.GEV"
+              FALSE,                  # 11 "binomial.modifiedGEVns"
+              TRUE                    # 12 "binomial.GEV"
               ),
     stringsAsFactors = FALSE)
 
@@ -106,14 +113,19 @@ lockBinding(".geoBayes_models", environment())
     as.integer(1L)
   } else if (pmatch(family, "transformed.gaussian", 0)) {
     as.integer(0L)
-  } else {
+  } else if (is.numeric(family) && family >= 0 &&
+             family <= length(.geoBayes_models$family)) {
+    as.integer(family)
+  } else if (is.character(family)) {
     fl <- strsplit(family, split = "[[:punct:][:space:]]+")[[1]]
     pattern <- if(length(fl) > 1)
                  paste0("\\.", fl[-1], "[[:alnum:]]*", collapse = "")
     pattern <- paste0("^", fl[1], "[[:alnum:]]*", pattern)
     out <- grep(pattern, .geoBayes_models$family, value = FALSE)
     if (length(out) == 0) stop ("Cannot deduce family from input.")
-    out[1]
+    as.integer(out[1])
+  } else {
+    stop ("Cannot deduce family.")
   }
 }
 

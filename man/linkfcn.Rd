@@ -12,11 +12,11 @@ linkinv(z, linkp, family = "gaussian")
 \arguments{
 \item{mu}{Numeric. The mean of the response variable.}
 
-\item{linkp}{The link function parameter. A scalar but for the
-binomial family is also allowed to have the character values
-"logit" or "probit".}
+\item{linkp}{The link function parameter. A scalar.}
 
-\item{family}{The distribution of the response variable.}
+\item{family}{The distribution of the response variable from
+\code{\link{.geoBayes_models}}. Either an integer or the
+family name.}
 
 \item{z}{Numeric. The linear predictor.}
 }
@@ -30,10 +30,6 @@ Link function for the exponential family.
 \details{
 \code{linkfcn} maps the mean of the response variable \code{mu} to
 the linear predictor \code{z}. \code{linkinv} is its inverse.
-
-Note that the logit link for the
-binomial family is defined as the quantile of the logistic
-distribution with scale 0.6458.
 
 For the Gaussian family, if the link parameter is positive, then
 the extended link is used, defined by \deqn{z =
@@ -62,7 +58,7 @@ where \eqn{c(\nu) = (8\nu+1)/(8\nu+3)}{c(nu) = (8*nu+1)/(8*nu+3)}
 \dontrun{
 mu <- seq(0.1, 0.9, 0.1)
 linkfcn(mu, 7, "binomial")       # robit(7) link function
-linkfcn(mu, "logit", "binomial") # logit link function
+linkfcn(mu, , "binomial.logit")  # logit link function
 
 mu <- seq(-3, 3, 1)
 linkfcn(mu, 0.5, "gaussian")     # sqrt transformation
@@ -70,6 +66,10 @@ linkinv(linkfcn(mu, 0.5, "gaussian"), 0.5, "gaussian")
 curve(linkfcn(x, 0.5, "gaussian"), -3, 3)
 }
 }
-\seealso{
-\code{\link{comparebinlinks}}
+\references{
+Evangelou, E., & Roy, V. (2019). Estimation and prediction for
+  spatial generalized linear mixed models with parametric links
+  via reparameterized importance sampling. Spatial Statistics, 29,
+  289-315.
 }
+\concept{linkfcn}

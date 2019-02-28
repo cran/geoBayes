@@ -41,7 +41,8 @@
 ##'   distance. See \code{\link[sp]{spDists}}.
 ##' @param dispersion The fixed dispersion parameter. When this is not
 ##'   1 and the sample is from a binomial or a Poisson distribution,
-##'   an approximate sample is returned.
+##'   no such distribution exists so an approximate sample is
+##'   returned. Use with caution.
 ##' @param returnGRF Whether to return the simulate Gaussian random
 ##'   field as well.
 ##' @param warndisp Whether to warn when sampling from a quasi

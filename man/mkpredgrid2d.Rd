@@ -43,12 +43,15 @@ contracted.}
 \value{
 A list with components
 \itemize{
-\item \code{grid} A two-column matrix with the prediction grid
+\item \code{grid} A two-column matrix with the prediction grid.
 \item \code{xycoord} A list with components "x" and "y"
-containing the sequence of points used to create the grid
+containing the sequence of points used to create the grid.
 \item \code{xygrid} A matrix with the full square grid derived
-from \code{xycoord}
-\item \code{borders} The (expanded) borders of the domain
+from \code{xycoord}.
+\item \code{borders} The (expanded) borders of the domain.
+\item \code{inxygrid} A logical vector indicating which rows of
+  \code{xycoord} fall inside \code{borders}, and therefore
+  correspond to the \code{grid}.
 }
 }
 \description{

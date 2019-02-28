@@ -1,3 +1,10 @@
+0.6.2
+* Added modified GEV with negative skewness.
+* Changed arguments to MCMC functions.
+
+0.5.1
+* Fix bug in revlogreg function when non-equal MC sizes.
+
 0.5.0
 * Calculation of log-likelihood derivatives.
 

@@ -4,9 +4,9 @@
 \alias{mcsglmm}
 \title{MCMC samples from the Spatial GLMM}
 \usage{
-mcsglmm(formula, family = "gaussian", data, weights, subset, atsample, Nout,
-  Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc, phipars, omgpars,
-  corrfcn = "matern", kappa, linkp, phisc, omgsc, phistart, omgstart,
+mcsglmm(formula, family = "gaussian", data, weights, subset, atsample,
+  corrfcn = "matern", linkp, phi, omg, kappa, Nout, Nthin = 1,
+  Nbi = 0, betm0, betQ0, ssqdf, ssqsc, corrpriors, corrtuning,
   dispersion = 1, longlat = FALSE, test = FALSE)
 }
 \arguments{
@@ -35,6 +35,31 @@ observations to be used in the fitting process.}
 \item{atsample}{A formula in the form \code{~ x1 + x2 + ... + xd}
 with the coordinates of the sampled locations.}
 
+\item{corrfcn}{Spatial correlation function. See
+\code{\link{geoBayes_correlation}} for details.}
+
+\item{linkp}{Parameter of the link function. A scalar value.}
+
+\item{phi}{Optional starting value for the MCMC for the
+spatial range parameter \code{phi}. Defaults to the mean of its
+prior. If \code{corrtuning[["phi"]]} is 0, then this argument is required and
+it corresponds to the fixed value of \code{phi}. This can be a
+vector of the same length as Nout.}
+
+\item{omg}{Optional starting value for the MCMC for the
+relative nugget parameter \code{omg}. Defaults to the mean of
+its prior. If \code{corrtuning[["omg"]]} is 0, then this argument is required
+and it corresponds to the fixed value of \code{omg}. This can be
+a vector of the same length as Nout.}
+
+\item{kappa}{Optional starting value for the MCMC for the
+spatial correlation parameter \code{kappa} (Matern smoothness or
+exponential power). Defaults to the mean of
+its prior. If \code{corrtuning[["kappa"]]} is 0 and it is needed for
+the chosen correlation function, then this argument is required
+and it corresponds to the fixed value of \code{kappa}. This can be
+a vector of the same length as Nout.}
+
 \item{Nout}{Number of MCMC samples to return. This can be a vector
 for running independent chains.}
 
@@ -55,48 +80,21 @@ prior for the partial sill parameter.}
 \item{ssqsc}{Scale for the scaled inverse chi-square prior for the
 partial sill parameter.}
 
-\item{phipars}{Parameters for the generalized inverse gamma prior
-for the spatial range parameter \code{phi}. A four dimensional
-vector with parameters scale, shape, exponent, location in that
-order. See Details.}
+\item{corrpriors}{A list with the components \code{phi},
+\code{omg} and \code{kappa} as needed. These correspond to the
+prior distribution parameters. For \code{phi} and \code{omg} it
+must be a vector of length 4. The generalized inverse gamma
+prior is assumed and the input corresponds to the parameters
+scale, shape, exponent, location in that order (see Details).
+For \code{kappa} it must be a vector of length 2. A uniform
+prior is assumed and the input corresponds to the lower and
+upper bounds in that order.}
 
-\item{omgpars}{Parameters for the generalized inverse gamma prior
-for the relative nugget parameter \code{omg}. A four dimensional
-vector with parameters scale, shape, exponent, location in that
-order. See Details.}
-
-\item{corrfcn}{Spatial correlation function. See
-\code{\link{geoBayes_correlation}} for details.}
-
-\item{kappa}{Spatial correlation parameter. Smoothness parameter
-for Matern, exponent for the power family.}
-
-\item{linkp}{Parameter of the link function. For binomial, a
-positive number for the degrees of freedom of the robit family
-or "logit" or "probit". For the other families any number for
-the exponent of the Box-Cox transformation.}
-
-\item{phisc}{Random walk parameter for \code{phi}. Smaller values
+\item{corrtuning}{A vector or list with the components \code{phi},
+\code{omg} and \code{kappa} as needed. These correspond to the
+random walk parameter for the Metropolis-Hastings step. Smaller values
 increase the acceptance ratio. Set this to 0 for fixed
-\code{phi}. In this case the fixed value is given in the
-argument \code{phistart}.}
-
-\item{omgsc}{Random walk parameter for \code{omg}. Smaller values
-increase the acceptance ratio. Set this to 0 for fixed
-\code{omg}. In this case the fixed value is given in the
-argument \code{omgstart}.}
-
-\item{phistart}{Optional starting value for the MCMC for the
-spatial range parameter \code{phi}. Defaults to the mean of its
-prior. If \code{phisc} is 0, then this argument is required and
-it corresponds to the fixed value of \code{phi}. This can be a
-vector of the same length as Nout.}
-
-\item{omgstart}{Optional starting value for the MCMC for the
-relative nugget parameter \code{omg}. Defaults to the mean of
-its prior. If \code{omgsc} is 0, then this argument is required
-and itcorresponds to the fixed value of \code{omg}. This can be
-a vector of the same length as Nout.}
+parameter value.}
 
 \item{dispersion}{The fixed dispersion parameter.}
 
@@ -113,8 +111,9 @@ acceptance. Set this to a positive number to change the default
 100. No thinning or burn-in are done when testing.}
 }
 \value{
-A list containing the MCMC samples and other variables as
-follows:
+A list containing the objects \code{MODEL}, \code{DATA},
+  \code{FIXED}, \code{MCMC} and \code{call}. The MCMC samples are
+  stored in the object \code{MCMC} as follows:
 \itemize{
  \item \code{z} A matrix containing the MCMC samples for the
 spatial random field. Each column is one sample.
@@ -123,36 +122,20 @@ mean response (a transformation of z). Each column is one sample.
  \item \code{beta} A matrix containing the MCMC samples for the
 regressor coefficients. Each column is one sample.
  \item \code{ssq} A vector with the MCMC samples for the partial
-sill parameter.
  \item \code{phi} A vector with the MCMC samples for the spatial
-range parameter.
+range parameter, if sampled.
  \item \code{omg} A vector with the MCMC samples for the relative
-nugget parameter.
- \item \code{nu} The link function parameter translated to
-numeric code used internally.
+nugget parameter, if sampled.
  \item \code{logLik} A vector containing the value of the
 log-likelihood evaluated at each sample.
  \item \code{acc_ratio} The acceptance ratio for the joint update
-of the parameters \code{phi} and \code{omg}.
+of the parameters \code{phi} and \code{omg}, if sampled.
  \item \code{sys_time} The total computing time for the MCMC sampling.
  \item \code{Nout}, \code{Nbi},  \code{Nthin} As in input. Used
 internally in other functions.
- \item \code{response} The value of the response variable at the
-observed locations. Used internally in other functions.
- \item \code{weights} The response weights at the observed
-locations. Used internally in other functions.
- \item \code{modelmatrix} The model matrix at the observed
-locations. Used internally in other functions.
- \item \code{family} As in input. Used internally in other functions.
- \item \code{betm0}, \code{betQ0}, \code{ssqdf}, \code{ssqsc},
-\code{corrfcn}, \code{kappa}, \code{dispersion} As in
-input. Used internally in other functions.
- \item \code{locations} Coordinates of the observed locations.
-Used internally in other functions.
- \item \code{whichobs} A logical vector indicated which rows in
-the data and in the MCMC samples for the spatial random field
-correspond to the observed locations.
 }
+The other objects contain input variables. The object \code{call}
+  contains the function call.
 }
 \description{
 Draw MCMC samples from the Spatial GLMM with known link function
@@ -184,9 +167,10 @@ predgrid <- mkpredgrid2d(rhizoctonia[c("Xcoord", "Ycoord")],
 
 ### Combine observed and prediction locations
 rhizdata <- stackdata(rhizoctonia, predgrid$grid)
-
+##'
 ### Define the model
 corrf <- "spherical"
+family <- "binomial.probit"
 kappa <- 0
 ssqdf <- 1
 ssqsc <- 1
@@ -196,36 +180,27 @@ phiprior <- c(100, 1, 1000, 100) # U(100, 200)
 phisc <- 3
 omgprior <- c(2, 1, 1, 0)        # Exp(mean = 2)
 omgsc <- .1
-linkp <- "probit"
-
+##'
 ### MCMC sizes
 Nout <- 100
 Nthin <- 1
 Nbi <- 0
 
 ### Trial run
-emt <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
+emt <- mcsglmm(Infected ~ 1, family, rhizdata, weights = Total,
                atsample = ~ Xcoord + Ycoord,
                Nout = Nout, Nthin = Nthin, Nbi = Nbi,
                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-               phipars = phiprior, omgpars = omgprior, linkp = linkp,
-               corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc,
+               corrpriors = list(phi = phiprior, omg = omgprior), 
+               corrfcn = corrf, kappa = kappa,
+               corrtuning = list(phi = phisc, omg = omgsc, kappa = 0),
                dispersion = 1, test = 10)
 
 ### Full run
-emc <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
-               atsample = ~ Xcoord + Ycoord,
-               Nout = Nout, Nthin = Nthin, Nbi = Nbi,
-               betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-               phipars = phiprior, omgpars = omgprior, linkp = linkp,
-               corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc,
-               dispersion = 1, test = FALSE)
-
-
-plot.ts(cbind(phi = emc$phi, omg = emc$omg, beta = c(emc$beta),
-              ssq = emc$ssq), nc = 2)
+emc <- update(emt, test = FALSE)
 
 emcmc <- mcmcmake(emc)
 summary(emcmc[, c("phi", "omg", "beta", "ssq")])
+plot(emcmc[, c("phi", "omg", "beta", "ssq")])
 }
 }

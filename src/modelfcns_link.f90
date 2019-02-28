@@ -42,6 +42,17 @@ contains
     y = exp(f - ff)
   end function invlinkdz_robit
 
+  elemental function loginvlinkdz_robit (z,d) result (y)
+    use interfaces, only: logprobt, logpdft
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision y
+    double precision f, ff
+    ff = logprobt(z, d)
+    f = logpdft(z, d)
+    y = f - ff
+  end function loginvlinkdz_robit
+
   elemental function invlinkhz_robit (z,d) result (y)
     ! If g_d(z) is the pdf of the t_d distribution, then we need
     ! d2w = d(log g_d(z)) * d1w - (d1w)^2
@@ -192,6 +203,16 @@ contains
     y = 1d0 - y
   end function invlinkdz_logit
 
+  elemental function loginvlinkdz_logit (z,d) result (y)
+    use interfaces, only: logproblogis, flog1mexp
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision y
+    ! y = 1d0/(1d0 + exp(z))
+    y = logproblogis(z)
+    y = flog1mexp(y)
+  end function loginvlinkdz_logit
+
   elemental function invlinkhz_logit (z,d) result (y)
     use interfaces, only: logproblogis
     implicit none
@@ -277,6 +298,17 @@ contains
     f = logpdfnorm(z)
     y = exp(f - ff)
   end function invlinkdz_probit
+
+  elemental function loginvlinkdz_probit (z,d) result (y)
+    use interfaces, only: logprobnorm, logpdfnorm
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision y
+    double precision f, ff
+    ff = logprobnorm(z)
+    f = logpdfnorm(z)
+    y = f - ff
+  end function loginvlinkdz_probit
 
   elemental function invlinkhz_probit (z,d) result (y)
     ! If g(z) is the pdf of the N(0,1) distribution, then we need
@@ -393,6 +425,24 @@ contains
       end if
     end if
   end function invlinkdz_boxcox
+
+  elemental function loginvlinkdz_boxcox (z,d) result (w)
+    ! w = log(mu)
+    use interfaces, only: flog1p
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w
+    if (d .eq. 0d0) then
+      w = 0d0
+    else
+      w = d*z
+      if (w .gt. -1d0) then
+        w = -flog1p(w)
+      else
+        w = bigneg
+      end if
+    end if
+  end function loginvlinkdz_boxcox
 
   elemental function invlinkhz_boxcox (z,d) result (w)
     ! w = log(mu)
@@ -591,6 +641,19 @@ contains
 !       end if
     end if
   end function invlinkdz_modbc
+
+  elemental function loginvlinkdz_modbc (z,d) result (w)
+    ! w = log(mu)
+    use interfaces, only: flog1p
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w
+    if (d .eq. 0d0) then
+      w = 0d0
+    else
+      w = -flog1p(abs(d*z))
+    end if
+  end function loginvlinkdz_modbc
 
   elemental function invlinkhz_modbc (z,d) result (w)
     ! w = log(mu)
@@ -815,6 +878,43 @@ contains
       end if
     end if
   end function invlinkdz_ga
+
+  elemental function loginvlinkdz_ga (z,d) result(w)
+    ! Inverse Box-Cox transformation. Using extended if d > 0.
+    use interfaces, only: flog1p
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w
+    if (d .eq. 0d0) then
+      w = z
+    else if (d .eq. 1d0) then
+      w = 0d0
+    else if (d .gt. 0d0) then
+      w = abs(d*z + 1d0)
+      w = log(w)
+      if (d .eq. 2d0) then
+        w = -.5d0*w
+      else if (d .ne. .5d0) then
+        w = (1d0/d - 1d0)*w
+      end if
+    else ! d .lt. 0d0
+      ! w = d*z + 1d0
+      w = flog1p(d*z)
+      if (w .gt. 0d0) then
+        if (d .eq. -1d0) then
+          w = -(w + w)
+        else if (d .eq. -2d0) then
+          w = -1.5d0*w
+        else if (d .eq. -.5d0) then
+          w = -(w+w+w)
+        else
+          w = (1d0/d - 1d0)*w
+        end if
+      else
+        w = bigneg
+      end if
+    end if
+  end function loginvlinkdz_ga
 
   elemental function invlinkhz_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
@@ -1064,6 +1164,29 @@ contains
     f = logpdfnorm(zt)
     w = exp(f-w)*dzt
   end function invlinkdz_wallace
+
+  elemental function loginvlinkdz_wallace (z,d) result (w)
+    use interfaces, only: logprobnorm, logpdfnorm, flog1p
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w
+    double precision t, c, f, u, dzt, zt
+    c = 8d0*d
+    c = (c + 1d0)/(c + 3d0)
+    t = z*z/d
+    u = sqrt(d*flog1p(t))
+    if (u .eq. 0d0) then
+      dzt = c
+      zt = 0d0
+    else
+      dzt = c*abs(z)/u/(1+t)
+      zt = c*u
+      if (z .lt. 0d0) zt = -zt
+    end if
+    w = logprobnorm(zt)
+    f = logpdfnorm(zt)
+    w = f - w + log(dzt)
+  end function loginvlinkdz_wallace
 
   elemental function invlinkhz_wallace (z,d) result (w)
     use interfaces, only: logprobnorm, logpdfnorm, flog1p
@@ -1429,48 +1552,80 @@ contains
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!! modified GEV binomial !!!!!!!!!!!!!!!!!!!!!!!!!!
-!! mu = exp{-max(0,1+nu*z)^{-1/nu}} if nu neq 0
-!!    = exp{-exp(z)}                if nu == 0
+!! mu = exp{-(1+nu*|z|)^{-sign(z)/nu}} if nu neq 0
+!!    = exp{-exp(z)}                   if nu == 0
   elemental function flink_modgev (w,d) result(z)
     implicit none
     double precision, intent(in) :: w, d
     double precision :: z
-    z = -flink_modbc(log(-w),-d)
+    z = log(-w)
+    if (d .eq. 0d0) then
+      z = -z
+    else
+      z = -flink_modbc(z,-d)
+    end if
   end function flink_modgev
 
   elemental function invlink_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
-    w = -exp(invlink_modbc(-z,-d))
+    if (d .eq. 0d0) then
+      w = -exp(-z)
+    else
+      w = -exp(invlink_modbc(-z,-d))
+    end if
   end function invlink_modgev
 
   elemental function invlinkdz_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
-    w = exp(invlink_modbc(-z,-d))*invlinkdz_modbc(-z,-d)
+    if (d .eq. 0d0) then
+      w = exp(-z)
+    else
+      w = exp(invlink_modbc(-z,-d))*invlinkdz_modbc(-z,-d)
+    end if
   end function invlinkdz_modgev
+
+  elemental function loginvlinkdz_modgev (z,d) result (w)
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w
+    if (d .eq. 0d0) then
+      w = -z
+    else
+      w = invlink_modbc(-z,-d) + loginvlinkdz_modbc(-z,-d)
+    end if
+  end function loginvlinkdz_modgev
 
   elemental function invlinkhz_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w, y, hz
-    y = exp(invlink_modbc(-z,-d))
-    w = invlinkdz_modbc(-z,-d)
-    hz = invlinkhz_modbc(-z,-d)
-    w = -(w*w + hz)*y
+    if (d .eq. 0d0) then
+      w = -exp(-z)
+    else
+      y = exp(invlink_modbc(-z,-d))
+      w = invlinkdz_modbc(-z,-d)
+      hz = invlinkhz_modbc(-z,-d)
+      w = -(w*w + hz)*y
+    end if
   end function invlinkhz_modgev
 
   elemental function invlink3z_modgev (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision dz, y, hz, w
-    y = exp(invlink_modbc(-z,-d))
-    dz = invlinkdz_modbc(-z,-d)
-    hz = invlinkhz_modbc(-z,-d)
-    w = invlink3z_modbc(-z,-d)
-    w = (dz*dz*dz + 3*dz*hz + w)*y
+    if (d .eq. 0d0) then
+      w = exp(-z)
+    else
+      y = exp(invlink_modbc(-z,-d))
+      dz = invlinkdz_modbc(-z,-d)
+      hz = invlinkhz_modbc(-z,-d)
+      w = invlink3z_modbc(-z,-d)
+      w = (dz*dz*dz + 3*dz*hz + w)*y
+    end if
   end function invlink3z_modgev
 
   elemental function invlinkdn_modgev (z,d) result (w)
@@ -1534,6 +1689,155 @@ contains
     w = (dz*dn*dn + dz*hn + 2*dzdn*dn + dzhn)*w
   end function invlinkdzhn_modgev
 
+!!!!!!!!!!!!!!!! modified GEV negative skeweness binomial !!!!!!!!!!!!!!!!!
+!! mu = 1 - exp{-(1+nu*|z|)^{sign(z)/nu}} if nu neq 0
+!!    = 1 - exp{-exp(-z)}                 if nu == 0
+  elemental function flink_modgevns (w,d) result(z)
+    use interfaces, only: flog1mexp
+    implicit none
+    double precision, intent(in) :: w, d
+    double precision :: z
+    z = -flink_modgev(flog1mexp(w),d)
+  end function flink_modgevns
+
+  elemental function invlink_modgevns (z,d) result (w)
+    use interfaces, only: flog1mexp
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w
+    w = flog1mexp(invlink_modgev(-z,d))
+  end function invlink_modgevns
+
+  elemental function invlinkdz_modgevns (z,d) result (w)
+    use interfaces, only: fexpm1, flogexpm1
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w, e, f1
+    if (d .eq. 0d0) then
+      f1 = exp(z)
+!!       e = fexpm1(f1)
+!!       w = f1/e
+      w = z - flogexpm1(f1)
+      w = exp(w)
+    else
+      e = fexpm1(-invlink_modgev(-z,d))
+      f1 = invlinkdz_modgev(-z,d)
+      w = f1/e
+    end if
+  end function invlinkdz_modgevns
+
+  elemental function loginvlinkdz_modgevns (z,d) result (w)
+    use interfaces, only: fexpm1, flogexpm1
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w, e, f1
+    if (d .eq. 0d0) then
+      f1 = exp(z)
+!!       e = fexpm1(f1)
+!!       w = f1/e
+      w = z - flogexpm1(f1)
+    else
+      e = flogexpm1(-invlink_modgev(-z,d))
+      f1 = invlinkdz_modgev(-z,d)
+      w = log(f1) - e
+    end if
+  end function loginvlinkdz_modgevns
+
+  elemental function invlinkhz_modgevns (z,d) result (w)
+    use interfaces, only: fexpm1
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w, w1, f1, f2, e
+    e = fexpm1(-invlink_modgev(-z,d))
+    f1 = invlinkdz_modgev(-z,d)
+    f2 = invlinkhz_modgev(-z,d)
+    w1 = f1/e
+    w = -w1*w1 - w1*f1 - f2/e
+  end function invlinkhz_modgevns
+
+  elemental function invlink3z_modgevns (z,d) result (w)
+    use interfaces, only: fexpm1
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w, e, f1, f2, f3, w1, w2, fr
+    e = fexpm1(-invlink_modgev(-z,d))
+    f1 = invlinkdz_modgev(-z,d)
+    f2 = invlinkhz_modgev(-z,d)
+    f3 = invlink3z_modgev(-z,d)
+    fr = f2/f1
+    w1 = f1/e
+    w2 = -w1*w1 - w1*f1 - f2/e
+    w = -2d0*w1*w2 - w2*f1 + w1*f2 - w2*fr + w1*fr*fr + f3/e
+  end function invlink3z_modgevns
+
+  elemental function invlinkdn_modgevns (z,d) result (w)
+    use interfaces, only: fexpm1
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w, e, f1
+    e = fexpm1(-invlink_modgev(-z,d))
+    f1 = invlinkdn_modgev(-z,d)
+    w = -f1/e
+  end function invlinkdn_modgevns
+
+  elemental function invlinkhn_modgevns (z,d) result (w)
+    use interfaces, only: fexpm1
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w, w1, f1, f2, e
+    e = fexpm1(-invlink_modgev(-z,d))
+    f1 = invlinkdn_modgev(-z,d)
+    f2 = invlinkhn_modgev(-z,d)
+    w1 = -f1/e
+    w = -w1*w1 + w1*f1 - f2/e
+  end function invlinkhn_modgevns
+
+  elemental function invlinkdzdn_modgevns (z,d) result (w)
+    use interfaces, only: fexpm1
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision wz, e, f10, f01, f11, w
+    e = fexpm1(-invlink_modgev(-z,d))
+    f10 = invlinkdz_modgev(-z,d)
+    f01 = invlinkdn_modgev(-z,d)
+    f11 = invlinkdzdn_modgev(-z,d)
+    wz = f10/e
+    w = wz*f01 + wz*wz*f01/f10 + f11/e
+  end function invlinkdzdn_modgevns
+
+  elemental function invlinkhzdn_modgevns (z,d) result (w)
+    use interfaces, only: fexpm1
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision wz, wzd, e, f10, f01, f11, f20, f21, w
+    e = fexpm1(-invlink_modgev(-z,d))
+    f10 = invlinkdz_modgev(-z,d)
+    f01 = invlinkdn_modgev(-z,d)
+    f11 = invlinkdzdn_modgev(-z,d)
+    f20 = invlinkhz_modgev(-z,d)
+    f21 = invlinkhzdn_modgev(-z,d)
+    wz = f10/e
+    wzd = wz*f01 + wz*wz*f01/f10 + f11/e
+    w = -2d0*wz*wzd - wzd*f10 - wz*f11 - (wzd - f11/e)*f20/f10 - f21/e
+  end function invlinkhzdn_modgevns
+
+  elemental function invlinkdzhn_modgevns (z,d) result (w)
+    use interfaces, only: fexpm1
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision wz, wzd, e, f10, f01, f11, f02, f12, w
+    e = fexpm1(-invlink_modgev(-z,d))
+    f10 = invlinkdz_modgev(-z,d)
+    f01 = invlinkdn_modgev(-z,d)
+    f11 = invlinkdzdn_modgev(-z,d)
+    f02 = invlinkhn_modgev(-z,d)
+    f12 = invlinkdzhn_modgev(-z,d)
+    wz = f10/e
+    wzd = wz*f01 + wz*wz*f01/f10 + f11/e
+    w = wzd*f01 + wz*f02 + 2d0*wzd*f01/e + wz*f02/e - f01*f11/(e*e) &
+       + wzd*f11/f10 + f12/e - f11*f11/(e*f10)
+  end function invlinkdzhn_modgevns
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! GEV binomial !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! mu = exp{-max(0,1+nu*z)^{-1/nu}} if nu neq 0
@@ -1558,6 +1862,13 @@ contains
     double precision w
     w = exp(invlink_boxcox(-z,-d))*invlinkdz_boxcox(-z,-d)
   end function invlinkdz_gev
+
+  elemental function loginvlinkdz_gev (z,d) result (w)
+    implicit none
+    double precision, intent(in) :: z, d
+    double precision w
+    w = invlink_boxcox(-z,-d) + loginvlinkdz_boxcox(-z,-d)
+  end function loginvlinkdz_gev
 
   elemental function invlinkhz_gev (z,d) result (w)
     implicit none

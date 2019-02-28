@@ -3,10 +3,6 @@
 ##' \code{linkfcn} maps the mean of the response variable \code{mu} to
 ##' the linear predictor \code{z}. \code{linkinv} is its inverse.
 ##'
-##' Note that the logit link for the
-##' binomial family is defined as the quantile of the logistic
-##' distribution with scale 0.6458.
-##'
 ##' For the Gaussian family, if the link parameter is positive, then
 ##' the extended link is used, defined by \deqn{z =
 ##' \frac{sign(\mu)|\mu|^\nu - 1}{\nu}}{z = (sign(mu)*abs(mu)^nu -
@@ -37,17 +33,17 @@
 ##' @title Calculate the link function for exponential families
 ##' @param mu Numeric. The mean of the response variable.
 ##' @param z Numeric. The linear predictor.
-##' @param linkp The link function parameter. A scalar but for the
-##' binomial family is also allowed to have the character values
-##' "logit" or "probit".
-##' @param family The distribution of the response variable.
+##' @param linkp The link function parameter. A scalar.
+##' @param family The distribution of the response variable from
+##'   \code{\link{.geoBayes_models}}. Either an integer or the
+##'   family name.
 ##' @return A numeric array of the same dimension as the function's
 ##' first argument.
-##' @seealso \code{\link{comparebinlinks}}
+## ##' @seealso \code{\link{comparebinlinks}}
 ##' @examples \dontrun{
 ##' mu <- seq(0.1, 0.9, 0.1)
 ##' linkfcn(mu, 7, "binomial")       # robit(7) link function
-##' linkfcn(mu, "logit", "binomial") # logit link function
+##' linkfcn(mu, , "binomial.logit")  # logit link function
 ##'
 ##' mu <- seq(-3, 3, 1)
 ##' linkfcn(mu, 0.5, "gaussian")     # sqrt transformation
@@ -59,6 +55,10 @@
 ##' @rdname linkfcn
 ##' @importFrom stats qlogis qnorm qt qf plogis pnorm pt
 ##' @useDynLib geoBayes flinkfcn
+##' @references Evangelou, E., & Roy, V. (2019). Estimation and prediction for
+##'   spatial generalized linear mixed models with parametric links
+##'   via reparameterized importance sampling. Spatial Statistics, 29,
+##'   289-315.
 ##' @export
 linkfcn <- function (mu, linkp, family = "gaussian") {
   if (is.numeric(family)) {
@@ -69,13 +69,14 @@ linkfcn <- function (mu, linkp, family = "gaussian") {
   } else {
     ifam <- .geoBayes_family(family)
   }
+  if (!.geoBayes_models$needlinkp[ifam]) linkp <- 0
   if (length(linkp) != 1) {
     stop ("The linkp argument must be scalar.")
   }
   linkp <- .geoBayes_getlinkp(linkp, ifam)
-  x <- as.double(mu)
+  x <- y <- as.double(mu)
   n <- length(x)
-  mu[] <- .Fortran("flinkfcn", x, n, x, linkp, ifam,
+  mu[] <- .Fortran("flinkfcn", x, n, y, linkp, ifam,
                    PACKAGE = "geoBayes")[[1]]
   mu
 }
@@ -93,13 +94,14 @@ linkinv <- function (z, linkp, family = "gaussian") {
   } else {
     ifam <- .geoBayes_family(family)
   }
+  if (!.geoBayes_models$needlinkp[ifam]) linkp <- 0
   if (length(linkp) != 1) {
     stop ("The linkp argument must be scalar.")
   }
   linkp <- .geoBayes_getlinkp(linkp, ifam)
-  x <- as.double(z)
+  x <- y <- as.double(z)
   n <- length(x)
-  z[] <- .Fortran("flinkinv", x, n, x, linkp, ifam,
+  z[] <- .Fortran("flinkinv", x, n, y, linkp, ifam,
                   PACKAGE = "geoBayes")[[1]]
   z
 }

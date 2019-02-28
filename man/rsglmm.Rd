@@ -2,15 +2,14 @@
 % Please edit documentation in R/simulate.R
 \name{rsglmm}
 \alias{rsglmm}
-\alias{rsglmm}
 \alias{rstrga}
-\alias{rsglmm}
 \alias{rsgrf}
 \title{Simulation from a spatial model}
 \usage{
-rsglmm(n, formula, family = "gaussian", data, weights, subset, atsample, beta,
-  linkp, phi, omg, kappa, ssq, corrfcn = "matern", longlat = FALSE,
-  dispersion = 1, returnGRF = FALSE, warndisp = TRUE)
+rsglmm(n, formula, family = "gaussian", data, weights, subset, atsample,
+  beta, linkp, phi, omg, kappa, ssq, corrfcn = "matern",
+  longlat = FALSE, dispersion = 1, returnGRF = FALSE,
+  warndisp = TRUE)
 
 rstrga(n, formula, data, weights, subset, atsample, beta, linkp, phi, omg,
   kappa, ssq, corrfcn = "matern", longlat = FALSE, dispersion = 1,
@@ -63,7 +62,8 @@ distance. See \code{\link[sp]{spDists}}.}
 
 \item{dispersion}{The fixed dispersion parameter. When this is not
 1 and the sample is from a binomial or a Poisson distribution,
-an approximate sample is returned.}
+no such distribution exists so an approximate sample is
+returned. Use with caution.}
 
 \item{returnGRF}{Whether to return the simulate Gaussian random
 field as well.}

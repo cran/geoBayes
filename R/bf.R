@@ -67,11 +67,11 @@
 ##' ssqsc <- 1
 ##' betm0 <- 0
 ##' betQ0 <- .01
-##' linkp <- "probit"
+##' family <- "binomial.probit"
 ##' ### Skeleton points
 ##' philist <- c(100, 140, 180)
 ##' omglist <- c(.5, 1)
-##' parlist <- expand.grid(phi=philist, linkp=linkp, omg=omglist, kappa = kappa)
+##' parlist <- expand.grid(linkp=0, phi=philist, omg=omglist, kappa = kappa)
 ##' ### MCMC sizes
 ##' Nout <- 100
 ##' Nthin <- 1
@@ -79,14 +79,15 @@
 ##' ### Take MCMC samples
 ##' runs <- list()
 ##' for (i in 1:NROW(parlist)) {
-##'   runs[[i]] <- mcsglmm(Infected ~ 1, 'binomial', rhizoctonia, weights = Total,
+##'   runs[[i]] <- mcsglmm(Infected ~ 1, family, rhizoctonia, weights = Total,
 ##'                        atsample = ~ Xcoord + Ycoord,
 ##'                        Nout = Nout, Nthin = Nthin, Nbi = Nbi,
 ##'                        betm0 = betm0, betQ0 = betQ0,
 ##'                        ssqdf = ssqdf, ssqsc = ssqsc,
-##'                        phistart = parlist$phi[i], omgstart = parlist$omg[i],
+##'                        phi = parlist$phi[i], omg = parlist$omg[i],
 ##'                        linkp = parlist$linkp[i], kappa = parlist$kappa[i],
-##'                        corrfcn = corrf, phisc = 0, omgsc = 0)
+##'                        corrfcn = corrf,
+##'                        corrtuning=list(phi = 0, omg = 0, kappa = 0))
 ##' }
 ##' bf <- bf1skel(runs)
 ##' bf$logbf
@@ -101,124 +102,107 @@ bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
   imeth <- match(method, eval(formals()$method))
   classes <- sapply(runs, class)
   if (any(classes != "geomcmc")) {
-    stop ("Input runs is not a list with elements of class geomcmc")
+    stop ("Input runs is not a list with elements of class geomcmc.")
   }
   nruns <- length(runs)
   if (nruns == 0) stop ("No runs specified")
   reference <- as.integer(reference)
   if (isTRUE(reference < 1L | reference > nruns)) {
-    stop("Argument reference does not correspond to a run in runs")
+    stop("Argument reference does not correspond to a run in runs.")
   }
-  Nout <- sapply(runs, "[[", "Nout")
+  Nout <- sapply(runs, function(x) x$MCMC$Nout)
   Nout1 <- getsize(bfsize1, Nout, "*")
+  Ntot1 <- sum(Nout1)
+  Nout2 <- Nout - Nout1
+  Ntot2 <- sum(Nout2)
 
-  ## Extract model
-  modelvars <- c("response", "weights", "modelmatrix", "family",
-                 "betm0", "betQ0", "ssqdf", "ssqsc",
-                 "dispersion", "tsqdf", "tsqsc", "locations",
-                 "longlat", "corrfcn")
-  models <- lapply(runs, "[", modelvars)
-  model <- models[[1]]
-  if (nruns > 1 && !all(sapply(models[2:nruns], identical, model))) {
-    stop("MCMC chains don't all correspond to the same model")
+  ## Check if fixed phi and omg
+  if (!all(sapply(runs, function(x) length(x$FIXED$phi) == 1))) {
+    stop("Each input runs must have a fixed value phi.")
   }
-  y <- model$response
+  if (!all(sapply(runs, function(x) length(x$FIXED$omg) == 1))) {
+    stop("Each input runs must have a fixed value omg.")
+  }
+
+  ## Extract data and model
+  nm_DATA <- c("response", "weights", "modelmatrix", "locations",
+               "longlat")
+  nm_MODEL <- c("family", "corrfcn", "betm0", "betQ0", "ssqdf", "ssqsc",
+                "tsqdf", "tsqsc", "dispersion")
+  DATA <- runs[[1]]$DATA[nm_DATA]
+  MODEL <- runs[[1]]$MODEL[nm_MODEL]
+  if (nruns > 1) {
+    for (i in 2:nruns) {
+      if (!identical(runs[[i]]$DATA[nm_DATA], DATA)) {
+        stop("MCMC chains don't all correspond to the same data.")
+      }
+      if (!identical(runs[[i]]$MODEL[nm_MODEL], MODEL)) {
+        stop("MCMC chains don't all correspond to the same model.")
+      }
+    }
+  }
+  y <- DATA$response
   n <- as.integer(length(y))
-  l <- model$weights
-  F <- model$modelmatrix
+  l <- DATA$weights
+  F <- DATA$modelmatrix
   p <- NCOL(F)
-  family <- model$family
+  loc <- DATA$locations
+  dm <- sp::spDists(loc, longlat = DATA$longlat)
+  family <- MODEL$family
   ## ifam <- .geoBayes_family(family)
-  betm0 <- model$betm0
-  betQ0 <- model$betQ0
-  ssqdf <- model$ssqdf
-  ssqsc <- model$ssqsc
-  dispersion <- model$dispersion
-  tsqdf <- model$tsqdf
-  tsqsc <- model$tsqsc
-  corrfcn <- model$corrfcn
+  corrfcn <- MODEL$corrfcn
+  icf <- .geoBayes_correlation(corrfcn)
+  betm0 <- MODEL$betm0
+  betQ0 <- MODEL$betQ0
+  ssqdf <- MODEL$ssqdf
+  ssqsc <- MODEL$ssqsc
+  tsqdf <- MODEL$tsqdf
+  tsqsc <- MODEL$tsqsc
+  dispersion <- MODEL$dispersion
 
   ## Choose sample
-  getsample <- transfsample(runs, model, transf)
+  getsample <-
+    transfsample(runs,
+                 list(response = y, family = family), transf)
   sample <- matrix(unlist(getsample$sample), n)
   itr <- getsample$itr
   transf <- getsample$transf
   real_transf <- getsample$real_transf
   ifam <- getsample$ifam
 
+  ## Skeleton points
+  phi_pnts <- as.double(sapply(runs, function(r) r$FIXED$phi))
+  omg_pnts <- as.double(sapply(runs, function(r) r$FIXED$omg))
+  nu_pnts <- as.double(sapply(runs, function(r) r$FIXED$linkp_num))
+  if (.geoBayes_corrfcn$needkappa[icf]) {
+    kappa_pnts <- sapply(runs, function(r) r$FIXED$kappa)
+    kappa_pnts <- .geoBayes_getkappa(kappa_pnts, icf)
+  } else {
+    kappa_pnts <- rep(0, nruns)
+  }
+
   bfroutine <- paste0("bfsp_", real_transf)
 
-  Ntot1 <- sum(Nout1)
-  Nout2 <- Nout - Nout1
-  Ntot2 <- sum(Nout2)
   if (nruns == 1) {
-    runs <- runs[[1]]
-    out <- list(logbf = 1, logLik1 = runs$logLik[1:Ntot1],
-                logLik2 = runs$logLik[-(1:Ntot1)],
+    MCMC <- runs[[1]]$MCMC
+    out <- list(logbf = 1, logLik1 = MCMC$logLik[1:Ntot1],
+                logLik2 = MCMC$logLik[-(1:Ntot1)],
                 isweights = rep.int(0, Ntot2),
                 controlvar = matrix(1, Ntot2, 1),
                 z = sample[[1]][, -(1:Ntot1), drop = FALSE],
                 N1 = Nout1, N2 = Nout2,
-                betm0 = runs$betm0, betQ0 = runs$betQ0, ssqdf = runs$ssqdf,
-                ssqsc = runs$ssqsc, tsqdf = runs$tsqdf, tsqsc = runs$tsqsc,
-                dispersion = runs$dispersion, response = runs$response,
-                weights = runs$weights, modelmatrix = runs$modelmatrix,
-                locations = runs$locations, longlat = runs$longlat,
-                distmat = sp::spDists(runs$locations),
-                family = runs$family,
-                referencebf = 0, corrfcn = runs$corrfcn, transf = transf,
+                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf,
+                ssqsc = ssqsc, tsqdf = tsqdf, tsqsc = tsqsc,
+                dispersion = dispersion, response = y,
+                weights = l, modelmatrix = F,
+                locations = loc, longlat = DATA$longlat,
+                distmat = dm,
+                family = family,
+                referencebf = 0, corrfcn = corrfcn, transf = transf,
                 real_transf = real_transf, itr = itr,
-                pnts = list(nu = runs$nu, phi = runs$phi, omg = runs$omg,
-                  kappa = runs$kappa))
+                pnts = list(nu = nu_pnts, phi = phi_pnts, omg = omg_pnts,
+                  kappa = kappa_pnts))
     return(out)
-  }
-  icf <- .geoBayes_correlation(corrfcn)
-  loc <- model$locations
-  dm <- sp::spDists(loc, longlat = model$longlat)
-  fixphi <- sapply(runs, function(r) attr(r[["phi"]], "fixed"))
-  if (sum(fixphi) != 0 & sum(fixphi) != nruns) {
-    stop ("The parameter phi is not consistently fixed or estimated")
-  }
-  fixphi <- fixphi[1]
-  if (!fixphi) {
-    stop("The case where phi is not fixed is not yet implemented")
-  }
-  fixomg <- sapply(runs, function(r) attr(r[["omg"]], "fixed"))
-  if (sum(fixomg) != 0 & sum(fixomg) != nruns) {
-    stop ("The parameter omg is not consistently fixed or estimated")
-  }
-  fixomg <- fixomg[1]
-  if (!fixomg) {
-    stop("The case where omg is not fixed is not yet implemented")
-  }
-  fixnu <- sapply(runs, function(r) attr(r[["nu"]], "fixed"))
-  if (sum(fixnu) != 0 & sum(fixnu) != nruns) {
-    stop ("The parameter nu is not consistently fixed or estimated")
-  }
-  fixnu <- fixnu[1]
-  if (!fixnu) {
-    stop("The parameter nu must be fixed in the MCMC")
-  }
-  if (fixphi) {
-    phi_pnts <- sapply(runs, function(r) r[["phi"]][1])
-  }
-  if (fixomg) {
-    omg_pnts <- sapply(runs, function(r) r[["omg"]][1])
-  }
-  if (fixnu) {
-    nu_pnts <- sapply(runs, function(r) r[["nu"]][1])
-  }
-  if (.geoBayes_corrfcn$needkappa[icf]) {
-    kappa_pnts <- sapply(runs, function(r) r[["kappa"]][1])
-  } else {
-    kappa_pnts <- rep(0, nruns)
-  }
-  kappa_pnts <- as.double(kappa_pnts)
-  if (corrfcn %in% c("matern", "powerexponential") && any(kappa_pnts < 0)) {
-    stop ("Argument kappa_pnts cannot be negative")
-  }
-  if (corrfcn == "powerexponential" && any(kappa_pnts > 2)) {
-    stop ("Argument kappa_pnts cannot be more than 2")
   }
 
   ## Split the sample

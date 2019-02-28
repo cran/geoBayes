@@ -16,7 +16,7 @@ the ith sample when all samples are put together evaluated
 at the jth parameter value.}
 
 \item{N}{A vector of length ncol(lglk) or a scalar corresponding to
-the sample sizes from each model. Must sum(N) == nrow(lglk). The 
+the sample sizes from each model. Must sum(N) == nrow(lglk). The
 first N[1] samples come from model corresponding to the first set
 of parameters, then (N[1]+1):N[2] are from the model corresponding
 to the second set of parameters, and so on.}
@@ -32,4 +32,9 @@ Perform the reverse logistic regression estimation
 }
 \details{
 Estimation is done by maximising the reverse logistic log likelihood.
+}
+\references{
+Geyer, C. J. (1994). Estimating normalizing constants
+  and reweighting mixtures in Markov chain Monte Carlo. Technical
+  Report 568, School of Statistics, University of Minnesota.
 }

@@ -1,47 +1,59 @@
-##' Standard errors for BF estimates
+##' Standard errors for the empirical Bayes estimates of the parameters.
 ##'
-##' Using the formula from Casella.
-##' @title SE for BF
-##' @param mcrun The output from the function \code{mcsglmm}.
+##' @title Empirical Bayes standard errors
+##' @param mcrun The output from the function \code{mcsglmm} where the
+##'   parameters linkp, phi, omg, kappa are set at their empirical
+##'   Bayes estimates (output of \code{\link{bf2optim}}).
 ##' @param transf The type of transformation to use.
-##' @return The precision matrix
+##' @return The precision (inverse covariance) matrix.
 ##' @importFrom stats var
 ##' @useDynLib geoBayes llikfcn_dh_tr
+##' @references Casella, G. (2001). Empirical Bayes Gibbs sampling.
+##'   Biostatistics, 2(4), 485-500.
+##'
+##' Evangelou, E., & Roy, V. (2019). Estimation and prediction for
+##'   spatial generalized linear mixed models with parametric links
+##'   via reparameterized importance sampling. Spatial Statistics, 29,
+##'   289-315.
 ##' @export
 bf2se <- function(mcrun, transf = c("no", "mu", "wo"))
 {
-  family <- mcrun$family
-  corrfcn <- mcrun$corrfcn
-  F <- mcrun$modelmatrix
+  family <- mcrun$MODEL$family
+  ifam <- .geoBayes_family(family)
+  corrfcn <- mcrun$MODEL$corrfcn
+  icf <- .geoBayes_correlation(corrfcn)
+  F <- mcrun$DATA$modelmatrix
   n <- NROW(F)
   p <- NCOL(F)
-  loc <- mcrun$locations
-  longlat <- mcrun$longlat
+  loc <- mcrun$DATA$locations
+  longlat <- mcrun$DATA$longlat
   dm <- spDists(loc, longlat = longlat)
-  y <- mcrun$response
-  l <- mcrun$weights
-  linkp <- mcrun$nu[1]
-  phi <- mcrun$phi[1]
-  omg <- mcrun$omg[1]
-  kappa <- mcrun$kappa[1]
-  betm0 <- mcrun$betm0
-  betQ0 <- mcrun$betQ0
-  ssqdf <- mcrun$ssqdf
-  ssqsc <- mcrun$ssqsc
-  dispersion <- mcrun$dispersion
-  tsqdf <- mcrun$tsqdf
-  tsqsc <- mcrun$tsqsc
-  icf <- .geoBayes_correlation(corrfcn)
-  ifam <- .geoBayes_family(family)
+  y <- mcrun$DATA$response
+  l <- mcrun$DATA$weights
+  linkp <- mcrun$FIXED$linkp_num[1]
+  if (length(linkp) < 1) stop ("This function requires fixed linkp.")
   nu <- .geoBayes_getlinkp(linkp, ifam)
+  phi <- mcrun$FIXED$phi[1]
+  if (length(phi) < 1) stop ("This function requires fixed phi.")
+  omg <- mcrun$FIXED$omg[1]
+  if (length(omg) < 1) stop ("This function requires fixed omg.")
+  kappa <- mcrun$FIXED$kappa[1]
+  if (length(kappa) < 1) stop ("This function requires fixed kappa.")
+  betm0 <- mcrun$MODEL$betm0
+  betQ0 <- mcrun$MODEL$betQ0
+  ssqdf <- mcrun$MODEL$ssqdf
+  ssqsc <- mcrun$MODEL$ssqsc
+  tsqdf <- mcrun$MODEL$tsqdf
+  tsqsc <- mcrun$MODEL$tsqsc
+  dispersion <- mcrun$MODEL$dispersion
   if (ifam == 0) {
     tsq <- tsqsc
   } else {
     tsq <- dispersion
     tsqdf <- 0
   }
-  getsample <- transfsample(list(mcrun[c("z", "mu", "nu", "whichobs")]),
-                            mcrun[c("response", "family")], transf)
+  getsample <- transfsample(list(mcrun),
+                            list(response = y, family = family), transf)
   sample <- matrix(unlist(getsample$sample), n)
   itr <- getsample$itr
   transf <- getsample$transf

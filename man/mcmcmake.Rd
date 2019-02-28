@@ -21,6 +21,7 @@ function \code{\link{mcsglmm}} or \code{\link{mcstrga}} and
 returns an \code{\link[coda]{mcmc}} object or an
 \code{\link[coda]{mcmc.list}} object for coda. The function
 requires the \code{coda} package to be installed.
+
 The spatial random field components are assigned the names
 \code{z_*} where \code{*} is a number beginning at 1. Similarly,
 the regressor coefficients are assigned the names \code{beta_*} if
@@ -31,13 +32,12 @@ spatial range, and relative nugget parameters respectively.
 }
 \examples{
 \dontrun{
-### Load the data
+ ### Load the data
 data(rhizoctonia)
 rhiz <- na.omit(rhizoctonia)
 rhiz$IR <- rhiz$Infected/rhiz$Total # Incidence rate of the
                               # rhizoctonia disease
-
-### Define the model
+ ### Define the model
 corrf <- "spherical"
 ssqdf <- 1
 ssqsc <- 1
@@ -50,23 +50,21 @@ phisc <- 1
 omgprior <- c(3, 1, 1000, 0) # U(0, 3)
 omgsc <- 1.3
 linkp <- 1
-
 ## MCMC parameters
 Nout <- 100
 Nbi <- 0
 Nthin <- 1
-
-### Run MCMC
+ ### Run MCMC
 sample <- mcstrga(Yield ~ IR, data = rhiz,
                   atsample = ~ Xcoord + Ycoord, corrf = corrf,
                   Nout = Nout, Nthin = Nthin,
                   Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
                   ssqdf = ssqdf, ssqsc = ssqsc,
                   tsqdf = tsqdf, tsqsc = tsqsc,
-                  phipars = phiprior, omgpars = omgprior,
                   linkp = linkp,
-                  phisc = phisc, omgsc = omgsc, test=FALSE)
-
+                  corrprior = list(phi = phiprior, omg = omgprior), 
+                  corrtuning = list(phi = phisc, omg = omgsc, kappa = 0),
+                  test = FALSE)
 mcsample <- mcmcmake(sample)
 plot(mcsample[, c("phi", "omg", "beta_1", "beta_2", "ssq", "tsq")],
      density = FALSE)

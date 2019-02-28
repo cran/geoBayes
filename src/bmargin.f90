@@ -28,7 +28,7 @@ contains
     ie = 0
     do i = 1, kg
       ie = ie + Nout(i)
-      lidx(ia:ie,i) = .true. 
+      lidx(ia:ie,i) = .true.
       ia = ia + Nout(i)
     end do
 
@@ -86,7 +86,7 @@ contains
     r = exp(eta)/a
     a = a/dble(Ntot)
 
-    convergence = .false. 
+    convergence = .false.
     iterations: do it = 1, maxit
       call rchkusr ! Check if user has requested interrupt
       ia = 1
@@ -108,7 +108,7 @@ contains
         ia = ia + Nout(i)
       end do
       do i = 2, kg
-        ia = 1 
+        ia = 1
         ie = 0
         Bmat(i,i) = 0d0
         do j = 1, kg

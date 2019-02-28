@@ -5,7 +5,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine calcbd_no (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
-   phi, nu, nsq, kappa, icf, Ntot, sample, weights, QRin, &
+   phi, nu, omg, kappa, icf, Ntot, sample, weights, QRin, &
    n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr, icv)
 
   use modelfcns, logpdfzf => logpdfz, logpdfydmu => logpdfydlnk
@@ -14,7 +14,7 @@ subroutine calcbd_no (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   use calcbd_fcns
   implicit none
   integer, intent(in) :: n, p, Ntot, ifam, icf, itr(n), icv
-  double precision, intent(in) :: phi, nsq, &
+  double precision, intent(in) :: phi, omg, &
      kappa, nu, sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n,p), dm(n,n)
@@ -49,9 +49,9 @@ subroutine calcbd_no (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
 
   call rchkusr
 
-  call calc_cov (phi,nsq,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+  call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
   do j = 1, 3
-    DT(:,:,j) = cor_dcov(n, dm, phi, nsq, kappa, j)
+    DT(:,:,j) = cor_dcov(n, dm, phi, omg, kappa, j)
     trUpsDTh(j) = .5d0*traceAB(Ups,DT(:,:,j),n)
   end do
 
@@ -95,7 +95,7 @@ subroutine calcbd_no (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
 end subroutine calcbd_no
 
 subroutine calcbd_mu (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
-   phi, nu, nsq, kappa, icf, Ntot, sample, weights, QRin, &
+   phi, nu, omg, kappa, icf, Ntot, sample, weights, QRin, &
    n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr, icv)
 
   use modelfcns, logpdfzf => logpdfz, logpdfydmu => logpdfydlnk
@@ -104,7 +104,7 @@ subroutine calcbd_mu (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   use calcbd_fcns
   implicit none
   integer, intent(in) :: n, p, Ntot, ifam, icf, itr(n), icv
-  double precision, intent(in) :: phi, nsq, &
+  double precision, intent(in) :: phi, omg, &
      kappa, nu, sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n,p), dm(n,n)
@@ -139,9 +139,9 @@ subroutine calcbd_mu (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
 
   call rchkusr
 
-  call calc_cov (phi,nsq,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+  call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
   do j = 1, 3
-    DT(:,:,j) = cor_dcov(n, dm, phi, nsq, kappa, j)
+    DT(:,:,j) = cor_dcov(n, dm, phi, omg, kappa, j)
     trUpsDTh(j) = .5d0*traceAB(Ups,DT(:,:,j),n)
   end do
 
@@ -150,7 +150,7 @@ subroutine calcbd_mu (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
     sam = sample(:,j)
     msam = sam
     zsam = flink(msam,nu)
-    jsam = logilinkdz(zsam,nu)
+    jsam = loginvlinkdz(zsam,nu)
     dlogpy = 0d0
     dzdnu = -invlinkdn(zsam,nu)/invlinkdz(zsam,nu)
     dmudnu = 0d0
@@ -183,7 +183,7 @@ end subroutine calcbd_mu
 
 
 subroutine calcbd_wo (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
-   phi, nu, nsq, kappa, icf, Ntot, sample, weights, QRin, &
+   phi, nu, omg, kappa, icf, Ntot, sample, weights, QRin, &
    n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr, icv)
 
   use modelfcns, logpdfzf => logpdfz, logpdfydmu => logpdfydlnk
@@ -192,7 +192,7 @@ subroutine calcbd_wo (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   use calcbd_fcns
   implicit none
   integer, intent(in) :: n, p, Ntot, ifam, icf, itr(n), icv
-  double precision, intent(in) :: phi, nsq, &
+  double precision, intent(in) :: phi, omg, &
      kappa, nu, sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n,p), dm(n,n)
@@ -227,9 +227,9 @@ subroutine calcbd_wo (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
 
   call rchkusr
 
-  call calc_cov (phi,nsq,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+  call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
   do j = 1, 3
-    DT(:,:,j) = cor_dcov(n, dm, phi, nsq, kappa, j)
+    DT(:,:,j) = cor_dcov(n, dm, phi, omg, kappa, j)
     trUpsDTh(j) = .5d0*traceAB(Ups,DT(:,:,j),n)
   end do
 
@@ -238,7 +238,7 @@ subroutine calcbd_wo (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
     sam = sample(:,j)
     zsam = transfw(sam,nu)
     msam = invlink(zsam,nu)
-    jsam = logitrwdz(zsam,nu)
+    jsam = loginvtrwdz(zsam,nu)
     dlogpy = logpdfydmu(y,l,msam)/tsq
     dzdnu = -invtrwdn(zsam,nu)/invtrwdz(zsam,nu)
     dmudnu = invlinkdn(zsam,nu) + invlinkdz(zsam,nu)*dzdnu
@@ -279,7 +279,7 @@ end subroutine calcbd_wo
 
 
 subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
-   phi, nu, nsq, kappa, icf, Ntot, sample, weights, QRin, &
+   phi, nu, omg, kappa, icf, Ntot, sample, weights, QRin, &
    n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr, icv)
 
   use modelfcns, logpdfzf => logpdfz, logpdfydmu => logpdfydlnk
@@ -288,7 +288,7 @@ subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   use calcbd_fcns
   implicit none
   integer, intent(in) :: n, p, Ntot, ifam, icf, itr(n), icv
-  double precision, intent(in) :: phi, nsq, &
+  double precision, intent(in) :: phi, omg, &
      kappa, nu, sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n,p), dm(n,n)
@@ -323,9 +323,9 @@ subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
 
   call rchkusr
 
-  call calc_cov (phi,nsq,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+  call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
   do j = 1, 3
-    DT(:,:,j) = cor_dcov(n, dm, phi, nsq, kappa, j)
+    DT(:,:,j) = cor_dcov(n, dm, phi, omg, kappa, j)
     trUpsDTh(j) = .5d0*traceAB(Ups,DT(:,:,j),n)
   end do
 
@@ -348,7 +348,7 @@ subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
     elsewhere (ltr1)
       msam = sam
       zsam = flink(msam,nu)
-      jsam = logilinkdz(zsam,nu)
+      jsam = loginvlinkdz(zsam,nu)
       dlogpy = 0d0
       dzdnu = -invlinkdn(zsam,nu)/invlinkdz(zsam,nu)
       dmudnu = 0d0
@@ -357,7 +357,7 @@ subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
     elsewhere (ltr2)
       zsam = transfw(sam,nu)
       msam = invlink(zsam,nu)
-      jsam = logitrwdz(zsam,nu)
+      jsam = loginvtrwdz(zsam,nu)
       dlogpy = logpdfydmu(y,l,msam)/tsq
       dzdnu = -invtrwdn(zsam,nu)/invtrwdz(zsam,nu)
       dmudnu = invlinkdn(zsam,nu) + invlinkdz(zsam,nu)*dzdnu

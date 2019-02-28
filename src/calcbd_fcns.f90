@@ -136,13 +136,13 @@ contains
     end do
   end function traceAB
 
-  double precision function cor_dcov (n, dm, phi, nsq, kappa, id) result (DT)
-    ! id = which derivative do you want? phi, nsq, kappa
-    ! Return dT where T = nsq*I + R(phi,kappa)
+  double precision function cor_dcov (n, dm, phi, omg, kappa, id) result (DT)
+    ! id = which derivative do you want? phi, omg, kappa
+    ! Return dT where T = omg*I + R(phi,kappa)
     use covfun, only: spcor_dh, spcor_dk, fill_symmetric_matrix, upper_tri
     implicit none
     integer, intent(in) :: n, id
-    double precision, intent(in) :: dm(n,n), phi, nsq, kappa
+    double precision, intent(in) :: dm(n,n), phi, omg, kappa
     !double precision, intent(out) :: DT(n,n)
     dimension :: DT(n,n)
     integer i

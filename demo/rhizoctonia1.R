@@ -21,7 +21,7 @@ ssqsc <- 1
 betm0 <- 0
 betQ0 <- .01
 phiprior <- c(100, 1, 1000, 100) # U(100, 200)
-phisc <- 4
+phisc <- 2.5
 omgprior <- c(2, 1, 1, 0)        # Exp(mean = 2)
 omgsc <- .3
 linkp <- 20
@@ -35,21 +35,17 @@ emt <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
                atsample = ~ Xcoord + Ycoord,
                Nout = Nout, Nthin = Nthin, Nbi = Nbi,
                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-               phipars = phiprior, omgpars = omgprior, linkp = linkp,
-               corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc,
+               corrprior = list(phi = phiprior, omg = omgprior), linkp = linkp,
+               corrfcn = corrf, kappa = kappa,
+               corrtuning = list(phi = phisc, omg = omgsc, kappa = 0), 
                dispersion = 1, test = TRUE)
 
-emc <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
-               atsample = ~ Xcoord + Ycoord,
-               Nout = Nout, Nthin = Nthin, Nbi = Nbi,
-               betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-               phipars = phiprior, omgpars = omgprior, linkp = linkp,
-               corrfcn = corrf, kappa = kappa, phisc = phisc, omgsc = omgsc,
-               dispersion = 1, test = FALSE)
+emc <- update(emt, test = FALSE)
 
 emcmc <- mcmcmake(emc)
 
-plot.ts(cbind(phi = emc$phi, omg = emc$omg, beta = c(emc$beta), ssq = emc$ssq),
+plot.ts(cbind(phi = emc$MCMC$phi, omg = emc$MCMC$omg,
+              beta = c(emc$MCMC$beta), ssq = emc$MCMC$ssq),
         nc = 2)
 
 summary(emcmc[, c("phi", "omg", "beta", "ssq")])
@@ -57,7 +53,7 @@ summary(emcmc[, c("phi", "omg", "beta", "ssq")])
 plot(emcmc[, c("phi", "omg", "beta", "ssq")])
 
 library(geoR)
-z0pred <- rowMeans(emc$z[!emc$whichobs, ])
+z0pred <- rowMeans(emc$MCMC$z[!emc$MCMC$whichobs, ])
 geoR:::image.kriging(locations = predgrid$xygrid,
                      borders = predgrid$borders, values = z0pred,
                      x.leg = c(3150, 3450), y.leg = c(1120, 1200),

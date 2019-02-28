@@ -1,8 +1,8 @@
-subroutine llikfcn_dh_tr (dlglk, hlglk, phi, nsq, nu, kappa, &
+subroutine llikfcn_dh_tr (dlglk, hlglk, phi, omg, nu, kappa, &
    sample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, ifam, itr)
 !! Log-likelihood function 1st and 2nd derivatives w.r.t link and
-!! covariance parameters. The order is (link,phi,nsq,kappa).
+!! covariance parameters. The order is (link,phi,omg,kappa).
 !! itr is the type of transformation used: 0 = no, 1 = mu, 2 = wo.
 
   use modelfcns, logpdfydmu => logpdfydlnk, logpdfyhmu => logpdfyhlnk
@@ -10,7 +10,7 @@ subroutine llikfcn_dh_tr (dlglk, hlglk, phi, nsq, nu, kappa, &
   use betaprior
   implicit none
   integer, intent(in) :: n, p, ifam, Ntot, icf, itr(n)
-  double precision, intent(in) :: phi, nsq, nu, &
+  double precision, intent(in) :: phi, omg, nu, &
      sample(n, Ntot), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappa
   double precision, intent(out) :: dlglk(4,Ntot), hlglk(4,4,Ntot)
@@ -43,17 +43,17 @@ subroutine llikfcn_dh_tr (dlglk, hlglk, phi, nsq, nu, kappa, &
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
-  call calc_cov (phi,nsq,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+  call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
   call fill_symmetric_matrix(Ups,n)
 
   do i = 1, 3
-    DT(:,:,i) = cor_dcov(n, dm, phi, nsq, kappa, i)
+    DT(:,:,i) = cor_dcov(n, dm, phi, omg, kappa, i)
     trUpsDT(i) = traceAB(Ups,DT(:,:,i),n)
   end do
 
   do j = 1, 3
     do i = 1, j
-      HT(:,:,i,j) = cor_hcov(n, dm, phi, nsq, kappa, i, j)
+      HT(:,:,i,j) = cor_hcov(n, dm, phi, omg, kappa, i, j)
       trUpsHT(i,j) = traceAB(Ups,HT(:,:,i,j),n)
       trUpsDTUpsDT(i,j) = traceABAC(Ups,DT(:,:,i),DT(:,:,j),n)
     end do
@@ -192,13 +192,13 @@ contains
     traceABAC = sum(AB*transpose(AC))
   end function traceABAC
 
-  double precision function cor_dcov (n, dm, phi, nsq, kappa, id) result (DT)
-    ! id = which derivative do you want? phi, nsq, kappa
-    ! Return dT where T = nsq*I + R(phi,kappa)
+  double precision function cor_dcov (n, dm, phi, omg, kappa, id) result (DT)
+    ! id = which derivative do you want? phi, omg, kappa
+    ! Return dT where T = omg*I + R(phi,kappa)
     use covfun, only: spcor_dh, spcor_dk, fill_symmetric_matrix, upper_tri
     implicit none
     integer, intent(in) :: n, id
-    double precision, intent(in) :: dm(n,n), phi, nsq, kappa
+    double precision, intent(in) :: dm(n,n), phi, omg, kappa
     !double precision, intent(out) :: DT(n,n)
     dimension :: DT(n,n)
     integer i
@@ -232,14 +232,14 @@ contains
     end select
   end function cor_dcov
 
-  double precision function cor_hcov (n, dm, phi, nsq, kappa, id, jd) result (HT)
-    ! id,jd = which derivative do you want? phi, nsq, kappa
-    ! Return d^2 T where T = nsq*I + R(phi,kappa)
+  double precision function cor_hcov (n, dm, phi, omg, kappa, id, jd) result (HT)
+    ! id,jd = which derivative do you want? phi, omg, kappa
+    ! Return d^2 T where T = omg*I + R(phi,kappa)
     use covfun, only: spcor_dh, spcor_dk, spcor_hh, spcor_hk, spcor_dhdk, &
        fill_symmetric_matrix, upper_tri
     implicit none
     integer, intent(in) :: n, id, jd
-    double precision, intent(in) :: dm(n,n), phi, nsq, kappa
+    double precision, intent(in) :: dm(n,n), phi, omg, kappa
     dimension :: HT(n,n)
     integer ij
     double precision H(n,n), H1(n,n)
@@ -256,15 +256,15 @@ contains
           HT = H1*H1*spcor_hh(H,kappa) - (2/phi)*H1*spcor_dh(H,kappa)
         end where
       end if
-    case (2,4) ! (phi,nsq)
+    case (2,4) ! (phi,omg)
       HT = 0d0
     case (3,7) ! (phi,kappa)
       H = dm/phi
       H1 = -H/phi
       HT = H1*spcor_dhdk(H,kappa)
-    case (5) ! (nsq,nsq)
+    case (5) ! (omg,omg)
       HT = 0d0
-    case (6,8) ! (nsq,kappa)
+    case (6,8) ! (omg,kappa)
       HT = 0d0
     case (9) ! (kappa,kappa)
       if (phi .eq. 0d0) then

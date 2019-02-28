@@ -2,21 +2,29 @@
 % Please edit documentation in R/seeb.R
 \name{bf2se}
 \alias{bf2se}
-\title{SE for BF}
+\title{Empirical Bayes standard errors}
 \usage{
 bf2se(mcrun, transf = c("no", "mu", "wo"))
 }
 \arguments{
-\item{mcrun}{The output from the function \code{mcsglmm}.}
+\item{mcrun}{The output from the function \code{mcsglmm} where the
+parameters linkp, phi, omg, kappa are set at their empirical
+Bayes estimates (output of \code{\link{bf2optim}}).}
 
 \item{transf}{The type of transformation to use.}
 }
 \value{
-The precision matrix
+The precision (inverse covariance) matrix.
 }
 \description{
-Standard errors for BF estimates
+Standard errors for the empirical Bayes estimates of the parameters.
 }
-\details{
-Using the formula from Casella.
+\references{
+Casella, G. (2001). Empirical Bayes Gibbs sampling.
+  Biostatistics, 2(4), 485-500.
+
+Evangelou, E., & Roy, V. (2019). Estimation and prediction for
+  spatial generalized linear mixed models with parametric links
+  via reparameterized importance sampling. Spatial Statistics, 29,
+  289-315.
 }

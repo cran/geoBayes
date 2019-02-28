@@ -15,16 +15,16 @@ rhiz$IR <- rhiz$Infected/rhiz$Total # Incidence rate of the
 
 ### Define the model
 corrf <- "spherical"
-ssqdf <- 1
+ssqdf <- 4
 ssqsc <- 1
-tsqdf <- 1
+tsqdf <- 4
 tsqsc <- 1
 betm0 <- 0
 betQ0 <- diag(.01, 2, 2)
 phiprior <- c(200, 1, 1000, 100) # U(100, 300)
-phisc <- 1
+phisc <- .7
 omgprior <- c(3, 1, 1000, 0) # U(0, 3)
-omgsc <- 1.3
+omgsc <- 1
 linkp <- 1
 
 ## MCMC parameters
@@ -38,19 +38,12 @@ samplt <- mcstrga(Yield ~ IR, data = rhiz,
                   Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
                   ssqdf = ssqdf, ssqsc = ssqsc,
                   tsqdf = tsqdf, tsqsc = tsqsc,
-                  phipars = phiprior, omgpars = omgprior,
+                  corrprior = list(phi = phiprior, omg = omgprior),
                   linkp = linkp,
-                  phisc = phisc, omgsc = omgsc, test=100)
+                  corrtuning = list(phi = phisc, omg = omgsc, kappa = 0), 
+                  test=100)
 
-sample <- mcstrga(Yield ~ IR, data = rhiz, 
-                  atsample = ~ Xcoord + Ycoord, corrf = corrf, 
-                  Nout = Nout, Nthin = Nthin,
-                  Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
-                  ssqdf = ssqdf, ssqsc = ssqsc,
-                  tsqdf = tsqdf, tsqsc = tsqsc,
-                  phipars = phiprior, omgpars = omgprior,
-                  linkp = linkp,
-                  phisc = phisc, omgsc = omgsc, test=FALSE)
+sample <- update(samplt, test = FALSE)
 
 mcsamp <- mcmcmake(sample)
 

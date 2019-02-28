@@ -19,7 +19,7 @@
 ##' of each variable. The elements in \code{fillwith} are coerced to
 ##' the corresponding variable's class.
 ##' @return A stacked \code{data.frame}.
-##' @export 
+##' @export
 ##' @examples
 ##' \dontrun{
 ##' d1 <- data.frame(w = 1:3, z = 4:6 + 0.1)
@@ -67,7 +67,7 @@ stackdata <- function (..., fillwith = NA, keepclass = FALSE) {
       fillwith <- lapply(nmall, function(nm)
         do.call("switch", c(list(nm), fillwith)))
       names(fillwith) <- nmall
-    }      
+    }
   }
   fmiss <- nmall[!(nmall %in% names(fillwith))]
   fillwith[fmiss] <- NA
@@ -118,12 +118,15 @@ stackdata <- function (..., fillwith = NA, keepclass = FALSE) {
 ##' contracted.
 ##' @return A list with components
 ##' \itemize{
-##' \item \code{grid} A two-column matrix with the prediction grid
+##' \item \code{grid} A two-column matrix with the prediction grid.
 ##' \item \code{xycoord} A list with components "x" and "y"
-##' containing the sequence of points used to create the grid
+##' containing the sequence of points used to create the grid.
 ##' \item \code{xygrid} A matrix with the full square grid derived
-##' from \code{xycoord}
-##' \item \code{borders} The (expanded) borders of the domain
+##' from \code{xycoord}.
+##' \item \code{borders} The (expanded) borders of the domain.
+##' \item \code{inxygrid} A logical vector indicating which rows of
+##'   \code{xycoord} fall inside \code{borders}, and therefore
+##'   correspond to the \code{grid}.
 ##' }
 ##' @seealso \code{\link[geoR]{pred_grid}}
 ##' @importFrom sp point.in.polygon
@@ -180,6 +183,7 @@ mkpredgrid2d <- function (pnts.x, pnts.y, par.x, par.y, isby = FALSE,
                               ph[, 1, drop = FALSE],
                               ph[, 2, drop = FALSE]) > 0
   grid <- eg[iin, , drop = FALSE]
-  out <- list(grid = grid, xycoord = xycoord, xygrid  = eg, borders = ph)
+  out <- list(grid = grid, xycoord = xycoord, xygrid  = eg, borders = ph,
+              inxygrid = iin)
   out
 }

@@ -35,7 +35,17 @@ Press.
 
 Roy, V., Evangelou, E., and Zhu, Z. (2015). Efficient estimation
 and prediction for the Bayesian spatial generalized linear mixed
-model with flexible link functions. \emph{Biometrics}, 72(1), 289-298.
+model with flexible link functions. \emph{Biometrics}, 72(1),
+  289-298.
+
+Evangelou, E., & Roy, V. (2019). Estimation and prediction for
+  spatial generalized linear mixed models with parametric links
+  via reparameterized importance sampling. Spatial Statistics, 29,
+  289-315.
+
+Roy, V., & Evangelou, E. (2018). Selection of proposal
+  distributions for generalized importance sampling estimators.
+  arXiv preprint arXiv:1805.00829.
 }
 \seealso{
 \code{geoR}, \code{geoRglm}

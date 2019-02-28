@@ -10,7 +10,7 @@ FMODSRC = interfaces.f90 msgmc.f90 flogsumexp.f90 lbfgsbmod.f90 \
   modelfcns.f90 mcmcfcns.f90 cor_fcns.f90 calcbd_fcns.f90
 FFSRC = mcsp2.f90 bfsp2.f90 calcb2.f90 calcbd.f90 linkcalc.f90 \
   llik.f90 mcspz0.f90 skelpnts.f90 spcorr.f90 bfse.f90 transformz.f90 \
-  seeb.f90 llikderiv.f90
+  seeb.f90 llikderiv.f90 llikmc.f90
 
 # Define the order of compilation
 OBJECTS = $(CSRC:.c=.o) $(FMODSRC:.f90=.o) $(FFSRC:.f90=.o)
@@ -31,9 +31,10 @@ linkfcn.o: interfaces.o tcdfder.o
 pdfy.o: interfaces.o linkfcn.o
 mcsp2.o: msgmc.o mcmcfcns.o modelfcns.o linkfcn.o
 llik.o: modelfcns.o covfun.o pdfy.o betaprior.o
+llikmc.o: modelfcns.o covfun.o pdfy.o betaprior.o
 mcspz0.o: interfaces.o covfun.o pdfy.o
 skelpnts.o: lbfgsbmod.o pdfdz.o linkfcn.o covfun.o betaprior.o pdfy.o \
-  modelfcns.o
+  modelfcns.o calcbd_fcns.o
 pdfdz.o: linkfcn.o linkdz.o interfaces.o
 linkdz.o: interfaces.o
 spcorr.o: covfun.o

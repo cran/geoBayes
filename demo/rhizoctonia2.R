@@ -47,11 +47,12 @@ runs <- list()
 for (i in 1:NROW(parlist)) {
   runs[[i]] <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
                        atsample = ~ Xcoord + Ycoord,
-                       Nout = Nout, Nthin = Nthin, Nbi = Nbi,
+                       Nout = Nout*c(.8, .2), Nthin = Nthin, Nbi = Nbi,
                        betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
-                       phistart = parlist$phi[i], omgstart = parlist$omg[i],
+                       phi = parlist$phi[i], omg = parlist$omg[i],
                        linkp = parlist$linkp[i], kappa = parlist$kappa[i],
-                       corrfcn = corrf, phisc = 0, omgsc = 0)
+                       corrfcn = corrf,
+                       corrtuning = list(phi = 0, omg = 0, kappa = 0))
 }
 
 bf <- bf1skel(runs)

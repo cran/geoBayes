@@ -1,4 +1,4 @@
-subroutine llikfcn_no (lglk, philist, nsqlist, nulist, kappalist, &
+subroutine llikfcn_no (lglk, philist, omglist, nulist, kappalist, &
    zsample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, kg, ifam, itr)
 
@@ -8,7 +8,7 @@ subroutine llikfcn_no (lglk, philist, nsqlist, nulist, kappalist, &
   use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
-  double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
+  double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
      zsample(n, Ntot), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
@@ -31,7 +31,7 @@ subroutine llikfcn_no (lglk, philist, nsqlist, nulist, kappalist, &
   select case (ifam)
   case (0)
     do i = 1, kg
-      call calc_cov (philist(i),nsqlist(i),dm,F,betQ0,&
+      call calc_cov (philist(i),omglist(i),dm,F,betQ0,&
          kappalist(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
@@ -41,7 +41,7 @@ subroutine llikfcn_no (lglk, philist, nsqlist, nulist, kappalist, &
     end do
   case default
     do i = 1, kg
-      call calc_cov (philist(i),nsqlist(i),dm,F,betQ0,&
+      call calc_cov (philist(i),omglist(i),dm,F,betQ0,&
          kappalist(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
@@ -55,7 +55,7 @@ end subroutine llikfcn_no
 
 
 
-subroutine llikfcn_mu (lglk, philist, nsqlist, nulist, kappalist, &
+subroutine llikfcn_mu (lglk, philist, omglist, nulist, kappalist, &
    musample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, kg, ifam, itr)
 
@@ -65,7 +65,7 @@ subroutine llikfcn_mu (lglk, philist, nsqlist, nulist, kappalist, &
   use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
-  double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
+  double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
      musample(n, Ntot), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
@@ -88,7 +88,7 @@ subroutine llikfcn_mu (lglk, philist, nsqlist, nulist, kappalist, &
   select case (ifam)
   case (0)
     do i = 1, kg
-      call calc_cov (philist(i),nsqlist(i),dm,F,betQ0,&
+      call calc_cov (philist(i),omglist(i),dm,F,betQ0,&
          kappalist(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
@@ -98,7 +98,7 @@ subroutine llikfcn_mu (lglk, philist, nsqlist, nulist, kappalist, &
     end do
   case default
     do i = 1, kg
-      call calc_cov (philist(i),nsqlist(i),dm,F,betQ0,&
+      call calc_cov (philist(i),omglist(i),dm,F,betQ0,&
          kappalist(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
@@ -109,7 +109,7 @@ subroutine llikfcn_mu (lglk, philist, nsqlist, nulist, kappalist, &
   end select
 end subroutine llikfcn_mu
 
-subroutine lpdffcn_mu (lglk, philist, nsqlist, nulist, kappalist, &
+subroutine lpdffcn_mu (lglk, philist, omglist, nulist, kappalist, &
    musample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, kg, ifam, itr)
   ! Like llikfcn_mu but not multiplying by p(y|mu)
@@ -120,7 +120,7 @@ subroutine lpdffcn_mu (lglk, philist, nsqlist, nulist, kappalist, &
   use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
-  double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
+  double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
      musample(n, Ntot), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
@@ -141,7 +141,7 @@ subroutine lpdffcn_mu (lglk, philist, nsqlist, nulist, kappalist, &
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
 
   do i = 1, kg
-    call calc_cov (philist(i),nsqlist(i),dm,F,betQ0,&
+    call calc_cov (philist(i),omglist(i),dm,F,betQ0,&
        kappalist(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
     do j = 1, Ntot
       call rchkusr
@@ -152,7 +152,7 @@ subroutine lpdffcn_mu (lglk, philist, nsqlist, nulist, kappalist, &
 end subroutine lpdffcn_mu
 
 
-subroutine llikfcn_wo (lglk, philist, nsqlist, nulist, kappalist, &
+subroutine llikfcn_wo (lglk, philist, omglist, nulist, kappalist, &
    wsample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, kg, ifam, itr)
   !! Work-around for the binomial family.
@@ -162,13 +162,13 @@ subroutine llikfcn_wo (lglk, philist, nsqlist, nulist, kappalist, &
   use betaprior
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
-  double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
+  double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
      wsample(n, Ntot), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
   logical lmxi
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n, n), &
-     ldh_Ups, ssqdfsc, modeldfh, nu, phi, nsq, kappa, &
+     ldh_Ups, ssqdfsc, modeldfh, nu, phi, omg, kappa, &
      tsqdfsc, respdfh, xi(n)
   integer i, j, m
   double precision zsam(n)
@@ -190,9 +190,9 @@ subroutine llikfcn_wo (lglk, philist, nsqlist, nulist, kappalist, &
     do i = 1, kg
       nu = nulist(i)
       phi = philist(i)
-      nsq = nsqlist(i)
+      omg = omglist(i)
       kappa = kappalist(i)
-      call calc_cov (phi,nsq,dm,F,betQ0,&
+      call calc_cov (phi,omg,dm,F,betQ0,&
          kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         call rchkusr
@@ -200,14 +200,14 @@ subroutine llikfcn_wo (lglk, philist, nsqlist, nulist, kappalist, &
         lglk(j,i) = jointyz_sp(n, zsam, y, l, Ups, ldh_Ups, &
            nu, xi, lmxi, ssqdfsc, tsq, modeldfh)
         do m = 1, n
-          lglk(j,i) = lglk(j,i) - logitrwdz(zsam(m),nu)
+          lglk(j,i) = lglk(j,i) - loginvtrwdz(zsam(m),nu)
         end do
       end do
     end do
   end select
 end subroutine llikfcn_wo
 
-subroutine llikfcn_tr (lglk, philist, nsqlist, nulist, kappalist, &
+subroutine llikfcn_tr (lglk, philist, omglist, nulist, kappalist, &
    sample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, kg, ifam, itr)
 !! Log-likelihood function.
@@ -219,13 +219,13 @@ subroutine llikfcn_tr (lglk, philist, nsqlist, nulist, kappalist, &
   use condymu, only: condymu_gt
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
-  double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
+  double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
      sample(n, Ntot), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot,kg)
   logical lmxi
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n, n), &
-     ldh_Ups, ssqdfsc, modeldfh, nu, phi, nsq, kappa, &
+     ldh_Ups, ssqdfsc, modeldfh, nu, phi, omg, kappa, &
      tsqval, respdfh, xi(n)
   integer i, j
   double precision zsam(n), msam(n), jsam(n), sam(n)
@@ -250,9 +250,9 @@ subroutine llikfcn_tr (lglk, philist, nsqlist, nulist, kappalist, &
   do i = 1, kg
     nu = nulist(i)
     phi = philist(i)
-    nsq = nsqlist(i)
+    omg = omglist(i)
     kappa = kappalist(i)
-    call calc_cov (phi,nsq,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+    call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
     do j = 1, Ntot
       call rchkusr
       sam = sample(:,j)
@@ -263,11 +263,11 @@ subroutine llikfcn_tr (lglk, philist, nsqlist, nulist, kappalist, &
       elsewhere (itr == 1)
         msam = sam
         zsam = flink(msam,nu)
-        jsam = logilinkdz(zsam,nu)
+        jsam = loginvlinkdz(zsam,nu)
       elsewhere (itr == 2)
         zsam = transfw(sam,nu)
         msam = invlink(zsam,nu)
-        jsam = logitrwdz(zsam,nu)
+        jsam = loginvtrwdz(zsam,nu)
       end where
       lglk(j,i) = logpdfzf(n,zsam,Ups,ldh_Ups,xi,lmxi,ssqdfsc,modeldfh) &
          + condymuf(ifam,n,y,l,msam,tsqval,respdfh) - sum(jsam)

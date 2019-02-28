@@ -9,11 +9,11 @@
 !!! @param VT2  The second term of variance
 !!! @param iref Which model is the reference model
 !!! @param phi  A vector of values to compute the SE
-!!! @param nsq  A vector of values to compute the SE
+!!! @param omg  A vector of values to compute the SE
 !!! @param nu   A vector of values to compute the SE
 !!! @param kappa        A vector of values to compute the SE
 !!! @param philist      A vector of values to compute the BF
-!!! @param nsqlist      A vector of values to compute the BF
+!!! @param omglist      A vector of values to compute the BF
 !!! @param nulist       A vector of values to compute the BF
 !!! @param kappalist    A vector of values to compute the BF
 !!! @param sample1      The sample to be used to compute the BF
@@ -45,158 +45,158 @@
 !!! @return SE, logbf, Sig, VT1, VT2
 
 subroutine bfse_no (bf, Sig, SE, VT1, VT2, iref, &
-   phi, nsq, nu, kappa, &
-   philist, nsqlist, nulist, kappalist, &
+   phi, omg, nu, kappa, &
+   philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
    y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, nnew, kg, ifam, imeth, nb1, nb2, ibvmeth, itr)
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, iref, nb1(kg), nnew, nb2(kg), ibvmeth, itr(n)
-  double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
+  double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
      sample1(n, Ntot1), sample2(n, Ntot2), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, &
-     kappalist(kg), phi(nnew), nsq(nnew), nu(nnew), kappa(nnew)
+     kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
      VT1(nnew), VT2(nnew)
   double precision llik1(Ntot1,kg), llik2(Ntot2,kg), &
      llikn(Ntot2,nnew)
-  double precision Bet(kg,kg), Omg(kg,kg)
+  double precision Bet(kg,kg), OOmg(kg,kg)
 
   ! Compute log-likelihood values
-  call llikfcn_no (llik1, philist, nsqlist, nulist, kappalist, sample1, &
+  call llikfcn_no (llik1, philist, omglist, nulist, kappalist, sample1, &
      Ntot1, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
-  call llikfcn_no (llik2, philist, nsqlist, nulist, kappalist, sample2, &
+  call llikfcn_no (llik2, philist, omglist, nulist, kappalist, sample2, &
      Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
-  call llikfcn_no (llikn, phi, nsq, nu, kappa, sample2, &
+  call llikfcn_no (llikn, phi, omg, nu, kappa, sample2, &
      Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
   call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
    llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2, &
-   nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, Omg)
+   nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, OOmg)
 end subroutine bfse_no
 
 subroutine bfse_mu (bf, Sig, SE, VT1, VT2, iref, &
-   phi, nsq, nu, kappa, &
-   philist, nsqlist, nulist, kappalist, &
+   phi, omg, nu, kappa, &
+   philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
    y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, nnew, kg, ifam, imeth, nb1, nb2, ibvmeth, itr)
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, iref, nb1(kg), nnew, nb2(kg), ibvmeth, itr(n)
-  double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
+  double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
      sample1(n, Ntot1), sample2(n, Ntot2), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, &
-     kappalist(kg), phi(nnew), nsq(nnew), nu(nnew), kappa(nnew)
+     kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
      VT1(nnew), VT2(nnew)
   double precision llik1(Ntot1,kg), llik2(Ntot2,kg), &
      llikn(Ntot2,nnew)
-  double precision Bet(kg,kg), Omg(kg,kg)
+  double precision Bet(kg,kg), OOmg(kg,kg)
 
   ! Compute log-likelihood values
-  call llikfcn_mu (llik1, philist, nsqlist, nulist, kappalist, sample1, &
+  call llikfcn_mu (llik1, philist, omglist, nulist, kappalist, sample1, &
      Ntot1, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
-  call llikfcn_mu (llik2, philist, nsqlist, nulist, kappalist, sample2, &
+  call llikfcn_mu (llik2, philist, omglist, nulist, kappalist, sample2, &
      Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
-  call llikfcn_mu (llikn, phi, nsq, nu, kappa, sample2, &
+  call llikfcn_mu (llikn, phi, omg, nu, kappa, sample2, &
      Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
   call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
      llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2, &
-     nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, Omg)
+     nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, OOmg)
 end subroutine bfse_mu
 
 subroutine bfse_wo (bf, Sig, SE, VT1, VT2, iref, &
-   phi, nsq, nu, kappa, &
-   philist, nsqlist, nulist, kappalist, &
+   phi, omg, nu, kappa, &
+   philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
    y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, nnew, kg, ifam, imeth, nb1, nb2, ibvmeth, itr)
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, iref, nb1(kg), nnew, nb2(kg), ibvmeth, itr(n)
-  double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
+  double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
      sample1(n, Ntot1), sample2(n, Ntot2), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, &
-     kappalist(kg), phi(nnew), nsq(nnew), nu(nnew), kappa(nnew)
+     kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
      VT1(nnew), VT2(nnew)
   double precision llik1(Ntot1,kg), llik2(Ntot2,kg), &
      llikn(Ntot2,nnew)
-  double precision Bet(kg,kg), Omg(kg,kg)
+  double precision Bet(kg,kg), OOmg(kg,kg)
 
   ! Compute log-likelihood values
-  call llikfcn_wo (llik1, philist, nsqlist, nulist, kappalist, sample1, &
+  call llikfcn_wo (llik1, philist, omglist, nulist, kappalist, sample1, &
      Ntot1, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
-  call llikfcn_wo (llik2, philist, nsqlist, nulist, kappalist, sample2, &
+  call llikfcn_wo (llik2, philist, omglist, nulist, kappalist, sample2, &
      Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
-  call llikfcn_wo (llikn, phi, nsq, nu, kappa, sample2, &
+  call llikfcn_wo (llikn, phi, omg, nu, kappa, sample2, &
      Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
   call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
    llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2, &
-   nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, Omg)
+   nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, OOmg)
 end subroutine bfse_wo
 
 subroutine bfse_tr (bf, Sig, SE, VT1, VT2, iref, &
-   phi, nsq, nu, kappa, &
-   philist, nsqlist, nulist, kappalist, &
+   phi, omg, nu, kappa, &
+   philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
    y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, nnew, kg, ifam, imeth, nb1, nb2, ibvmeth, itr)
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, iref, nb1(kg), nnew, nb2(kg), ibvmeth, itr(n)
-  double precision, intent(in) :: philist(kg), nsqlist(kg), nulist(kg), &
+  double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
      sample1(n, Ntot1), sample2(n, Ntot2), y(n), l(n), F(n, p), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, &
-     kappalist(kg), phi(nnew), nsq(nnew), nu(nnew), kappa(nnew)
+     kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
      VT1(nnew), VT2(nnew)
   double precision llik1(Ntot1,kg), llik2(Ntot2,kg), &
      llikn(Ntot2,nnew)
-  double precision Bet(kg,kg), Omg(kg,kg)
+  double precision Bet(kg,kg), OOmg(kg,kg)
 
   ! Compute log-likelihood values
-  call llikfcn_tr (llik1, philist, nsqlist, nulist, kappalist, sample1, &
+  call llikfcn_tr (llik1, philist, omglist, nulist, kappalist, sample1, &
      Ntot1, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
-  call llikfcn_tr (llik2, philist, nsqlist, nulist, kappalist, sample2, &
+  call llikfcn_tr (llik2, philist, omglist, nulist, kappalist, sample2, &
      Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
-  call llikfcn_tr (llikn, phi, nsq, nu, kappa, sample2, &
+  call llikfcn_tr (llikn, phi, omg, nu, kappa, sample2, &
      Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
   call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
    llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2, &
-   nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, Omg)
+   nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, OOmg)
 end subroutine bfse_tr
 
 
 
 subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
    llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2, &
-   nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, Omg)
+   nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, OOmg)
   use bmargin
   implicit none
   integer, intent(in) :: kg, imeth, Nout1(kg), Ntot1, &
@@ -208,8 +208,8 @@ subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
   double precision eta(kg), logbf(kg)
   double precision logYY(Ntot1,kg), YY(Ntot1,kg), logVV(Ntot2,nnew), &
      VV(Ntot2,nnew), VVcol(Ntot2)
-  double precision Bet(kg,kg), BMP(kg,kg), BD(kg,1:kg-1), Omg(kg,kg), &
-     OmgBD(kg,1:kg-1), cvec(1:kg-1,nnew), logcall(kg,nnew), &
+  double precision Bet(kg,kg), BMP(kg,kg), BD(kg,1:kg-1), OOmg(kg,kg), &
+     OOmgBD(kg,1:kg-1), cvec(1:kg-1,nnew), logcall(kg,nnew), &
      SigC(1:kg-1)
   double precision NNratio(kg), logN(kg)
   integer i, j, kgm1, ia, ie
@@ -233,15 +233,17 @@ subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
 !  logbf = logbf - sum(logbf)/dble(kg)
 !  eta = logN - logbf ! zeta
 
+  if (kg .lt. 2) go to 9
+
   logYY = logp(llik1,eta,Ntot1,kg)
   YY = exp(logYY)
 
-  Omg = 0d0
+  OOmg = 0d0
   ie = 0
   do j = 1, kg
     ia = ie + 1
     ie = ie + Nout1(j)
-    Omg = Omg + bmmcvrmat(ibvmeth,YY(ia:ie,:),Nout1(j),kg,nb1(j))*&
+    OOmg = OOmg + bmmcvrmat(ibvmeth,YY(ia:ie,:),Nout1(j),kg,nb1(j))*&
        dble(Nout1(j))/dble(Ntot1)
   end do
 
@@ -265,17 +267,17 @@ subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
     BD(:,j) = (eta - symcol(BMP,kg,i))*bf(i) ! B * D
   end do
 
-  kgm1 = kg - 1
+9 kgm1 = kg - 1
   logN = log(dble(Nout2))
   eta = logN - logbf
-  OmgBD = 0d0
+  OOmgBD = 0d0
   Sig = 0d0
   SigC = 0d0
   VT1 = 0d0
 
   if (kgm1 .gt. 0) then
-    call dsymm("l","u",kg,kgm1,1d0,Omg,kg,BD,kg,0d0,OmgBD,kg)
-    call dgemm("t","n",kgm1,kgm1,kg,1d0,BD,kg,OmgBD,kg,0d0,Sig,kgm1)
+    call dsymm("l","u",kg,kgm1,1d0,OOmg,kg,BD,kg,0d0,OOmgBD,kg)
+    call dgemm("t","n",kgm1,kgm1,kg,1d0,BD,kg,OOmgBD,kg,0d0,Sig,kgm1)
 
     logcall = logc(llik2,llikn,eta,Ntot2,kg,nnew) + spread(eta+eta-logN,2,nnew)
     cvec(:iref-1,:) = exp(logcall(:iref-1,:))

@@ -6,7 +6,7 @@ module mcmcfcns
      sample_cov, sample_z, sample_z0, samplez_gt
 
 contains
-  subroutine ini_mcmc (lglk, z, p0, phi, nsq, y1, y2, F, kappa, icf, dm, &
+  subroutine ini_mcmc (lglk, z, p0, phi, omg, kappa, y1, y2, F, icf, dm, &
      betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, dft, n, p, ifam, &
      betQm0, zmxi, T, TiF, FTF, Ups, Upsz, zUz, ldh_Ups, &
      modeldfh, ssqdfsc, respdf, tsqdfsc, tsqyy, lnewcov)
@@ -21,7 +21,7 @@ contains
     integer, intent(in) :: n, p, ifam, icf
     double precision, intent(in) :: y1(n), y2(n), dm(n,n), &
        F(n,p), kappa, betm0(p), betQ0(p,p), ssqdf, ssqsc, &
-       tsqdf, tsq, phi, nsq, dft
+       tsqdf, tsq, phi, omg, dft
     double precision, intent(out) :: zUz, ldh_Ups, modeldfh, ssqdfsc, &
        respdf, tsqdfsc, tsqyy
     double precision, intent(inout) :: z(n)
@@ -53,7 +53,7 @@ contains
       betQm0 = 0d0
     end if
 
-    call calc_cov (phi,nsq,dm,F,betQ0, &
+    call calc_cov (phi,omg,dm,F,betQ0, &
        kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
 
     call dsymv ('u',n,1d0,Ups,n,zmxi,1,0d0,Upsz,1) ! Upsz = Ups*(z-xi)
@@ -125,27 +125,27 @@ contains
     call dtrmv ('u','n','n',p,FTF,p,beta,1)
   end subroutine sample_beta
 
-  subroutine sample_cov (lglk, phi, nsq, phipars, nsqpars, phisc, nsqsc, dm, &
-     F, betQ0, n, p, kappa, icf, acc, zmxi, T, TiF, FTF, Ups, &
+  subroutine sample_cov (lglk, phi, omg, kappa, &
+     phipars, omgpars, kappapars, phisc, omgsc, kappasc, dm, &
+     F, betQ0, n, p, acc, zmxi, T, TiF, FTF, Ups, &
      Upsz, lnewcov, zUz, ldh_Ups, modeldfh, ssqdfsc)
     use interfaces
     use covfun
     implicit none
-    integer, intent(in) :: n, p, icf
+    integer, intent(in) :: n, p
     logical, intent(inout) :: lnewcov
     integer, intent(inout):: acc
     double precision, intent(in) :: modeldfh, dm(n,n), F(n,p), &
-       kappa, betQ0(p,p), zmxi(n), ssqdfsc
-    double precision, intent(in) :: phipars(4), nsqpars(4), phisc, nsqsc
-    double precision, intent(inout) :: phi, nsq, lglk, T(n,n), TiF(n,p), &
-       FTF(p,p), Ups(n,n), Upsz(n), zUz, ldh_Ups
-    double precision tr, ll, u, phi2, nsq2, up3
+       betQ0(p,p), zmxi(n), ssqdfsc
+    double precision, intent(in) :: phipars(4), omgpars(4), kappapars(2), &
+       phisc, omgsc, kappasc
+    double precision, intent(inout) :: phi, omg, lglk, T(n,n), TiF(n,p), &
+       kappa, FTF(p,p), Ups(n,n), Upsz(n), zUz, ldh_Ups
+    double precision tr, ll, u, phi2, omg2, up3, kappa2, phi_kap2, phi_kap
     double precision FTF2(p,p), Ups2(n,n), Upsz2(n), &
        zUz2, ldh_Ups2, T2(n,n), TiF2(n,p)
 
-    call create_spcor(icf,n)
-
-    if (phisc .le. 0d0 .and. nsqsc .le. 0d0) return
+    if (phisc .le. 0d0 .and. omgsc .le. 0d0 .and. kappasc .le. 0d0) return
 
     tr = 0d0
 
@@ -167,29 +167,41 @@ contains
       phi2 = phi
     end if
 
-!! Sample nsq
-    if (nsqsc .gt. 0d0) then
-      ll = nsq - nsqpars(4)
-      u = randnorm()*nsqsc ! u ~ N(0,nsqsc^2)
-      nsq2 = ll*exp(u) + nsqpars(4) ! log(nsq2-p4) ~ N(log(nsq-p4), nsqsc^2)
+!! Sample omg
+    if (omgsc .gt. 0d0) then
+      ll = omg - omgpars(4)
+      u = randnorm()*omgsc ! u ~ N(0,omgsc^2)
+      omg2 = ll*exp(u) + omgpars(4) ! log(omg2-p4) ~ N(log(omg-p4), omgsc^2)
       ! Add logratio of priors
-      up3 = u*nsqpars(3)
+      up3 = u*omgpars(3)
       if (up3 .lt. 0d0) then
-        tr = tr + nsqpars(2)*u + exp(nsqpars(3)*log(ll/nsqpars(1)) &
+        tr = tr + omgpars(2)*u + exp(omgpars(3)*log(ll/omgpars(1)) &
            + flog1mexp(up3))
       else
-        tr = tr + nsqpars(2)*u - exp(nsqpars(3)*log(ll/nsqpars(1)) &
+        tr = tr + omgpars(2)*u - exp(omgpars(3)*log(ll/omgpars(1)) &
            + flogexpm1(up3))
       end if
     else
-      nsq2 = nsq
+      omg2 = omg
+    end if
+
+!! Sample kappa
+    if (kappasc .gt. 0d0) then
+      phi_kap = logitfcn_ab(kappa,kappapars)
+      u = randnorm()*kappasc
+      phi_kap2 = phi_kap + u
+      kappa2 = logitinv_ab(phi_kap2,kappapars)
+      tr = tr + log_logitder_ab(kappa2,kappapars) &
+         - log_logitder_ab(kappa,kappapars)
+    else
+      kappa2 = kappa
     end if
 
     if (tr .le. bigneg .or. tr .ne. tr) return
 
-!! Compute covariance matrices for the new phi, nsq
-    call calc_cov (phi2,nsq2,dm,F,betQ0, &
-       kappa,n,p,T2,TiF2,FTF2,Ups2,ldh_Ups2)
+!! Compute covariance matrices for the new phi, omg, kappa
+    call calc_cov (phi2,omg2,dm,F,betQ0, &
+       kappa2,n,p,T2,TiF2,FTF2,Ups2,ldh_Ups2)
 
 !! Compute log likelihood ratio
     call dsymv ('u',n,1d0,Ups2,n,zmxi,1,0d0,Upsz2,1) ! Upsz = Ups*(z-xi)
@@ -200,11 +212,12 @@ contains
 
     u = randunif()
     u = log(u)
-    if (u .lt. tr) then ! Update phi, nsq
+    if (u .lt. tr) then ! Update phi, omg, kappa
       lnewcov = .true.
       lglk = lglk + ll
       phi = phi2
-      nsq = nsq2
+      omg = omg2
+      kappa = kappa2
       FTF = FTF2
       T = T2
       TiF = TiF2
@@ -214,15 +227,29 @@ contains
       ldh_Ups = ldh_Ups2
       acc = acc + 1
     end if
+
+  contains
+    pure double precision function logitfcn_ab (x,ab)
+      double precision, intent(in) :: x, ab(2)
+      logitfcn_ab = log(x-ab(1)) - log(ab(2)-x)
+    end function logitfcn_ab
+    pure double precision function logitinv_ab (y,ab)
+      double precision, intent(in) :: y, ab(2)
+      logitinv_ab = ab(2) - (ab(2) - ab(1))/(1d0+exp(y))
+    end function logitinv_ab
+    pure double precision function log_logitder_ab (x,ab)
+      double precision, intent(in) :: x, ab(2)
+      log_logitder_ab = log(ab(2)-x) + log(x-ab(1))
+    end function log_logitder_ab
   end subroutine sample_cov
 
-  subroutine sample_z0 (z0,z,beta,ssq,phi,nsq,n0,n,p,dmdm0,F,F0,kappa,icf,&
+  subroutine sample_z0 (z0,z,beta,ssq,phi,omg,n0,n,p,dmdm0,F,F0,kappa,icf,&
      T, z0_ups, TC, FCTF, lnewcov)
     use interfaces
     use covfun
     implicit none
     integer, intent(in) :: n, n0, p, icf
-    double precision, intent(in) :: z(n), beta(p), ssq, phi, nsq, &
+    double precision, intent(in) :: z(n), beta(p), ssq, phi, omg, &
        dmdm0(n,n0), F(n,p), F0(n0,p), kappa, T(n,n)
     double precision, intent(out) :: z0(n0)
     double precision, intent(inout) :: TC(n,n0), FCTF(n0,p), &
@@ -232,7 +259,7 @@ contains
     double precision z0_sd(n0), z0_mean(n0)
     call create_spcor(icf,0)
     if (lnewcov) then
-      call calc_cov_pred(z0_ups, TC, FCTF, phi, nsq, dmdm0, F, &
+      call calc_cov_pred(z0_ups, TC, FCTF, phi, omg, dmdm0, F, &
          F0, kappa, T, n, n0, p)
       lnewcov = .false.
     end if

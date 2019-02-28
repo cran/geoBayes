@@ -4,6 +4,32 @@
 ##
 ######################################################################
 
+getbetaprior <- function (betm0, betQ0, p) {
+  if (length(betQ0) == 1 && betQ0[1] == 0) {
+    ## Uniform prior
+    betQ0 <- matrix(0, p, p)
+    betm0 <- rep(0, p)
+  } else if (length(betQ0) == 1 || length(betQ0) == p) {
+    if (any(betQ0 <= 0)) stop ('betQ0 not > 0')
+    betQ0 <- diag(as.vector(betQ0), p, p)
+    betm0 <- rep(as.double(betm0), length.out = p)
+  } else if (length(betQ0) == p*p) {
+    betQ0 <- matrix(as.double(betQ0), p, p)
+    betQ0[lower.tri(betQ0)] <- 0
+    betQ0eig <- eigen(t(betQ0), 1, 1)$values
+    if (any (betQ0eig < sqrt(.Machine$double.eps))) {
+      stop ('betQ0 not > 0 within tolerance')
+    }
+    betm0 <- rep(as.double(betm0), length.out = p)
+  } else stop ('Bad betQ0')
+  if (!all(is.finite(betm0))) {
+    stop ('Non-finite betm0')
+  }
+  if (!all(is.finite(betQ0[upper.tri(betQ0, diag = TRUE)]))) {
+    stop ('Non-finite betQ0')
+  }
+  list(betm0 = as.double(betm0), betQ0 = as.double(betQ0))
+}
 
 ## Checks if the paroptim argument is valid and returns a list with
 ## components pstart, lower, upper, estim.
@@ -46,7 +72,7 @@ getparoptim <- function (paroptim, ifam, icf) {
       pstart[i] <- ppp
       estim[i] <- FALSE
     } else if (lppp == 2) {
-      pstart[i] <- NA ## .5*(ppp[1]+ppp[2])
+      pstart[i] <- .5*(ppp[1]+ppp[2])
       estim[i] <- TRUE
       lower[i] <- ppp[1]
       upper[i] <- ppp[2]
@@ -103,17 +129,16 @@ number of runs; the extra elements will be discarded."))
   Nout
 }
 
-##' Compute transformed sample.
-##'
-##' Computes the transformed sample according to transf.
-##' @title Compute transformed sample
-##' @param runs A list of lists with elements z, mu, nu, whichobs
-##'   which gives the samples and link parameter.
-##' @param model A list with elements response and family.
-##' @param transf The type of transformation to use.
-##' @return A list with elements sample, transf, itr, ifam.
-##' @useDynLib geoBayes transformz
-transfsample <- function (runs, model, transf = c("no", "mu", "wo"))
+## Compute transformed sample.
+##
+## Computes the transformed sample according to transf.
+## @title Compute transformed sample
+## @param runs A list of outputs from \code{mcsglmm} or \code{mctrga}.
+## @param model A list with elements response and family.
+## @param transf The type of transformation to use.
+## @return A list with elements sample, transf, itr, ifam.
+## @useDynLib geoBayes transformz
+transfsample <- function (runs, model, transf = c("no", "mu", "wo"), verb = TRUE)
 {
   y <- model$response
   n <- as.integer(length(y))
@@ -127,33 +152,47 @@ transfsample <- function (runs, model, transf = c("no", "mu", "wo"))
     transf <- transf0 <- "no"
   }
   if (transf == "wo" && !.geoBayes_models$haswo[ifam]) {
-    warning("Can't use workaround for this family. Computing no transformation.")
+    if (verb)
+      warning("Can't use workaround for this family. Computing no transformation.")
     transf0 <- "no"
   }
   if (transf == "wo" && family == "poisson.boxcox") {
     ypo <- y > 0
     if (all(ypo)) {
-      message("For poisson.boxcox with all positive responses, the workaround is the same as the mean transformation.")
+      if (verb)
+        message("For poisson.boxcox with all positive responses, the workaround is the same as the mean transformation.")
       transf0 <- "mu"
     } else if (any(ypo)) {
       transf0 <- "tr"
     }
   }
   if (transf0 == "mu") {
-    sample <- lapply(runs, function(r) r[["mu"]][r[["whichobs"]], ])
     itr <- rep.int(1L, n)
+    ftrw <- function (r) {
+      o <- r$MCMC[["whichobs"]]
+      out <- r$MCMC[["mu"]][o, , drop = FALSE]
+      if (is.null(out) && any(o)) {
+        out <- r$MCMC[["z"]][o, , drop = FALSE]
+        nu <- r$FIXED[["linkp_num"]][1]
+        nn <- as.integer(length(out))
+        out[] <- .Fortran("transformz", out, nu, nn, ifam,
+                          PACKAGE = "geoBayes")[[1]]
+      }
+      out
+    }
+    sample <- lapply(runs, ftrw)
   } else if (transf0 == "tr") {
     ifam <- -ifam
     if (family == "poisson.boxcox") { # Poisson y = 0
       itr <- 2L - ypo
       ftrw <- function (r) {
         i2 <- itr == 2
-        o <- r[["whichobs"]]
-        out <- r[["mu"]][o, ]
-        z <- r[["z"]][o, ][i2, ]
-        nu <- r[["nu"]][1]
+        o <- r$MCMC[["whichobs"]]
+        out <- r$MCMC[["mu"]][o, , drop = FALSE]
+        z <- r$MCMC[["z"]][o, ][i2, ]
+        nu <- r$FIXED[["linkp_num"]][1]
         nn <- as.integer(length(z))
-        out[i2, ] <- .Fortran("transformz", z, nu, nn, as.integer(ifam),
+        out[i2, ] <- .Fortran("transformz", z, nu, nn, ifam,
                               PACKAGE = "geoBayes")[[1]]
         out
       }
@@ -165,22 +204,27 @@ transfsample <- function (runs, model, transf = c("no", "mu", "wo"))
     ifam <- -ifam
     itr <- rep.int(2L, n)
     ftrw <- function (r) {
-      o <- r[["whichobs"]]
-      out <- r[["z"]][o, ]
-      nu <- r[["nu"]][1]
+      o <- r$MCMC[["whichobs"]]
+      out <- r$MCMC[["z"]][o, , drop = FALSE]
+      nu <- r$FIXED[["linkp_num"]][1]
       nn <- as.integer(length(out))
-      out[] <- .Fortran("transformz", out, nu, nn, as.integer(ifam),
+      out[] <- .Fortran("transformz", out, nu, nn, ifam,
                         PACKAGE = "geoBayes")[[1]]
       out
     }
     sample <- lapply(runs, ftrw)
   } else {
-    sample <- lapply(runs, function(r) r[["z"]][r[["whichobs"]], ])
+    ftrw <- function (r) {
+      o <- r$MCMC[["whichobs"]]
+      out <- r$MCMC[["z"]][o, , drop = FALSE]
+      out
+    }
+    sample <- lapply(runs, ftrw)
     itr <- rep.int(0L, n)
   }
   list(sample = sample, transf = transf,
        real_transf = transf0, itr = as.integer(itr),
-       ifam = as.integer(ifam))
+       ifam = ifam)
 }
 
 
@@ -188,15 +232,23 @@ transfsample <- function (runs, model, transf = c("no", "mu", "wo"))
 ## Check and return the parameter grid
 check_pargrid <- function(pargrid, family, corrfcn)
 {
-  pargrid <- data.frame(pargrid, stringsAsFactors = FALSE)
+  pargrid <- as.data.frame(pargrid, stringsAsFactors = FALSE)
   ##if(!is.list(pargrid)) stop ("Argument pargrid must be a list")
   parnm <- c("linkp", "phi", "omg", "kappa")
-  needkappa <- corrfcn %in% c("matern", "powerexponential")
-  if (!needkappa) pargrid$kappa <- 0
+  ifam <- .geoBayes_family(family)
+  needlinkp <- .geoBayes_models$needlinkp[ifam]
+  if (!needlinkp) pargrid$linkp <- 0
+  icf <- .geoBayes_correlation(corrfcn)
+  needkappa <- .geoBayes_corrfcn$needkappa[icf]
+  if (!needkappa) {
+    pargrid$kappa <- 0
+  } else {
+    pargrid$kappa <- .geoBayes_getkappa(pargrid$kappa, icf)
+  }
   if (!all(parnm %in% names(pargrid))) {
     stop (paste("Argument", deparse(substitute(pargrid)), "must have the names",
-                paste(c("linkp", "phi", "omg", if (needkappa) "kappa"),
-                      collapse=" ")))
+                paste(c(if (needlinkp) "linkp", "phi", "omg",
+                        if (needkappa) "kappa"), collapse=", ")))
   } else {
     pargrid <- pargrid[parnm]
   }
@@ -208,18 +260,37 @@ check_pargrid <- function(pargrid, family, corrfcn)
   if (any (phi < 0)) stop ("Element phi given must be non-negative")
   if (any (omg < 0)) stop ("Element omg given must be non-negative")
 
-  ## Check kappa and corrfcn
-  kappa <- as.double(kappa)
-  if ((corrfcn %in% c("matern", "powerexponential")) && any(kappa < 0)) {
-    stop ("Component kappa cannot be negative")
-  }
-  if ((corrfcn == "powerexponential") && any(kappa > 2)) {
-    stop ("Component kappa cannot be more than 2 for the powerexponential correlation")
-  }
-
   ## Check if linkp conforms with family
   nu <- .geoBayes_getlinkp(linkp, family)
 
   ## Output
   data.frame(linkp = linkp, phi = phi, omg = omg, kappa = kappa, nu = nu)
+}
+
+check_gengamma_prior <- function (pars)
+  ## Checks if the generalised gamma prior parameters are correct.
+{
+  pars <- as.double(pars)
+  if (4 != length(pars))
+    stop ("Generalised gamma parameters must be a vector of length 4.")
+  if (!all(is.finite(pars)))
+    stop ("Non-finite generalised gamma parameters.")
+  if (pars[1] <= 0 || pars[4] < 0 || pars[2]*pars[3] < 0) {
+    stop ("Invalid values in pars: pars[1] <= 0 || pars[4] < 0 || pars[2]*pars[3] < 0")
+  }
+  pars
+}
+
+check_unif_prior <- function (pars)
+  ## Checks if the uniform prior parameters are correct.
+{
+  pars <- as.double(pars)
+  if (2 != length(pars))
+    stop ("Uniform parameters must be a vector of length 2.")
+  if (!all(is.finite(pars)))
+    stop ("Non-finite uniform prior parameters.")
+  if (pars[1] >= pars[2]) {
+    stop ("Invalid values in pars: pars[1] >= pars[2]")
+  }
+  pars
 }

@@ -4,7 +4,7 @@
 !!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine calcb_no_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+subroutine calcb_no_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, zsample, weights, n, p, betm0, betQ0, ssqdf, &
    ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
@@ -16,7 +16,7 @@ subroutine calcb_no_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   use betaprior
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
-  double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
+  double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
      nu(n_nu), zsample(n, Ntot), weights(Ntot), &
      betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n, p), dm(n, n)
@@ -60,7 +60,7 @@ subroutine calcb_no_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   end select
 
   do k = 1, n_cov
-    call calc_cov (phi(k),nsq(k),dm,F,betQ0,&
+    call calc_cov (phi(k),omg(k),dm,F,betQ0,&
        kappa(k),n,p,T,TiF,FTF,Ups,ldh_Ups)
     do j = 1, Ntot
       ! Calculate unnormalised log-likelihood at sampled points
@@ -75,7 +75,7 @@ subroutine calcb_no_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
 end subroutine calcb_no_st
 
 
-subroutine calcb_wo_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+subroutine calcb_wo_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, wsample, weights, n, p, betm0, betQ0, ssqdf, &
    ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
@@ -85,7 +85,7 @@ subroutine calcb_wo_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   use betaprior
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
-  double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
+  double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
      nu(n_nu), wsample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n,p), dm(n,n)
@@ -114,7 +114,7 @@ subroutine calcb_wo_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   case default
     do i = 1, n_cov
       call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
+      call calc_cov (phi(i),omg(i),dm,F,betQ0,&
          kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
@@ -122,7 +122,7 @@ subroutine calcb_wo_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
           lfw = jointyz(n, zsample, y, l, Ups, ldh_Ups, &
              nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
           do m = 1, n
-            lfw = lfw - logitrwdz(zsample(m),nu(k))
+            lfw = lfw - loginvtrwdz(zsample(m),nu(k))
           end do
           llikw(k,j) = lfw - weights(j)
         end do
@@ -133,7 +133,7 @@ subroutine calcb_wo_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
 end subroutine calcb_wo_st
 
 
-subroutine calcb_mu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+subroutine calcb_mu_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, musample, weights, n, p, betm0, betQ0, ssqdf, &
    ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
@@ -145,7 +145,7 @@ subroutine calcb_mu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   use betaprior
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
-  double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
+  double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
      nu(n_nu), musample(n, Ntot), weights(Ntot), &
      betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n, p), dm(n, n)
@@ -173,13 +173,13 @@ subroutine calcb_mu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   case (0)
     do i = 1, n_cov
       call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
+      call calc_cov (phi(i),omg(i),dm,F,betQ0,&
          kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu_ga(n, musample(:, j), Ups, ldh_Ups, &
              nu(k), xi, lmxi, ssqdfsc, modeldfh)
-          llikw(k, j) = lfmu - weights(j)
+          llikw(k,j) = lfmu - weights(j)
         end do
       end do
       bfact(:, i) = logrsumexp(llikw, n_nu, Ntot)
@@ -187,8 +187,9 @@ subroutine calcb_mu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   case default
     do i = 1, n_cov
       call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
+      call calc_cov (phi(i),omg(i),dm,F,betQ0,&
          kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
+      call fill_symmetric_matrix(Ups,n)
       do j = 1, Ntot
         do k = 1, n_nu
           lfmu = logpdfmu(n, musample(:,j), Ups, ldh_Ups, &
@@ -202,7 +203,7 @@ subroutine calcb_mu_st (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
 end subroutine calcb_mu_st
 
 
-subroutine calcb_tr_st (bfact, philist, nulist, nsqlist, kappalist, &
+subroutine calcb_tr_st (bfact, philist, nulist, omglist, kappalist, &
    icf, n_cov, n_nu, Ntot, sample, weights, n, p, betm0, betQ0, ssqdf, &
    ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
@@ -213,7 +214,7 @@ subroutine calcb_tr_st (bfact, philist, nulist, nsqlist, kappalist, &
   use condymu, only: condymu_gt
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
-  double precision, intent(in) :: philist(n_cov), nsqlist(n_cov), &
+  double precision, intent(in) :: philist(n_cov), omglist(n_cov), &
      kappalist(n_cov), nulist(n_nu), sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n,p), dm(n,n)
@@ -223,7 +224,7 @@ subroutine calcb_tr_st (bfact, philist, nulist, nsqlist, kappalist, &
   integer i, j, k
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
      ldh_Ups, lglk(Ntot), xi(n)
-  double precision nu, phi, nsq, kappa
+  double precision nu, phi, omg, kappa
   double precision zsam(n), msam(n), jsam(n), sam(n)
 
   call create_model (ifam)
@@ -245,9 +246,9 @@ subroutine calcb_tr_st (bfact, philist, nulist, nsqlist, kappalist, &
 
   do i = 1, n_cov
     phi = philist(i)
-    nsq = nsqlist(i)
+    omg = omglist(i)
     kappa = kappalist(i)
-    call calc_cov (phi,nsq,dm,F,betQ0,&
+    call calc_cov (phi,omg,dm,F,betQ0,&
        kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
     do j = 1, n_nu
       nu = nulist(j)
@@ -261,11 +262,11 @@ subroutine calcb_tr_st (bfact, philist, nulist, nsqlist, kappalist, &
         elsewhere (itr == 1)
           msam = sam
           zsam = flink(msam,nu)
-          jsam = logilinkdz(zsam,nu)
+          jsam = loginvlinkdz(zsam,nu)
         elsewhere (itr == 2)
           zsam = transfw(sam,nu)
           msam = invlink(zsam,nu)
-          jsam = logitrwdz(zsam,nu)
+          jsam = loginvtrwdz(zsam,nu)
         end where
         lglk(k) = logpdfzf(n,zsam,Ups,ldh_Ups,xi,lmxi,ssqdfsc,modeldfh) &
            + condymuf(ifam,n,y,l,msam,tsqval,respdfh) - sum(jsam) - weights(k)
@@ -304,7 +305,7 @@ end subroutine calcb_tr_st
 
 !!!!!!!!!!!!!!!!!!!!!!!!! Control variates method !!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine calcb_no_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+subroutine calcb_no_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, zsample, weights, QRin, n, p, betm0, betQ0, ssqdf, &
    ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
@@ -316,7 +317,7 @@ subroutine calcb_no_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   use betaprior
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
-  double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
+  double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
      nu(n_nu), zsample(n, Ntot), weights(Ntot), QRin(Ntot), &
      betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n, p), dm(n, n)
@@ -361,7 +362,7 @@ subroutine calcb_no_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
 
   do k = 1, n_cov
     call rchkusr
-    call calc_cov (phi(k),nsq(k),dm,F,betQ0,&
+    call calc_cov (phi(k),omg(k),dm,F,betQ0,&
        kappa(k),n,p,T,TiF,FTF,Ups,ldh_Ups)
     do j = 1, Ntot
       ! Calculate unnormalised log-likelihood at sampled points
@@ -384,7 +385,7 @@ end subroutine calcb_no_cv
 
 
 
-subroutine calcb_wo_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+subroutine calcb_wo_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, wsample, weights, QRin, n, p, betm0, betQ0, ssqdf, &
    ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
@@ -394,7 +395,7 @@ subroutine calcb_wo_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   use betaprior
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
-  double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
+  double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
      nu(n_nu), wsample(n,Ntot), weights(Ntot), QRin(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n,p), dm(n,n)
@@ -425,7 +426,7 @@ subroutine calcb_wo_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   case default
     do i = 1, n_cov
       call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
+      call calc_cov (phi(i),omg(i),dm,F,betQ0,&
          kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
@@ -433,7 +434,7 @@ subroutine calcb_wo_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
           lfw = jointyz(n, zsample, y, l, Ups, ldh_Ups, &
              nu(k), xi, lmxi, ssqdfsc, tsq, modeldfh)
           do m = 1, n
-            lfw = lfw - logitrwdz(zsample(m),nu(k))
+            lfw = lfw - loginvtrwdz(zsample(m),nu(k))
           end do
           llikw = lfw - weights(j)
           ycv(k,j) = exp(llikw + dNtot)
@@ -451,7 +452,7 @@ end subroutine calcb_wo_cv
 
 
 
-subroutine calcb_mu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
+subroutine calcb_mu_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, musample, weights, QRin, n, p, betm0, betQ0, ssqdf, &
    ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
 
@@ -463,7 +464,7 @@ subroutine calcb_mu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   use betaprior
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
-  double precision, intent(in) :: phi(n_cov), nsq(n_cov), kappa(n_cov), &
+  double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
      nu(n_nu), musample(n,Ntot), weights(Ntot), QRin(Ntot), &
      betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n, p), dm(n, n)
@@ -492,7 +493,7 @@ subroutine calcb_mu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   case (0)
     do i = 1, n_cov
       call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
+      call calc_cov (phi(i),omg(i),dm,F,betQ0,&
          kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
@@ -512,7 +513,7 @@ subroutine calcb_mu_cv (bfact, phi, nu, nsq, kappa, icf, n_cov, n_nu, &
   case default
     do i = 1, n_cov
       call rchkusr
-      call calc_cov (phi(i),nsq(i),dm,F,betQ0,&
+      call calc_cov (phi(i),omg(i),dm,F,betQ0,&
          kappa(i),n,p,T,TiF,FTF,Ups,ldh_Ups)
       do j = 1, Ntot
         do k = 1, n_nu
@@ -534,7 +535,7 @@ end subroutine calcb_mu_cv
 
 
 
-subroutine calcb_tr_cv (bfact, philist, nulist, nsqlist, kappalist, &
+subroutine calcb_tr_cv (bfact, philist, nulist, omglist, kappalist, &
    icf, n_cov, n_nu, Ntot, sample, weights, QRin, &
    n, p, betm0, betQ0, ssqdf, &
    ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
@@ -546,7 +547,7 @@ subroutine calcb_tr_cv (bfact, philist, nulist, nsqlist, kappalist, &
   use condymu, only: condymu_gt
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
-  double precision, intent(in) :: philist(n_cov), nsqlist(n_cov), &
+  double precision, intent(in) :: philist(n_cov), omglist(n_cov), &
      kappalist(n_cov), nulist(n_nu), sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
      F(n,p), dm(n,n)
@@ -557,7 +558,7 @@ subroutine calcb_tr_cv (bfact, philist, nulist, nsqlist, kappalist, &
   integer i, j, k
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
      ldh_Ups, lglk(Ntot), xi(n)
-  double precision nu, phi, nsq, kappa
+  double precision nu, phi, omg, kappa
   double precision zsam(n), msam(n), jsam(n), sam(n)
   double precision dNtot, ycv(Ntot), betareg
 
@@ -581,9 +582,9 @@ subroutine calcb_tr_cv (bfact, philist, nulist, nsqlist, kappalist, &
 
   do i = 1, n_cov
     phi = philist(i)
-    nsq = nsqlist(i)
+    omg = omglist(i)
     kappa = kappalist(i)
-    call calc_cov (phi,nsq,dm,F,betQ0,&
+    call calc_cov (phi,omg,dm,F,betQ0,&
        kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
     do j = 1, n_nu
       nu = nulist(j)
@@ -597,11 +598,11 @@ subroutine calcb_tr_cv (bfact, philist, nulist, nsqlist, kappalist, &
         elsewhere (itr == 1)
           msam = sam
           zsam = flink(msam,nu)
-          jsam = logilinkdz(zsam,nu)
+          jsam = loginvlinkdz(zsam,nu)
         elsewhere (itr == 2)
           zsam = transfw(sam,nu)
           msam = invlink(zsam,nu)
-          jsam = logitrwdz(zsam,nu)
+          jsam = loginvtrwdz(zsam,nu)
         end where
         lglk(k) = logpdfzf(n,zsam,Ups,ldh_Ups,xi,lmxi,ssqdfsc,modeldfh) &
            + condymuf(ifam,n,y,l,msam,tsqval,respdfh) - sum(jsam) - weights(k)

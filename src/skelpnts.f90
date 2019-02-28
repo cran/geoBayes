@@ -19,10 +19,8 @@ subroutine gaussaprx (mean, prec, fcyz, y1, y2, Ups, ldh_Ups, &
   ! fcyz is the value at the maximum
   ! Rest are input to the joint pdf
   use lbfgsbmod
-  use pdfdz, only: logcondyzdz_gt, logcondyzhs_gt
   use linkfcns, only: flink_ga
-  use modelfcns, only: mustart, flink_sp => flink, &
-     logpdfzdz, logcondyzdz_sp => logcondyzdz, logcondyzhs_sp => logcondyzhs
+  use modelfcns, only: mustart, flink_sp => flink
   implicit none
   integer, intent(in) :: n, ifam
   logical, intent(in) :: lmxi
@@ -33,7 +31,7 @@ subroutine gaussaprx (mean, prec, fcyz, y1, y2, Ups, ldh_Ups, &
   double precision tsqdfsc, respdf
   integer opnb(n), opipr, iflag, maxiter, i
   double precision oplb(n), opub(n), opfac, oppgt
-  parameter ( maxiter = 200, opfac = 1d7, oppgt = 0d0 )
+  parameter ( maxiter = 1500, opfac = 1d7, oppgt = 0d0 )
 
   opnb = 0
   iflag = 0
@@ -87,11 +85,116 @@ subroutine gaussaprx (mean, prec, fcyz, y1, y2, Ups, ldh_Ups, &
     end if
     call logcondyzhs_sp (hs, nu, y1, y2, mean, n, tsq)
   end select
-  fcyz = -fcyz
+  fcyz = -fcyz ! Because it was minus before
   do i = 1, n
     prec(:i,i) = Ups(:i,i)/ssq ! Upper triangular elements
     prec(i,i) = prec(i,i) - hs(i)
   end do
+
+contains
+
+  subroutine logpdfzdz (fc, gr, z, Ups, ldh_Ups, xi, lmxi, ssq, n)
+!! log-pdf of z and its derivative after integrating out beta. The 2*pi
+!! constant is removed.
+    implicit none
+    integer, intent(in) :: n
+    logical, intent(in) :: lmxi
+    double precision, intent(in) :: z(n), Ups(n,n), ldh_Ups, xi(n), ssq
+    double precision, intent(out) :: fc, gr(n)
+    double precision zmxi(n)
+    if (lmxi) then
+      zmxi = z - xi
+    else
+      zmxi = z
+    end if
+    call dsymv ('u',n,1d0,Ups,n,zmxi,1,0d0,gr,1) ! gr = Ups*(z-xi)
+    gr = -gr/ssq ! gr = -Ups*(z-x)/ssq
+    fc = -.5d0*n*log(ssq) + ldh_Ups + .5d0*dot_product(zmxi,gr)
+  end subroutine logpdfzdz
+
+  subroutine logcondyzdz_gt (fc, gr, nu, y1, y2, z, n, tsq)
+!! TODO respdf is not needed here. Can be computed outside the fcn. XXX
+!! log-pdf of y|z and its derivative w.r.t. z.
+!! Gaussian transformed
+!! tsq is tsqdf*tsqsc on input
+!! respdf is n + tsqdf on input
+    use linkfcns, only: invlink_ga
+    use linkdz, only: invlinkdz_ga
+    integer, intent(in) :: n
+    double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
+    double precision, intent(out) :: fc, gr(n)
+    integer i
+    double precision par, pardz
+    fc = tsq
+    do i = 1, n
+      par = invlink_ga(z(i),nu)
+      pardz = invlinkdz_ga(z(i),nu)
+      par = y1(i) - par
+      gr(i) = y2(i)*par
+      fc = fc + gr(i)*par
+      gr(i) = gr(i)*pardz
+    end do
+    gr = gr/fc ! XXX Missing respdf factor. Must be computed outside the fcn
+    fc = -.5d0*log(fc) ! XXX Also missing respdf = n + tsqdf
+  end subroutine logcondyzdz_gt
+
+  subroutine logcondyzhs_gt (hs, nu, y1, y2, z, n, tsq)
+!! Component used in the calculation of the Hessian
+!! Gaussian transformed
+!! tsq is tsqdf*tsqsc on input
+    use linkfcns, only: invlink_ga
+    use linkdz, only: invlinkdz_ga
+    integer, intent(in) :: n
+    double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
+    double precision, intent(out) :: hs(n)
+    integer i
+    double precision par, pardz, fc
+    fc = tsq
+    do i = 1, n
+      par = invlink_ga(z(i),nu)
+      pardz = invlinkdz_ga(z(i),nu)
+      hs(i) = y2(i)*par*pardz*pardz
+      par = y1(i) - par
+      fc = fc + y2(i)*par*par
+    end do
+    hs = -hs/fc ! XXX Missing respdf factor. Must be computed outside the fcn
+  end subroutine logcondyzhs_gt
+
+  subroutine logcondyzdz_sp (fc, gr, nu, y1, y2, z, n, tsq)
+!! log-pdf of y|z and its derivative w.r.t. z.
+    use modelfcns, only: invlink, invlinkdz, logpdfy, logpdfydlnk
+    integer, intent(in) :: n
+    double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
+    double precision, intent(out) :: fc, gr(n)
+    integer i
+    double precision par, pardz
+    fc = 0d0
+    do i = 1, n
+      par = invlink(z(i),nu)
+      pardz = invlinkdz(z(i),nu)
+      fc = fc + logpdfy(y1(i),y2(i),par)
+      gr(i) = logpdfydlnk(y1(i),y2(i),par) * pardz
+    end do
+    fc = fc/tsq
+    gr = gr/tsq
+  end subroutine logcondyzdz_sp
+
+  subroutine logcondyzhs_sp (hs, nu, y1, y2, z, n, tsq)
+!! Component used in the calculation of the Hessian
+    use modelfcns, only: invlink, invlinkdz, logpdfyhlnk, logpdfydlnk, invlinkhz
+    integer, intent(in) :: n
+    double precision, intent(in) :: y1(n), y2(n), z(n), nu, tsq
+    double precision, intent(out) :: hs(n)
+    integer i
+    double precision par, pardz
+    do i = 1, n
+      par = invlink(z(i),nu)
+      pardz = invlinkdz(z(i),nu)
+      hs(i) = logpdfyhlnk(y1(i),y2(i),par) * pardz*pardz
+      hs(i) = hs(i) + logpdfydlnk(y1(i),y2(i),par) * invlinkhz(z(i),nu)
+    end do
+    hs = hs/tsq
+  end subroutine logcondyzhs_sp
 end subroutine gaussaprx
 
 
@@ -119,10 +222,14 @@ subroutine poster (fssq, meang, prechg, ssq, ssqdfh, ssqdfsc, &
   fssq = fssq - ldh + fpr
 contains
   subroutine factorpd(n,x,ldh)
+    ! The returned matrix x is upper triangular s.t. U'*U = X
     integer, intent(in) :: n
     double precision, intent(inout) :: x(n,n)
     double precision, intent(out) :: ldh
     integer i
+!!     open(11,file='postermat.txt')
+!!     write(11,*) x
+!!     close(11)
     call dpotrf ('u',n,x,n,i)
     if (i .ne. 0) then
       call rexit("poster - Non positive definite matrix")
@@ -133,6 +240,96 @@ contains
     end do
   end subroutine factorpd
 end subroutine poster
+
+subroutine aprxposterssq (fssq, meang, prechg, dz_dnu, dz_dphi, &
+   ssq, nu, phi, omg, kappa, y1, y2, F, betm0, betQ0, &
+   ssqdf, ssqsc, dm, tsq, tsqdf, n, p, ifam, icf)
+  use covfun
+  use betaprior
+  use modelfcns
+  use calcbd_fcns, only: qform, traceAB, cor_dcov
+  implicit none
+  integer, intent(in) :: n, p, ifam, icf
+  double precision, intent(in) :: ssq, ssqdf, ssqsc, &
+     y1(n), y2(n), phi, nu, omg, kappa, dm(n,n), F(n,p), &
+     betm0(p), betQ0(p,p), tsq, tsqdf
+  double precision, intent(out) :: fssq, meang(n), prechg(n,n), &
+     dz_dnu(n), dz_dphi(n)
+  double precision Ups(n,n), ldh_Ups, xi(n), modeldfh, ssqdfh, ssqdfsc
+  logical lmxi
+  double precision T(n,n), TiF(n,p), FTF(p,p), par(n), varh(n,n)
+  integer j
+  call create_model (ifam)
+  call create_spcor (icf,n)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+  ssqdfh = .5d0*ssqdf
+  ssqdfsc = ssqdf*ssqsc
+  call poster (fssq, meang, prechg, ssq, ssqdfh, ssqdfsc, &
+     y1, y2, Ups, ldh_Ups, nu, xi, lmxi, tsq, tsqdf, n, ifam)
+  par = invlink(meang,nu)
+  varh = prechg
+  call dtrtri ('u','n',n,varh,n,j)
+  dz_dnu = fdz_dnu (meang, par, ssq, varh, y1, y2, Ups, &
+     nu, xi, lmxi, tsq, tsqdf, n)
+  dz_dphi = fdz_dphi (meang, par, ssq, varh, y1, y2, dm, Ups, &
+     nu, xi, lmxi, tsq, tsqdf, n, icf)
+
+contains
+!   function fdz_dnu (z, par, ssq, prechg, y1, y2, Ups, &
+!      nu, xi, lmxi, tsq, tsqdf, n)
+!     implicit none
+!     integer, intent(in) :: n
+!     logical, intent(in) :: lmxi
+!     double precision, intent(in) :: y1(n), y2(n), Ups(n,n), nu, &
+!        xi(n), tsq, tsqdf, ssq, z(n), prechg(n,n), par(n)
+!     double precision, dimension(n) :: fdz_dnu
+!     fdz_dnu = logpdfyhlnk(y1,y2,par) * invlinkdz(z,nu) * invlinkdn(z,nu) &
+!        + logpdfydlnk(y1,y2,par) * invlinkdzdn(z,nu)
+!     call dtrsv ('u','t','n',n,prechg,n,fdz_dnu,1)
+!     call dtrsv ('u','n','n',n,prechg,n,fdz_dnu,1)
+!   end function fdz_dnu
+
+  function fdz_dnu (z, par, ssq, varh, y1, y2, Ups, &
+     nu, xi, lmxi, tsq, tsqdf, n)
+    implicit none
+    integer, intent(in) :: n
+    logical, intent(in) :: lmxi
+    double precision, intent(in) :: y1(n), y2(n), Ups(n,n), nu, &
+       xi(n), tsq, tsqdf, ssq, z(n), varh(n,n), par(n)
+    double precision, dimension(n) :: fdz_dnu
+    fdz_dnu = logpdfyhlnk(y1,y2,par) * invlinkdz(z,nu) * invlinkdn(z,nu) &
+       + logpdfydlnk(y1,y2,par) * invlinkdzdn(z,nu)
+    fdz_dnu = fdz_dnu/tsq
+    call dtrmv ('u','t','n',n,varh,n,fdz_dnu,1)
+    call dtrmv ('u','n','n',n,varh,n,fdz_dnu,1)
+  end function fdz_dnu
+
+  function fdz_dphi (z, par, ssq, varh, y1, y2, dm, Ups, &
+     nu, xi, lmxi, tsq, tsqdf, n, icf)
+    implicit none
+    integer, intent(in) :: n, icf
+    logical, intent(in) :: lmxi
+    double precision, intent(in) :: y1(n), y2(n), nu, dm(n,n), &
+       xi(n), tsq, tsqdf, ssq, z(n), varh(n,n), par(n), Ups(n,n)
+    double precision, dimension(n) :: fdz_dphi
+    double precision zmxi(n), UpsDTUps(n,n), DT(n,n), &
+       DTUps(n,n)
+    DT = cor_dcov(n,dm,phi,omg,kappa,1)
+    call fill_symmetric_matrix(DT,n)
+    call dsymm ('r','u',n,n,1d0,Ups,n,DT,n,0d0,DTUps,n)
+    call dsymm ('l','u',n,n,1d0,Ups,n,DTUps,n,0d0,UpsDTUps,n)
+    UpsDTUps = UpsDTUps/ssq
+    if (lmxi) then
+      zmxi = z - xi
+    else
+      zmxi = z
+    end if
+    call dsymv ('u',n,1d0,UpsDTUps,n,zmxi,1,0d0,fdz_dphi,1) ! Ups*(z-xi)
+    call dtrmv ('u','t','n',n,varh,n,fdz_dphi,1)
+    call dtrmv ('u','n','n',n,varh,n,fdz_dphi,1)
+  end function fdz_dphi
+end subroutine aprxposterssq
 
 
 subroutine posterlog (fval, meang, prechg, logssq, ssqdfh, ssqdfsc, &
@@ -170,7 +367,7 @@ subroutine optlogssq (tval, tprc, pdfval, meang, prechg, ssqdfh, ssqdfsc, &
   double precision, intent(inout) :: tval
   double precision, intent(out) :: tprc, pdfval, meang(n), prechg(n,n)
   double precision pdfpnts(3), tnew, tpnts(3), mtmp(n), ptmp(n,n), pdfnew
-  double precision, parameter :: eps = 1d-3
+  double precision, parameter :: eps = 1d-4
   integer, parameter :: maxiter = 100
   integer i, ii
   logical lconv, ok
@@ -187,14 +384,16 @@ subroutine optlogssq (tval, tprc, pdfval, meang, prechg, ssqdfh, ssqdfsc, &
       prechg = ptmp
     end if
   end do
-  !!print*, 0, real(tpnts), real(pdfpnts), real(pdfval)
+  ! print*, 0, real(tpnts), real(pdfpnts), real(pdfval)
   do i = 1, maxiter
     call polmax(tnew, ii, ok, tpnts, pdfpnts) ! Find new point
     call posterlog (pdfnew, mtmp, ptmp, tnew, ssqdfh, ssqdfsc, &
        y1, y2, Ups, ldh_Ups, nu, xi, lmxi, tsq, tsqdf, n, ifam)
     lconv = .false.
-    if (ok) lconv = abs(pdfnew - pdfval) .lt. eps !eps*(1d0+abs(pdfval))
-    if (ok .and. .not. lconv) lconv = minval(abs(tnew-tpnts)) .lt. 15d-1
+    if (ok) lconv = abs(pdfnew - pdfval) .lt. eps*(1d0+sqrt(abs(pdfval)))
+    if (ok .and. .not. lconv) lconv = minval(abs(tnew-tpnts)) .lt. &
+       eps*1e2*(1d0+sqrt(abs(tnew)))
+    ! print*, real(tnew), real(pdfnew), lconv
     if (lconv) then
       exit
     end if
@@ -206,7 +405,7 @@ subroutine optlogssq (tval, tprc, pdfval, meang, prechg, ssqdfh, ssqdfsc, &
       meang = mtmp
       prechg = ptmp
     end if
-  !!print*, i, real(tpnts), real(pdfpnts), real(pdfval)
+  ! print*, i, real(tpnts), real(pdfpnts), real(pdfval)
   end do
   if (.not. lconv) then
     call rwarn("optlogssq - Was not able to find the maximum posterior.")
@@ -346,57 +545,360 @@ subroutine gridposter (np, tg, twght, meang, prechg, ssqdfh, ssqdfsc, &
        ssqdfsc, y1, y2, Ups, ldh_Ups, nu, xi, lmxi, tsq, tsqdf, n, ifam)
 !     twght(i) = twght(i) - twght(m)
   end do
+!!   open(11, file = "gridposter_data.txt")
+!!   write(11,*) tg
+!!   write(11,*) twght
+!!   close(11)
 !   twght(m) = 0d0
   !! twght = twght - log(sum(exp(twght))) ! XXX Not normalised.
 end subroutine gridposter
 
+subroutine aloglik (np, logssqg, out, meang, prechg, ssqdfh, ssqdfsc, &
+   y1, y2, Ups, ldh_Ups, nu, xi, lmxi, tsq, tsqdf, n, ifam)
+  implicit none
+  integer, intent(in) :: np, n, ifam
+  logical, intent(in) :: lmxi
+  double precision, intent(in) :: y1(n), y2(n), Ups(n,n), nu, &
+     xi(n), tsq, tsqdf, ssqdfh, ssqdfsc, ldh_Ups
+  double precision, intent(in) :: logssqg(np+np+1)
+  double precision, intent(out) :: out(np+np+1), meang(n,np+np+1), &
+     prechg(n,n,np+np+1)
+  integer i
+  do i = 1, np+np+1
+    call posterlog (out(i),meang(:,i),prechg(:,:,i),logssqg(i),ssqdfh,ssqdfsc,&
+       y1,y2,Ups,ldh_Ups,nu,xi,lmxi,tsq,tsqdf,n,ifam)
+  end do
+end subroutine aloglik
 
-subroutine llikpars2 (fval, nu, phi, nsq, kappa, y1, y2, F, betm0, betQ0, &
+
+subroutine aloglik_dnu (np, logssqg, dnu, meang, prechg, ssqdfh, ssqdfsc, &
+   y1, y2, Ups, nu, xi, lmxi, tsq, tsqdf, n, ifam)
+  use modelfcns
+  implicit none
+  integer, intent(in) :: np, n, ifam
+  logical, intent(in) :: lmxi
+  double precision, intent(in) :: y1(n), y2(n), Ups(n, n), nu, &
+     xi(n), tsq, tsqdf, ssqdfh, ssqdfsc
+  double precision, intent(in) :: logssqg(np+np+1), &
+     meang(n,np+np+1), prechg(n,n,np+np+1)
+  double precision, intent(out) :: dnu(np+np+1)
+  double precision par(n), z(n), dz_dnu(n), dpar_dnu(n), &
+     dpz_dz(n), ssq
+  double precision dpym_dpar(n), dpym_hpar(n), dpym_3par(n)
+  double precision invlink_dz(n), invlink_dn(n), invlink_hz(n), &
+     invlink_dzdn(n), invlink_3z(n), invlink_hzdn(n)
+  double precision dH(n)
+  double precision varh(n,n)
+  integer i, j
+  do i = 1, np+np+1
+    z = meang(:,i)
+    ssq = exp(logssqg(i))
+    varh = prechg(:,:,i)
+    call dtrtri ('u','n',n,varh,n,j)
+    if (j .ne. 0) call rexit ("aloglik_dnu - Non-invertible precision.")
+    par = invlink(z,nu)
+    invlink_dz = invlinkdz(z,nu)
+    invlink_dn = invlinkdn(z,nu)
+    invlink_hz = invlinkhz(z,nu)
+    invlink_dzdn = invlinkdzdn(z,nu)
+    invlink_3z = invlink3z(z,nu)
+    invlink_hzdn = invlinkhzdn(z,nu)
+    dpym_dpar = logpdfydlnk(y1,y2,par)
+    dpym_hpar = logpdfyhlnk(y1,y2,par)
+    dpym_3par = logpdfy3lnk(y1,y2,par)
+    dpz_dz = logpdfzdz(z, Ups, xi, lmxi, ssq, n)
+    dz_dnu = fdz_dnu(z, par, ssq, varh, &
+       y1, y2, Ups, nu, xi, lmxi, tsq, tsqdf, n)
+    dpar_dnu = invlink_dn + invlink_dz*dz_dnu
+    dH = -dpym_3par*invlink_dz*invlink_dz*dpar_dnu &
+       - 3d0*dpym_hpar*invlink_dz*invlink_hz*dz_dnu &
+       - 2d0*dpym_hpar*invlink_dz*invlink_dzdn &
+       - dpym_hpar*invlink_hz*invlink_dn &
+       - dpym_dpar*invlink_3z*dz_dnu &
+       - dpym_dpar*invlink_hzdn
+    dH = dH/tsq
+    dnu(i) = dot_product(dpym_dpar, dpar_dnu)/tsq &
+       + dot_product(dpz_dz, dz_dnu) - .5d0*traceH(varh,dH,n)
+  end do
+
+contains
+  function logpdfzdz (z, Ups, xi, lmxi, ssq, n) result (gr)
+!! log-pdf of z and its derivative after integrating out beta. The 2*pi
+!! constant is removed.
+    implicit none
+    integer, intent(in) :: n
+    logical, intent(in) :: lmxi
+    double precision, intent(in) :: z(n), Ups(n,n), xi(n), ssq
+    double precision :: gr(n)
+    double precision zmxi(n)
+    if (lmxi) then
+      zmxi = z - xi
+    else
+      zmxi = z
+    end if
+    call dsymv ('u',n,1d0,Ups,n,zmxi,1,0d0,gr,1) ! gr = Ups*(z-xi)
+    gr = -gr/ssq ! gr = -Ups*(z-x)/ssq
+  end function logpdfzdz
+
+  function fdz_dnu (z, par, ssq, varh, y1, y2, Ups, &
+     nu, xi, lmxi, tsq, tsqdf, n)
+    implicit none
+    integer, intent(in) :: n
+    logical, intent(in) :: lmxi
+    double precision, intent(in) :: y1(n), y2(n), Ups(n,n), nu, &
+       xi(n), tsq, tsqdf, ssq, z(n), varh(n,n), par(n)
+    double precision, dimension(n) :: fdz_dnu
+    fdz_dnu = logpdfyhlnk(y1,y2,par) * invlinkdz(z,nu) * invlinkdn(z,nu) &
+       + logpdfydlnk(y1,y2,par) * invlinkdzdn(z,nu)
+    fdz_dnu = fdz_dnu/tsq
+    call dtrmv ('u','t','n',n,varh,n,fdz_dnu,1)
+    call dtrmv ('u','n','n',n,varh,n,fdz_dnu,1)
+  end function fdz_dnu
+
+  function traceH (varh, dh, n)
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: varh(n,n), dh(n)
+    double precision traceH
+    integer i
+    double precision v(n)
+    traceH = 0d0
+    do i = 1, n
+      v(1:i) = dh(1:i)*varh(1:i,i)
+      traceH = traceH + dot_product(varh(1:i,i),v(1:i))
+    end do
+  end function traceH
+end subroutine aloglik_dnu
+
+
+subroutine aloglik_dcov (np, logssqg, dcov, ideriv, &
+   meang, prechg, ssqdfh, ssqdfsc, &
+   y1, y2, dm, phi, omg, kappa, Ups, nu, xi, lmxi, tsq, tsqdf, n, ifam)
+  use modelfcns
+  use covfun
+  use calcbd_fcns, only: qform, traceAB, cor_dcov
+  implicit none
+  integer, intent(in) :: np, n, ifam, ideriv
+  logical, intent(in) :: lmxi
+  double precision, intent(in) :: y1(n), y2(n), Ups(n, n), nu, &
+     xi(n), tsq, tsqdf, ssqdfh, ssqdfsc
+  double precision, intent(in) :: dm(n,n), phi, omg, kappa
+  double precision, intent(in) :: logssqg(np+np+1), &
+     meang(n,np+np+1), prechg(n,n,np+np+1)
+  double precision, intent(out) :: dcov(np+np+1)
+  double precision par(n), z(n), dz_dcov(n), dpar_dcov(n), &
+     dpz_dz(n), ssq
+  double precision dpym_dpar(n), dpym_hpar(n), dpym_3par(n)
+  double precision invlink_dz(n), invlink_hz(n), invlink_3z(n)
+  double precision dH1(n), dH(n,n)
+  double precision varh(n,n), DT(n,n), trUpsDTh, UpsDTUps(n,n), DTUps(n,n)
+  double precision dpz_dcov
+  integer i, j
+  DT = cor_dcov(n,dm,phi,omg,kappa,ideriv)
+  trUpsDTh = .5d0*traceAB(Ups,DT,n)
+  call fill_symmetric_matrix(DT,n)
+  call dsymm ('r','u',n,n,1d0,Ups,n,DT,n,0d0,DTUps,n)
+  call dsymm ('l','u',n,n,1d0,Ups,n,DTUps,n,0d0,UpsDTUps,n)
+  do i = 1, np+np+1
+    z = meang(:,i)
+    ssq = exp(logssqg(i))
+    dH = UpsDTUps/ssq
+    varh = prechg(:,:,i)
+    call dtrtri ('u','n',n,varh,n,j)
+    if (j .ne. 0) call rexit ("aloglik_dcov - Non-invertible precision.")
+    par = invlink(z,nu)
+    invlink_dz = invlinkdz(z,nu)
+    invlink_hz = invlinkhz(z,nu)
+    invlink_3z = invlink3z(z,nu)
+    dpym_dpar = logpdfydlnk(y1,y2,par)
+    dpym_hpar = logpdfyhlnk(y1,y2,par)
+    dpym_3par = logpdfy3lnk(y1,y2,par)
+    dpz_dz = logpdfzdz(z, Ups, xi, lmxi, ssq, n)
+    dpz_dcov = logpdfzdcov(z, xi, lmxi, dH, trUpsDth, n)
+    dz_dcov = fdz_dcov(z, par, ssq, varh, &
+       y1, y2, dH, nu, xi, lmxi, tsq, tsqdf, n)
+    dpar_dcov = invlink_dz*dz_dcov
+    dH1 = -dpym_3par*invlink_dz*invlink_dz*dpar_dcov &
+       - 3d0*dpym_hpar*invlink_dz*invlink_hz*dz_dcov &
+       - dpym_dpar*invlink_3z*dz_dcov
+    dH1 = dH1/tsq
+    dH = -dH
+    do j = 1, n
+      dH(j,j) = dH(j,j) + dH1(j)
+    end do
+    dcov(i) = dpz_dcov &
+       + dot_product(dpym_dpar, dpar_dcov)/tsq &
+       + dot_product(dpz_dz, dz_dcov) &
+       - .5d0*traceH(varh,dH,n)
+  end do
+
+contains
+  function logpdfzdz (z, Ups, xi, lmxi, ssq, n) result (gr)
+!! log-pdf of z and its derivative after integrating out beta. The 2*pi
+!! constant is removed.
+    implicit none
+    integer, intent(in) :: n
+    logical, intent(in) :: lmxi
+    double precision, intent(in) :: z(n), Ups(n,n), xi(n), ssq
+    double precision :: gr(n)
+    double precision zmxi(n)
+    if (lmxi) then
+      zmxi = z - xi
+    else
+      zmxi = z
+    end if
+    call dsymv ('u',n,1d0,Ups,n,zmxi,1,0d0,gr,1) ! gr = Ups*(z-xi)
+    gr = -gr/ssq ! gr = -Ups*(z-x)/ssq
+  end function logpdfzdz
+
+  function logpdfzdcov (z, xi, lmxi, UpsDTUps, trUpsDTh, n)
+!! log-pdf of z and its derivative after integrating out beta. The 2*pi
+!! constant is removed.
+    implicit none
+    integer, intent(in) :: n
+    logical, intent(in) :: lmxi
+    double precision, intent(in) :: z(n), xi(n), UpsDTUps(n,n), trUpsDTh
+    double precision :: logpdfzdcov
+    double precision zmxi(n), zUDTUz
+    if (lmxi) then
+      zmxi = z - xi
+    else
+      zmxi = z
+    end if
+    zUDTUz = .5d0*qform(zmxi,UpsDTUps,n)
+    logpdfzdcov = -trUpsDTh + zUDTUz
+  end function logpdfzdcov
+
+  function fdz_dcov (z, par, ssq, varh, y1, y2, UpsDTUps, &
+     nu, xi, lmxi, tsq, tsqdf, n)
+    implicit none
+    integer, intent(in) :: n
+    logical, intent(in) :: lmxi
+    double precision, intent(in) :: y1(n), y2(n), UpsDTUps(n,n), nu, &
+       xi(n), tsq, tsqdf, ssq, z(n), varh(n,n), par(n)
+    double precision, dimension(n) :: fdz_dcov
+    double precision zmxi(n)
+    if (lmxi) then
+      zmxi = z - xi
+    else
+      zmxi = z
+    end if
+    call dsymv ('u',n,1d0,UpsDTUps,n,zmxi,1,0d0,fdz_dcov,1) ! Ups*(z-xi)
+    call dtrmv ('u','t','n',n,varh,n,fdz_dcov,1)
+    call dtrmv ('u','n','n',n,varh,n,fdz_dcov,1)
+  end function fdz_dcov
+
+  function traceH (varh, dH, n)
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: varh(n,n), dH(n,n)
+    double precision traceH
+    integer i
+    double precision v(n,n)
+    v = dH
+    call dtrmm ('r','u','n','n',n,n,1d0,varh,n,v,n)
+    traceH = 0d0
+    do i = 1, n
+      traceH = traceH + dot_product(varh(1:i,i),v(1:i,i))
+    end do
+  end function traceH
+end subroutine aloglik_dcov
+
+
+subroutine llikpars2 (fval, gval, lderiv, &
+   nu, phi, omg, kappa, y1, y2, F, betm0, betQ0, &
    ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, ssqin, ifam, icf)
   use covfun, only: create_spcor, calc_cov
   use betaprior
   implicit none
   integer, intent(in) :: np, n, p, ifam, icf
+  logical, intent(in) :: lderiv(4) ! Which derivatives to calculate?
   double precision, intent(in) :: ssqin, ssqdf, ssqsc, &
-     y1(n), y2(n), phi, nu, nsq, kappa, dm(n,n), F(n,p), &
+     y1(n), y2(n), phi, nu, omg, kappa, dm(n,n), F(n,p), &
      betm0(p), betQ0(p,p), tsq, tsqdf
-  double precision, intent(out) :: fval
+  double precision, intent(out) :: fval, gval(4)
   double precision Ups(n,n), ldh_Ups, xi(n), modeldfh, ssqdfh, ssqdfsc
   integer i
   logical lmxi
   double precision T(n,n), TiF(n,p), FTF(p,p)
   double precision tg(np+np+1), logw(np+np+1), &
      meang(n,np+np+1), prechg(n,n,np+np+1)
+  double precision, dimension(np+np+1) :: w_dnu, w_dphi, w_dnsq, w_dkap
   double precision ssqst
   call create_spcor(icf,n)
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
-  call calc_cov (phi,nsq,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+  call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
   ssqdfh = .5d0*ssqdf
   ssqdfsc = ssqdf*ssqsc
   ssqst = ssqstart(y1,y2,nu,Ups,n,ifam)
   ! TODO ssqin or ssqst?
   ! ssqst = ssqin
+  i = np+np+1
   call gridposter (np, tg, logw, meang, prechg, ssqdfh, ssqdfsc, &
      ssqst, y1, y2, Ups, ldh_Ups, nu, xi, lmxi, tsq, tsqdf, n, ifam)
-  i = np+np+1
-  fval = trapezoid(i, tg, logw)
+  fval = trapezoid_lf(i, tg, logw)
+  gval = 0d0
+  if (lderiv(1)) then
+    call aloglik_dnu (np, tg, w_dnu, meang, prechg, ssqdfh, ssqdfsc, &
+       y1, y2, Ups, nu, xi, lmxi, tsq, tsqdf, n, ifam)
+    w_dnu = w_dnu*exp(logw - fval)
+    gval(1) = trapezoid_f(i, tg, w_dnu)
+  end if
+  if (lderiv(2)) then
+    call aloglik_dcov (np, tg, w_dphi, 1, &
+       meang, prechg, ssqdfh, ssqdfsc, &
+       y1, y2, dm, phi, omg, kappa, Ups, nu, &
+       xi, lmxi, tsq, tsqdf, n, ifam)
+    w_dphi = w_dphi*exp(logw - fval)
+    gval(2) = trapezoid_f(i, tg, w_dphi)
+  end if
+  if (lderiv(3)) then
+    call aloglik_dcov (np, tg, w_dnsq, 2, &
+       meang, prechg, ssqdfh, ssqdfsc, &
+       y1, y2, dm, phi, omg, kappa, Ups, nu, &
+       xi, lmxi, tsq, tsqdf, n, ifam)
+    w_dnsq = w_dnsq*exp(logw - fval)
+    gval(3) = trapezoid_f(i, tg, w_dnsq)
+  end if
+  if (lderiv(4)) then
+    call aloglik_dcov (np, tg, w_dkap, 3, &
+       meang, prechg, ssqdfh, ssqdfsc, &
+       y1, y2, dm, phi, omg, kappa, Ups, nu, &
+       xi, lmxi, tsq, tsqdf, n, ifam)
+    w_dkap = w_dkap*exp(logw - fval)
+    gval(4) = trapezoid_f(i, tg, w_dkap)
+  end if
+  ! print*, real(fval), real(gval)
+
 contains
-  function trapezoid (n, x, f)
+  function trapezoid_lf (n, x, f)
     ! Compute the log integral of exp(f) along x
     implicit none
     integer, intent(in) :: n
-    double precision, intent(in) :: x(n), f(n)
-    double precision trapezoid
-    double precision fpf(n-1), xmx(n-1), fmx, fmm(n), ln2
+    double precision, intent(in) :: x(1:n), f(1:n)
+    double precision trapezoid_lf
+    double precision fpf(1:n-1), xmx(1:n-1), fmx, fmm(1:n), ln2
     parameter (ln2 = 0.6931471805599453d0)
     fmx = maxval(f)
     fmm = f - fmx
     fmm = exp(fmm)
     fpf = fmm(2:n) + fmm(1:n-1)
     xmx = x(2:n) - x(1:n-1)
-    trapezoid = dot_product(xmx,fpf)
-    trapezoid = log(trapezoid) + fmx - ln2
-  end function trapezoid
+    trapezoid_lf = dot_product(xmx,fpf)
+    trapezoid_lf = log(trapezoid_lf) + fmx - ln2
+  end function trapezoid_lf
+
+  function trapezoid_f (n, x, f)
+    ! Compute the integral of f along x
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: x(1:n), f(1:n)
+    double precision trapezoid_f
+    double precision fpf(1:n-1), xmx(1:n-1)
+    fpf = f(2:n) + f(1:n-1)
+    xmx = x(2:n) - x(1:n-1)
+    trapezoid_f = dot_product(xmx,fpf)*.5d0
+  end function trapezoid_f
 
   function ssqstart (y1,y2,nu,Ups,n,ifam)
     use linkfcns, only: flink_ga
@@ -421,22 +923,53 @@ contains
   end function ssqstart
 end subroutine llikpars2
 
-
-subroutine llikparsval (fval, nu, phi, nsq, kappa, y1, y2, F, betm0, betQ0, &
+subroutine llikparsval (fval, gval, ideriv, &
+   nu, phi, omg, kappa, y1, y2, F, betm0, betQ0, &
    ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, ssqin, ifam, icf)
   use modelfcns, only: create_model
   implicit none
-  integer, intent(in) :: np, n, p, ifam, icf
+  integer, intent(in) :: np, n, p, ifam, icf, ideriv(4)
   double precision, intent(in) :: ssqin, ssqdf, ssqsc, &
-     y1(n), y2(n), phi, nu, nsq, kappa, dm(n,n), F(n,p), &
+     y1(n), y2(n), phi, nu, omg, kappa, dm(n,n), F(n,p), &
      betm0(p), betQ0(p,p), tsq, tsqdf
-  double precision, intent(out) :: fval
+  double precision, intent(out) :: fval, gval(4)
+  logical lderiv(4)
   call create_model (ifam)
-  call llikpars2 (fval, nu, phi, nsq, kappa, y1, y2, F, betm0, betQ0, &
+  lderiv = ideriv .ne. 0
+  call llikpars2 (fval, gval, lderiv, &
+     nu, phi, omg, kappa, y1, y2, F, betm0, betQ0, &
    ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, ssqin, ifam, icf)
 end subroutine llikparsval
 
-subroutine llikparscalc (fval, nu, phi, nsq, kappa, npars, &
+subroutine aloglikval (fval, gval, &
+   nu, phi, omg, kappa, y1, y2, F, betm0, betQ0, &
+   ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, logssqg, ifam, icf)
+  use modelfcns, only: create_model
+  use covfun, only: create_spcor, calc_cov
+  use betaprior
+  implicit none
+  integer, intent(in) :: np, n, p, ifam, icf
+  double precision, intent(in) :: logssqg(np+np+1), ssqdf, ssqsc, &
+     y1(n), y2(n), phi, nu, omg, kappa, dm(n,n), F(n,p), &
+     betm0(p), betQ0(p,p), tsq, tsqdf
+  double precision, intent(out) :: fval(np+np+1), gval(np+np+1)
+  double precision Ups(n,n), ldh_Ups, xi(n), modeldfh, ssqdfh, ssqdfsc
+  logical lmxi
+  double precision T(n,n), TiF(n,p), FTF(p,p)
+  double precision meang(n,np+np+1), prechg(n,n,np+np+1)
+  call create_model (ifam)
+  call create_spcor(icf,n)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
+  ssqdfh = .5d0*ssqdf
+  ssqdfsc = ssqdf*ssqsc
+  call aloglik (np, logssqg, fval, meang, prechg, ssqdfh, ssqdfsc, &
+     y1, y2, Ups, ldh_Ups, nu, xi, lmxi, tsq, tsqdf, n, ifam)
+  call aloglik_dnu (np, logssqg, gval, meang, prechg, ssqdfh, ssqdfsc, &
+     y1, y2, Ups, nu, xi, lmxi, tsq, tsqdf, n, ifam)
+end subroutine aloglikval
+
+subroutine llikparscalc (fval, nu, phi, omg, kappa, npars, &
    y1, y2, F, betm0, betQ0, &
    ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, ssqin, ifam, icf)
   ! Calls subroutine llikpars2 repeatedly for each parameter input.
@@ -444,14 +977,17 @@ subroutine llikparscalc (fval, nu, phi, nsq, kappa, npars, &
   implicit none
   integer, intent(in) :: np, n, p, ifam, icf, npars
   double precision, intent(in) :: ssqin, ssqdf, ssqsc, &
-     y1(n), y2(n), phi(npars), nu(npars), nsq(npars), kappa(npars), &
+     y1(n), y2(n), phi(npars), nu(npars), omg(npars), kappa(npars), &
      dm(n,n), F(n,p), betm0(p), betQ0(p,p), tsq, tsqdf
   double precision, intent(out) :: fval(npars)
   integer i
+  logical lderiv(4)
+  double precision gval(4)
   call create_model (ifam)
+  lderiv = .false.
   do i = 1, npars
-    call llikpars2 (fval(i), nu(i), phi(i), nsq(i), kappa(i), &
-       y1, y2, F, betm0, betQ0, &
+    call llikpars2 (fval(i), gval, lderiv, &
+       nu(i), phi(i), omg(i), kappa(i), y1, y2, F, betm0, betQ0, &
        ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, ssqin, ifam, icf)
   end do
 end subroutine llikparscalc
