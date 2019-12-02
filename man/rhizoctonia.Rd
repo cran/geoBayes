@@ -6,7 +6,7 @@
 \title{Rhizoctonia root rot infections}
 \format{A data frame with 100 rows and 5 variables.}
 \source{
-\url{www.biometrics.tibs.org/datasets/010434.txt}
+\url{http://www.biometrics.tibs.org/datasets/010434.txt}
 }
 \usage{
 data(rhizoctonia)
@@ -17,7 +17,7 @@ Rhizoctonia root rot infections.
 \details{
 A dataset containing the number of infected roots and the sample
 coordinate. The data were collected by Dr Jim Cook at Washington
-State University.
+State University. 
 
 \itemize{
 \item Xcoord Longitude of the sampling location.

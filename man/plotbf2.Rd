@@ -4,8 +4,12 @@
 \alias{plotbf2}
 \title{Plot the estimated Bayes factors}
 \usage{
-plotbf2(bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
-  profile = length(pars) > 2, ...)
+plotbf2(
+  bf2obj,
+  pars = c("linkp", "phi", "omg", "kappa"),
+  profile = length(pars) > 2,
+  ...
+)
 }
 \arguments{
 \item{bf2obj}{Output from the function \code{\link{bf2new}}.}

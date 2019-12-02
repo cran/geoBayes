@@ -3,7 +3,6 @@
 \docType{package}
 \name{geoBayes}
 \alias{geoBayes}
-\alias{geoBayes-package}
 \title{The \code{geoBayes} package}
 \description{
 Analysis of geostatistical data using Bayes and Empirical Bayes

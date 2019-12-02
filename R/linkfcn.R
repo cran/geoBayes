@@ -75,9 +75,10 @@ linkfcn <- function (mu, linkp, family = "gaussian") {
   }
   linkp <- .geoBayes_getlinkp(linkp, ifam)
   x <- y <- as.double(mu)
-  n <- length(x)
-  mu[] <- .Fortran("flinkfcn", x, n, y, linkp, ifam,
-                   PACKAGE = "geoBayes")[[1]]
+  ii <- is.finite(x)
+  n <- as.integer(sum(ii))
+  mu[ii] <- .Fortran("flinkfcn", x[ii], n, y[ii], linkp, ifam,
+                     PACKAGE = "geoBayes")[[1]]
   mu
 }
 
@@ -100,8 +101,9 @@ linkinv <- function (z, linkp, family = "gaussian") {
   }
   linkp <- .geoBayes_getlinkp(linkp, ifam)
   x <- y <- as.double(z)
-  n <- length(x)
-  z[] <- .Fortran("flinkinv", x, n, y, linkp, ifam,
-                  PACKAGE = "geoBayes")[[1]]
+  ii <- is.finite(x)
+  n <- as.integer(sum(ii))
+  z[ii] <- .Fortran("flinkinv", x[ii], n, y[ii], linkp, ifam,
+                    PACKAGE = "geoBayes")[[1]]
   z
 }

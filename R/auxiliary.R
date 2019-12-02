@@ -109,9 +109,16 @@ getsize <- function(sz, N, FUN = "*", allow0 = FALSE)
 number of runs; the extra elements will be discarded."))
   }
   sz <- rep(sz, length.out = nruns)
-  if (any(sz <= 0)) {
-    stop(paste("Argument", nm, "must be positive"))
-  } else if (all(sz < 1)) {
+  if (allow0) {
+    if (any(sz < 0)) {
+      stop(paste("Argument", nm, "must be non-negative"))
+    }
+  } else {
+    if (any(sz <= 0)) {
+      stop(paste("Argument", nm, "must be positive"))
+    }
+  }
+  if (all(sz < 1)) {
     Nout <- as.integer(FUN(N, sz))
     if (!allow0 && any(Nout == 0)) {
       stop(paste("Calculated 0 sizes; give a larger", nm))

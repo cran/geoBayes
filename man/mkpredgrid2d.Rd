@@ -4,8 +4,15 @@
 \alias{mkpredgrid2d}
 \title{Make prediction grid}
 \usage{
-mkpredgrid2d(pnts.x, pnts.y, par.x, par.y, isby = FALSE, chull = FALSE,
-  exf = 1)
+mkpredgrid2d(
+  pnts.x,
+  pnts.y,
+  par.x,
+  par.y,
+  isby = FALSE,
+  chull = FALSE,
+  exf = 1
+)
 }
 \arguments{
 \item{pnts.x}{x coordinate of the domain. Could also be a

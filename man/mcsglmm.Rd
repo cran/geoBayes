@@ -4,10 +4,31 @@
 \alias{mcsglmm}
 \title{MCMC samples from the Spatial GLMM}
 \usage{
-mcsglmm(formula, family = "gaussian", data, weights, subset, atsample,
-  corrfcn = "matern", linkp, phi, omg, kappa, Nout, Nthin = 1,
-  Nbi = 0, betm0, betQ0, ssqdf, ssqsc, corrpriors, corrtuning,
-  dispersion = 1, longlat = FALSE, test = FALSE)
+mcsglmm(
+  formula,
+  family = "gaussian",
+  data,
+  weights,
+  subset,
+  atsample,
+  corrfcn = "matern",
+  linkp,
+  phi,
+  omg,
+  kappa,
+  Nout,
+  Nthin = 1,
+  Nbi = 0,
+  betm0,
+  betQ0,
+  ssqdf,
+  ssqsc,
+  corrpriors,
+  corrtuning,
+  dispersion = 1,
+  longlat = FALSE,
+  test = FALSE
+)
 }
 \arguments{
 \item{formula}{A representation of the model in the form

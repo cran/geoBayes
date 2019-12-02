@@ -4,8 +4,13 @@
 \alias{bf1skel}
 \title{Computation of Bayes factors at the skeleton points}
 \usage{
-bf1skel(runs, bfsize1 = 0.8, method = c("RL", "MW"), reference = 1,
-  transf = c("no", "mu", "wo"))
+bf1skel(
+  runs,
+  bfsize1 = 0.8,
+  method = c("RL", "MW"),
+  reference = 1,
+  transf = c("no", "mu", "wo")
+)
 }
 \arguments{
 \item{runs}{A list with outputs from the function

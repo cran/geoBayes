@@ -4,9 +4,17 @@
 \alias{bmbfse}
 \title{Batch means, Bayes factors standard errors}
 \usage{
-bmbfse(pargrid, runs, bfsize1 = 0.8, nbatch1 = 0.5, nbatch2 = 0.5,
-  method = c("RL", "MW"), bvmethod = c("Standard", "TukeyHanning",
-  "Bartlett"), reference = 1, transf = c("no", "mu", "wo"))
+bmbfse(
+  pargrid,
+  runs,
+  bfsize1 = 0.8,
+  nbatch1 = 0.5,
+  nbatch2 = 0.5,
+  method = c("RL", "MW"),
+  bvmethod = c("Standard", "TukeyHanning", "Bartlett"),
+  reference = 1,
+  transf = c("no", "mu", "wo")
+)
 }
 \arguments{
 \item{pargrid}{A data frame with components "linkp", "phi", "omg",

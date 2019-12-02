@@ -9,8 +9,18 @@
 \usage{
 spcovariance(...)
 
-\method{spcovariance}{formula}(formula, data, subset, corrfcn, ssq, phi,
-  omg, kappa, longlat = FALSE, ...)
+\method{spcovariance}{formula}(
+  formula,
+  data,
+  subset,
+  corrfcn,
+  ssq,
+  phi,
+  omg,
+  kappa,
+  longlat = FALSE,
+  ...
+)
 
 \method{spcovariance}{numeric}(x, corrfcn, ssq, phi, omg, kappa, ...)
 

@@ -4,9 +4,24 @@
 \alias{alik_optim}
 \title{Log-likelihood maximisation}
 \usage{
-alik_optim(paroptim, formula, family = "gaussian", data, weights, subset,
-  atsample, corrfcn = "matern", np, betm0, betQ0, ssqdf, ssqsc,
-  dispersion = 1, longlat = FALSE, control = list())
+alik_optim(
+  paroptim,
+  formula,
+  family = "gaussian",
+  data,
+  weights,
+  subset,
+  atsample,
+  corrfcn = "matern",
+  np,
+  betm0,
+  betQ0,
+  ssqdf,
+  ssqsc,
+  dispersion = 1,
+  longlat = FALSE,
+  control = list()
+)
 }
 \arguments{
 \item{paroptim}{A named list with the components "linkp", "phi",

@@ -1,3 +1,7 @@
+0.6.3
+* Implemented mala updates for z.
+* Functions linkfcn and linkinv work with NAs in their first input.
+
 0.6.2
 * Added modified GEV with negative skewness.
 * Changed arguments to MCMC functions.

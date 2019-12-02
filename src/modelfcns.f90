@@ -177,8 +177,8 @@ contains
     implicit none
     double precision, intent(in) :: y1, y2, par
     select case (MODELIS)
-    case (0) ! Transformed Gaussian, not really used except mustart
-      logpdfy = logpdfy_ga(y1,y2,par)
+    case (0) ! Transformed Gaussian
+      logpdfy = logpdfy_gt(y1,y2,par)
     case (1) ! Gaussian response
       logpdfy = logpdfy_ga(y1,y2,par)
     case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
@@ -195,8 +195,8 @@ contains
     implicit none
     double precision, intent(in) :: y1, y2, p1, p2
     select case (MODELIS)
-    case (0) ! Transformed Gaussian, not really used except mustart
-      logdffy = logdffy_ga(y1,y2,p1,p2)
+    case (0) ! Transformed Gaussian
+      logdffy = logdffy_gt(y1,y2,p1,p2)
     case (1) ! Gaussian response
       logdffy = logdffy_ga(y1,y2,p1,p2)
     case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
@@ -213,8 +213,8 @@ contains
     implicit none
     double precision, intent(in) :: y1, y2, par
     select case (MODELIS)
-    case (0) ! Transformed Gaussian, not really used except mustart
-      logpdfydlnk = logpdfydlnk_ga(y1,y2,par)
+    case (0) ! Transformed Gaussian
+      logpdfydlnk = logpdfydlnk_gt(y1,y2,par)
     case (1) ! Gaussian response
       logpdfydlnk = logpdfydlnk_ga(y1,y2,par)
     case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
@@ -231,8 +231,8 @@ contains
     implicit none
     double precision, intent(in) :: y1, y2, par
     select case (MODELIS)
-    case (0) ! Transformed Gaussian, not really used except mustart
-      logpdfyhlnk = logpdfyhlnk_ga(y1,y2,par)
+    case (0) ! Transformed Gaussian
+      logpdfyhlnk = logpdfyhlnk_gt(y1,y2,par)
     case (1) ! Gaussian response
       logpdfyhlnk = logpdfyhlnk_ga(y1,y2,par)
     case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
@@ -249,8 +249,8 @@ contains
     implicit none
     double precision, intent(in) :: y1, y2, par
     select case (MODELIS)
-    case (0) ! Transformed Gaussian, not really used except mustart
-      logpdfy3lnk = logpdfy3lnk_ga(y1,y2,par)
+    case (0) ! Transformed Gaussian
+      logpdfy3lnk = logpdfy3lnk_gt(y1,y2,par)
     case (1) ! Gaussian response
       logpdfy3lnk = logpdfy3lnk_ga(y1,y2,par)
     case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
@@ -267,8 +267,8 @@ contains
     implicit none
     double precision, intent(in) :: y1, y2
     select case (MODELIS)
-    case (0) ! Transformed Gaussian, not really used except mustart
-      mustart = mustart_ga(y1,y2)
+    case (0) ! Transformed Gaussian
+      mustart = mustart_gt(y1,y2)
     case (1) ! Gaussian response
       mustart = mustart_ga(y1,y2)
     case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
@@ -285,7 +285,7 @@ contains
     implicit none
     double precision, intent(in) :: x
     select case (MODELIS)
-    case (0) ! Transformed Gaussian, not really used except mustart
+    case (0) ! Transformed Gaussian
       fcntruemu = x
     case (1) ! Gaussian response
       fcntruemu = x
@@ -303,7 +303,7 @@ contains
     implicit none
     double precision, intent(in) :: x
     select case (MODELIS)
-    case (0) ! Transformed Gaussian, not really used except mustart
+    case (0) ! Transformed Gaussian
       invtruemu = x
     case (1) ! Gaussian response
       invtruemu = x
@@ -321,8 +321,8 @@ contains
     implicit none
     double precision, intent(in) :: x
     select case (MODELIS)
-    case (0) ! Transformed Gaussian, not really used except mustart
-      fcncum = fcncum_ga(x)
+    case (0) ! Transformed Gaussian
+      fcncum = fcncum_gt(x)
     case (1) ! Gaussian response
       fcncum = fcncum_ga(x)
     case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
@@ -339,8 +339,8 @@ contains
     implicit none
     double precision, intent(in) :: x
     select case (MODELIS)
-    case (0) ! Transformed Gaussian, not really used except mustart
-      fcncumd2 = fcncumd2_ga(x)
+    case (0) ! Transformed Gaussian
+      fcncumd2 = fcncumd2_gt(x)
     case (1) ! Gaussian response
       fcncumd2 = fcncumd2_ga(x)
     case (2,-2,3,4,5,10,11,-12,12) ! Binomial response
@@ -357,8 +357,8 @@ contains
     implicit none
     double precision, intent(in) :: x
     select case (MODELIS)
-    case (0) ! Transformed Gaussian, not really used except mustart
-      fcncumd3 = fcncumd3_ga(x)
+    case (0) ! Transformed Gaussian
+      fcncumd3 = fcncumd3_gt(x)
     case (1) ! Gaussian response
       fcncumd3 = fcncumd3_ga(x)
     case (2,-2,3,4,5,10,11,-12,12) ! Binomial response

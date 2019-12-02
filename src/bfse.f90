@@ -204,16 +204,22 @@ subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
   double precision, intent(in) :: &
      llik1(Ntot1,kg), llik2(Ntot2,kg), llikn(Ntot2,nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
-     VT1(nnew), VT2(nnew)
+     VT1(nnew), VT2(nnew), OOmg(kg,kg)
   double precision eta(kg), logbf(kg)
   double precision logYY(Ntot1,kg), YY(Ntot1,kg), logVV(Ntot2,nnew), &
      VV(Ntot2,nnew), VVcol(Ntot2)
-  double precision Bet(kg,kg), BMP(kg,kg), BD(kg,1:kg-1), OOmg(kg,kg), &
+  double precision Bet(kg,kg), BMP(kg,kg), BD(kg,1:kg-1), &
      OOmgBD(kg,1:kg-1), cvec(1:kg-1,nnew), logcall(kg,nnew), &
      SigC(1:kg-1)
   double precision NNratio(kg), logN(kg)
   integer i, j, kgm1, ia, ie
   double precision tmp
+
+  if (kg .lt. 2) then
+    logbf = 0d0
+    bf = 1d0
+    go to 9
+  end if
 
   ! Estimate BF
   logN = log(dble(Nout1))
@@ -230,10 +236,6 @@ subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
   logbf = logbf - logbf(iref)
   bf = exp(logbf)
   eta = eta - sum(eta)/dble(kg) ! zeta
-!  logbf = logbf - sum(logbf)/dble(kg)
-!  eta = logN - logbf ! zeta
-
-  if (kg .lt. 2) go to 9
 
   logYY = logp(llik1,eta,Ntot1,kg)
   YY = exp(logYY)
@@ -604,3 +606,61 @@ contains
     end if
   end function mean
 end subroutine bfsecalc
+
+
+
+subroutine logbfcalc (logbf, logbfnew, iref, &
+   llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2, &
+   nnew, kg, imeth)
+  use bmargin
+  implicit none
+  integer, intent(in) :: kg, imeth, Nout1(kg), Ntot1, &
+     Nout2(kg), Ntot2, nnew, iref
+  double precision, intent(in) :: &
+     llik1(Ntot1,kg), llik2(Ntot2,kg), llikn(Ntot2,nnew)
+  double precision, intent(out) :: logbf(kg), logbfnew(nnew)
+  double precision eta(kg), logN(kg)
+
+  if (kg .lt. 2) then
+    logbf = 0d0
+    go to 9
+  end if
+
+  ! Estimate BF
+  logN = log(dble(Nout1))
+  eta = logN
+  select case (imeth)
+  case (1)
+    call revlogistic (eta,llik1,kg,Ntot1,Nout1)
+  case (2)
+    call revlogistic (eta,llik1,kg,Ntot1,Nout1)
+    call mengwong (eta,llik1,kg,Ntot1,Nout1)
+  end select
+  ! eta_i = log(N_i) - log(bf_i)
+  logbf = logN - eta ! = log(bf_i)
+  logbf = logbf - logbf(iref)
+
+9 if (nnew > 0) then
+    logN = log(dble(Nout2))
+    eta = logN - logbf
+    logbfnew = logbfnew_calc(llik2,llikn,eta,Ntot2,kg,nnew)
+  end if
+
+contains
+  function logbfnew_calc (llik1,llik2,eta,Ntot,kg,nnew)
+    use flogsumexp, only: logrsumexp, logcsumexp
+    implicit none
+    integer, intent(in) :: Ntot, kg, nnew
+    double precision, intent(in) :: llik1(Ntot,kg), llik2(Ntot,nnew), &
+       eta(kg)
+    double precision logbfnew_calc(nnew)
+    double precision logb(Ntot,nnew)
+    double precision lliketa(Ntot,kg), lgdenom(Ntot)
+    lliketa = spread(eta,1,Ntot)
+    lliketa = llik1 + lliketa
+    lgdenom = logrsumexp(lliketa,Ntot,kg)
+    logb = spread(lgdenom,2,nnew)
+    logb = llik2 - logb
+    logbfnew_calc = logcsumexp(logb,Ntot,nnew)
+  end function logbfnew_calc
+end subroutine logbfcalc

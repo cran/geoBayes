@@ -82,6 +82,7 @@
 ##'   random walk parameter for the Metropolis-Hastings step. Smaller values
 ##'   increase the acceptance ratio. Set this to 0 for fixed
 ##'   parameter value.
+##' @param malatuning Tuning parameter for the MALA updates.
 ##' @param dispersion The fixed dispersion parameter.
 ##' @param longlat How to compute the distance between locations. If
 ##'   \code{FALSE}, Euclidean distance, if \code{TRUE} Great Circle
@@ -148,14 +149,14 @@
 ##' Nbi <- 0
 ##'
 ##' ### Trial run
-##' emt <- mcsglmm(Infected ~ 1, family, rhizdata, weights = Total,
+##' emt <- mcsglmm_mala(Infected ~ 1, family, rhizdata, weights = Total,
 ##'                atsample = ~ Xcoord + Ycoord,
 ##'                Nout = Nout, Nthin = Nthin, Nbi = Nbi,
 ##'                betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc,
 ##'                corrpriors = list(phi = phiprior, omg = omgprior), 
 ##'                corrfcn = corrf, kappa = kappa,
 ##'                corrtuning = list(phi = phisc, omg = omgsc, kappa = 0),
-##'                dispersion = 1, test = 10)
+##'                malatuning = .003, dispersion = 1, test = 10)
 ##'
 ##' ### Full run
 ##' emc <- update(emt, test = FALSE)
@@ -169,11 +170,11 @@
 ##'   as.formula update
 ##' @useDynLib geoBayes mcspsamtry mcspsample
 ##' @export
-mcsglmm <- function (formula, family = "gaussian",
+mcsglmm_mala <- function (formula, family = "gaussian",
                      data, weights, subset, atsample, corrfcn = "matern",
                      linkp, phi, omg, kappa,
                      Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc,
-                     corrpriors, corrtuning,
+                     corrpriors, corrtuning, malatuning, 
                      dispersion = 1, longlat = FALSE, test = FALSE) {
   cl <- match.call()
   ## Family
@@ -286,6 +287,7 @@ grater than 3.")
   z0 <- matrix(0, k0, Nout)
   beta <- matrix(0, p, Nout)
   ssq <- numeric(Nout)
+  if (malatuning <= 0) stop ("Input malatuning must > 0.")
 
   ## Starting values for correlation parameters
   phisc <- corrtuning[["phi"]]
@@ -376,9 +378,9 @@ grater than 3.")
   if (test > 0) { # Running a test
     if (is.logical(test)) test <- 100
     test <- as.integer(test)
-    acc <- 0L
+    acc <- acc_z <- 0L
     tm <- system.time({
-      RUN <- .Fortran("mcspsamtry", ll = lglk, z = z, phi = phi, omg = omg,
+      RUN <- .Fortran("mcspsamtry_mala", ll = lglk, z = z, phi = phi, omg = omg,
                       kappa = kappa,
                       acc = acc,
                       as.double(y), as.double(l), as.double(F),
@@ -389,8 +391,8 @@ grater than 3.")
                       as.integer(icf),
                       as.double(nu), as.double(dispersion), as.double(dm),
                       as.integer(Nout), as.integer(test), as.integer(k),
-                      as.integer(p), as.integer(ifam),
-                      PACKAGE = "geoBayes")
+                      as.integer(p), as.integer(ifam), as.double(malatuning), 
+                      acc_z = acc_z, PACKAGE = "geoBayes")
     })
     ## Store samples
     ll <- RUN$ll
@@ -406,6 +408,7 @@ grater than 3.")
 ###     attr(nu, 'fixed') <- TRUE
     kappa <- RUN$kappa
     acc_ratio <- RUN$acc/Nout
+    acc_ratio_z <- RUN$acc_z/Nout
     Nthin <- 1
     Nbi <- 0
 ###     out <- list(z = zz0, beta = beta, ssq = ssq, phi = phi, omg = omg, nu = nu,
@@ -417,9 +420,9 @@ grater than 3.")
 ###                 dispersion = dispersion, locations = loc[ii, , drop = FALSE],
 ###                 longlat = longlat, whichobs = ii)
   } else {
-    acc <- integer(nch)
+    acc <- acc_z <- integer(nch)
     tm <- system.time({
-      RUN <- .Fortran("mcspsample", ll = lglk, z = z, z0 = z0,
+      RUN <- .Fortran("mcspsample_mala", ll = lglk, z = z, z0 = z0,
                       mu = z, mu0 = z0,
                       beta = beta, ssq = ssq,
                       phi = phi, omg = omg, kappa = kappa, acc = acc,
@@ -433,7 +436,8 @@ grater than 3.")
                       as.double(dmdm0), as.integer(nch), as.integer(Nmc),
                       as.integer(Nout), as.integer(Nbi),
                       as.integer(Nthin), as.integer(k), as.integer(k0),
-                      as.integer(p), as.integer(ifam),
+                      as.integer(p), as.integer(ifam), as.double(malatuning),
+                      acc_z = acc_z, 
                       PACKAGE = "geoBayes")
     })
     ## Store samples
@@ -452,6 +456,7 @@ grater than 3.")
 ###    attr(nu, 'fixed') <- TRUE
     kappa <- RUN$kappa
     acc_ratio <- RUN$acc/(Nmc*Nthin + max(Nthin, Nbi))
+    acc_ratio_z <- RUN$acc_z/(Nmc*Nthin + max(Nthin, Nbi))
 ###     out <- list(z = zz0, mu = mm0,
 ###                 beta = beta, ssq = ssq, phi = phi, omg = omg, nu = nu,
 ###                 logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
@@ -486,6 +491,7 @@ grater than 3.")
   }
   MCMC$logLik <- ll
   MCMC$acc_ratio <- acc_ratio
+  MCMC$acc_ratio_z <- acc_ratio_z
   MCMC$sys_time <- tm
   MCMC$Nout <- Nout
   MCMC$Nbi <- Nbi
@@ -509,7 +515,6 @@ grater than 3.")
   class(out) <- "geomcmc"
   out
 }
-
 
 ##' Draw MCMC samples from the transformed Gaussian model with known
 ##' link function
@@ -577,6 +582,7 @@ grater than 3.")
 ##'   For \code{kappa} it must be a vector of length 2. A uniform
 ##'   prior is assumed and the input corresponds to the lower and
 ##'   upper bounds in that order.
+##' @param malatuning Tuning parameter for the MALA updates.
 ##' @param corrtuning A vector or list with the components \code{phi},
 ##'   \code{omg} and \code{kappa} as needed. These correspond to the
 ##'   random walk parameter for the Metropolis-Hastings step. Smaller values
@@ -646,7 +652,7 @@ grater than 3.")
 ##' Nbi <- 0
 ##' Nthin <- 1
 ##'
-##' samplt <- mcstrga(Yield ~ IR, data = rhiz,
+##' samplt <- mcstrga_mala(Yield ~ IR, data = rhiz,
 ##'                   atsample = ~ Xcoord + Ycoord, corrf = corrf,
 ##'                   Nout = Nout, Nthin = Nthin,
 ##'                   Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
@@ -655,7 +661,7 @@ grater than 3.")
 ##'                   corrprior = list(phi = phiprior, omg = omgprior),
 ##'                   linkp = linkp,
 ##'                   corrtuning = list(phi = phisc, omg = omgsc, kappa = 0),
-##'                   test=10)
+##'                   malatuning = .0002, test=10)
 ##'
 ##' sample <- update(samplt, test = FALSE)
 ##' }
@@ -664,12 +670,12 @@ grater than 3.")
 ##'   as.formula update
 ##' @useDynLib geoBayes trgasamtry trgasample
 ##' @export
-mcstrga <- function (formula,
+mcstrga_mala <- function (formula,
                      data, weights, subset, atsample, corrfcn = "matern",
                      linkp, phi, omg, kappa,
                      Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc,
                      tsqdf, tsqsc,
-                     corrpriors, corrtuning,
+                     corrpriors, corrtuning, malatuning, 
                      longlat = FALSE,
                      test = FALSE) {
   cl <- match.call()
@@ -774,6 +780,7 @@ grater than 3.")
   z0 <- matrix(0, k0, Nout)
   beta <- matrix(0, p, Nout)
   ssq <- tsq <- numeric(Nout)
+  if (malatuning <= 0) stop ("Input malatuning must > 0.")
 
   ## Starting values for correlation parameters
   phisc <- corrtuning[["phi"]]
@@ -864,9 +871,9 @@ grater than 3.")
   if (test > 0) { # Running a test
     if (is.logical(test)) test <- 100
     test <- as.integer(test)
-    acc <- 0L
+    acc <- acc_z <- 0L
     tm <- system.time({
-      RUN <- .Fortran("trgasamtry", ll = lglk, z = z, phi = phi, omg = omg,
+      RUN <- .Fortran("trgasamtry_mala", ll = lglk, z = z, phi = phi, omg = omg,
                       kappa = kappa, acc = acc,
                       as.double(ybar), as.double(l), as.double(F),
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
@@ -877,6 +884,7 @@ grater than 3.")
                       as.double(kappasc), as.integer(icf),
                       as.double(nu), as.double(dm), as.integer(Nout),
                       as.integer(test), as.integer(k), as.integer(p),
+                      as.double(malatuning), acc_z = acc_z,
                       PACKAGE = "geoBayes")
     })
     ## Store samples
@@ -893,6 +901,7 @@ grater than 3.")
 ###     attr(nu, 'fixed') <- TRUE
     kappa <- RUN$kappa
     acc_ratio <- RUN$acc/Nout
+    acc_ratio_z <- RUN$acc_z/Nout
     Nthin <- 1
     Nbi <- 0
 ###     out <- list(z = zz0, beta = beta, ssq = ssq, phi = phi, omg = omg, nu = nu,
@@ -905,9 +914,9 @@ grater than 3.")
 ###                 locations = loc[ii, , drop = FALSE],
 ###                 longlat = longlat, whichobs = ii)
   } else {
-    acc <- integer(nch)
+    acc <- acc_z <- integer(nch)
     tm <- system.time({
-      RUN <- .Fortran("trgasample", ll = lglk, z = z, z0 = z0,
+      RUN <- .Fortran("trgasample_mala", ll = lglk, z = z, z0 = z0,
                       mu = z, mu0 = z0, beta = beta, ssq = ssq,
                       tsq = tsq, phi = phi, omg = omg,
                       kappa = kappa, acc = acc,
@@ -923,6 +932,7 @@ grater than 3.")
                       as.integer(nch), as.integer(Nmc),
                       as.integer(Nout), as.integer(Nbi), as.integer(Nthin),
                       as.integer(k), as.integer(k0), as.integer(p),
+                      as.double(malatuning), acc_z = acc_z,
                       PACKAGE = "geoBayes")
     })
     ## Store samples
@@ -942,6 +952,7 @@ grater than 3.")
 ###     attr(nu, 'fixed') <- TRUE
     kappa <- RUN$kappa
     acc_ratio <- RUN$acc/(Nmc*Nthin + max(Nthin, Nbi))
+    acc_ratio_z <- RUN$acc_z/(Nmc*Nthin + max(Nthin, Nbi))
 ###     out <- list(z = zz0, mu = mm0, beta = beta, ssq = ssq, tsq = tsq,
 ###                 phi = phi, omg = omg, nu = nu,
 ###                 logLik = ll, acc_ratio = acc_ratio, sys_time = tm,
@@ -978,6 +989,7 @@ grater than 3.")
   }
   MCMC$logLik <- ll
   MCMC$acc_ratio <- acc_ratio
+  MCMC$acc_ratio_z <- acc_ratio_z
   MCMC$sys_time <- tm
   MCMC$Nout <- Nout
   MCMC$Nbi <- Nbi
@@ -1000,132 +1012,5 @@ grater than 3.")
   MODEL$omgpars <- omgpars
   out <- list(MODEL = MODEL, DATA = DATA, FIXED = FIXED, MCMC = MCMC, call = cl)
   class(out) <- "geomcmc"
-  out
-}
-
-
-##' Convert to an \code{\link[coda]{mcmc}} object.
-##'
-##' This function takes as input the one or more output(s) from
-##' function \code{\link{mcsglmm}} or \code{\link{mcstrga}} and
-##' returns an \code{\link[coda]{mcmc}} object or an
-##' \code{\link[coda]{mcmc.list}} object for coda. The function
-##' requires the \code{coda} package to be installed.
-##'
-##' The spatial random field components are assigned the names
-##' \code{z_*} where \code{*} is a number beginning at 1. Similarly,
-##' the regressor coefficients are assigned the names \code{beta_*} if
-##' not unique, or simply \code{beta} if there is only one regressor.
-##' The names \code{ssq}, \code{tsq}, \code{phi}, \code{omg}
-##' correspond to the partial sill, measurement error variance,
-##' spatial range, and relative nugget parameters respectively.
-##' @title Convert to an \code{\link[coda]{mcmc}} object
-##' @param ... Output(s) from the functions mentioned in the Details.
-##' @return An mcmc object.
-##' @examples \dontrun{
-##'  ### Load the data
-##' data(rhizoctonia)
-##' rhiz <- na.omit(rhizoctonia)
-##' rhiz$IR <- rhiz$Infected/rhiz$Total # Incidence rate of the
-##'                               # rhizoctonia disease
-##'  ### Define the model
-##' corrf <- "spherical"
-##' ssqdf <- 1
-##' ssqsc <- 1
-##' tsqdf <- 1
-##' tsqsc <- 1
-##' betm0 <- 0
-##' betQ0 <- diag(.01, 2, 2)
-##' phiprior <- c(200, 1, 1000, 100) # U(100, 300)
-##' phisc <- 1
-##' omgprior <- c(3, 1, 1000, 0) # U(0, 3)
-##' omgsc <- 1.3
-##' linkp <- 1
-##' ## MCMC parameters
-##' Nout <- 100
-##' Nbi <- 0
-##' Nthin <- 1
-##'  ### Run MCMC
-##' sample <- mcstrga(Yield ~ IR, data = rhiz,
-##'                   atsample = ~ Xcoord + Ycoord, corrf = corrf,
-##'                   Nout = Nout, Nthin = Nthin,
-##'                   Nbi = Nbi, betm0 = betm0, betQ0 = betQ0,
-##'                   ssqdf = ssqdf, ssqsc = ssqsc,
-##'                   tsqdf = tsqdf, tsqsc = tsqsc,
-##'                   linkp = linkp,
-##'                   corrprior = list(phi = phiprior, omg = omgprior), 
-##'                   corrtuning = list(phi = phisc, omg = omgsc, kappa = 0),
-##'                   test = FALSE)
-##' mcsample <- mcmcmake(sample)
-##' plot(mcsample[, c("phi", "omg", "beta_1", "beta_2", "ssq", "tsq")],
-##'      density = FALSE)
-##' summary(mcsample[, c("phi", "omg", "beta_1", "beta_2", "ssq", "tsq")])
-##' }
-##' @seealso Functions such as \code{\link[coda]{plot.mcmc}} and
-##' \code{\link[coda]{summary.mcmc}} in the \code{coda} package. The
-##' function \code{\link[base]{do.call}} can be used to pass arguments
-##' stored in a list.
-##' @importFrom coda mcmc mcmc.list
-##' @export
-mcmcmake <- function (...) {
-  ### This function takes as input the output from function mcmcrun
-  ### and returns an mcmc object or an mcmc.list object for coda. The
-  ### function requires the coda package to be installed.
-  vnm <- c('z','beta','ssq','tsq','phi','omg', 'kappa')
-  input <- list(...)
-  nruns <- length(input)
-  mcl <- list(); length(mcl) <- nruns
-  for (j in seq_len(nruns)) {
-    chain <- input[[j]]$MCMC[vnm]
-    names(chain) <- vnm
-    if (is.matrix(chain$z)) chain$z <- t(chain$z)
-    if(isTRUE(ncol(chain$z) > 1)) {
-      colnames(chain$z) <- paste0('z_', 1:ncol(chain$z))
-    } else {
-      chain$z <- as.vector(chain$z)
-    }
-    if (is.matrix(chain$beta)) chain$beta <- t(chain$beta)
-    if(isTRUE(ncol(chain$beta) > 1)) {
-      colnames(chain$beta) <- paste0('beta_', 1:ncol(chain$beta))
-    } else {
-      chain$beta <- as.vector(chain$beta)
-    }
-    chain <- do.call("cbind", chain)
-    thin <- max(1, input[[j]]$MCMC$Nthin)
-    start <- max(thin, input[[j]]$MCMC$Nbi) + 1
-    mcl[[j]] <- coda::mcmc(chain, start = start, thin = thin)
-  }
-  if (nruns == 1) {
-    return (mcl[[1]])
-  } else if (nruns > 1) {
-    return (do.call(coda::mcmc.list, mcl))
-  } else return (NULL)
-}
-
-
-##' Return subset of MCMC chain.
-##'
-##'
-##' @title Subset MCMC chain
-##' @param x Output from the functions \code{\link{mcsglmm}} or
-##'   \code{\link{mcstrga}}.
-##' @param subset Logical or integer vector.
-##' @param ... Further arguments to be passed to or from other methods.
-##' @return A similar object as \code{x} with the subsetted chain.
-##' @export
-subset.geomcmc <- function (x, subset, ...) {
-  if (class(x) != "geomcmc") stop ("Wrong class of object x.")
-  subset <- as.vector(subset)
-  if (is.logical(subset)) subset <- subset & !is.na(subset)
-  nm_vec <- c("ssq", "tsq", "phi", "omg", "kappa", "logLik")
-  nm_mat <- c("z", "mu", "beta")
-  out <- x
-  for (nm in nm_vec) {
-    out$MCMC[[nm]] <- x$MCMC[[nm]][subset]
-  }
-  for (nm in nm_mat) {
-    out$MCMC[[nm]] <- x$MCMC[[nm]][, subset, drop = FALSE]
-  }
-  out$MCMC$Nout <- length(out$MCMC[[nm_vec[1]]])
   out
 }

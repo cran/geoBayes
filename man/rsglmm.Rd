@@ -6,17 +6,60 @@
 \alias{rsgrf}
 \title{Simulation from a spatial model}
 \usage{
-rsglmm(n, formula, family = "gaussian", data, weights, subset, atsample,
-  beta, linkp, phi, omg, kappa, ssq, corrfcn = "matern",
-  longlat = FALSE, dispersion = 1, returnGRF = FALSE,
-  warndisp = TRUE)
+rsglmm(
+  n,
+  formula,
+  family = "gaussian",
+  data,
+  weights,
+  subset,
+  atsample,
+  beta,
+  linkp,
+  phi,
+  omg,
+  kappa,
+  ssq,
+  corrfcn = "matern",
+  longlat = FALSE,
+  dispersion = 1,
+  returnGRF = FALSE,
+  warndisp = TRUE
+)
 
-rstrga(n, formula, data, weights, subset, atsample, beta, linkp, phi, omg,
-  kappa, ssq, corrfcn = "matern", longlat = FALSE, dispersion = 1,
-  returnGRF = FALSE)
+rstrga(
+  n,
+  formula,
+  data,
+  weights,
+  subset,
+  atsample,
+  beta,
+  linkp,
+  phi,
+  omg,
+  kappa,
+  ssq,
+  corrfcn = "matern",
+  longlat = FALSE,
+  dispersion = 1,
+  returnGRF = FALSE
+)
 
-rsgrf(n, formula, data, subset, atsample, beta, phi, omg, kappa, ssq,
-  corrfcn = "matern", longlat = FALSE)
+rsgrf(
+  n,
+  formula,
+  data,
+  subset,
+  atsample,
+  beta,
+  phi,
+  omg,
+  kappa,
+  ssq,
+  corrfcn = "matern",
+  longlat = FALSE
+)
 }
 \arguments{
 \item{n}{The number of instances to simulate}

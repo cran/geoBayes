@@ -3,7 +3,7 @@ module mcmcfcns
   private
   double precision, parameter :: bigpos = huge(1d0), bigneg = -bigpos
   public ini_mcmc, end_mcmc, sample_ssq, sample_tsq, sample_beta, &
-     sample_cov, sample_z, sample_z0, samplez_gt
+     sample_cov, sample_z, sample_z0, samplez_gt, sample_z_mala, samplez_gt_mala
 
 contains
   subroutine ini_mcmc (lglk, z, p0, phi, omg, kappa, y1, y2, F, icf, dm, &
@@ -310,6 +310,62 @@ contains
     end do
   end subroutine sample_z
 
+  subroutine sample_z_mala (lglk,z,p0,y1,y2,dft,ssq,tsq,zmxi,Ups,Upsz,zUz, &
+     modeldfh,n,z_eps,iupdt)
+    use interfaces
+    use modelfcns
+    implicit none
+    integer, intent(in) :: n
+    double precision, intent(in) :: y1(n), y2(n), dft, ssq, tsq, Ups(n,n), &
+       modeldfh, z_eps
+    integer, intent(inout) :: iupdt
+    double precision, intent(inout) :: z(n), lglk, p0(n), zmxi(n), Upsz(n),&
+       zUz
+    integer j
+    double precision u(n), logfz_grad(n), logfy_grad(n), dmudz(n), &
+       gradz(n), gradznew(n), znew(n), zmxinew(n), &
+       logacc, r, Upsznew(n), p0new(n), zUznew, ll, zz, zznew, zzdiff
+    logfz_grad = -Upsz/ssq
+    dmudz = invlinkdz(z,dft)
+    logfy_grad = logpdfydlnk(y1,y2,p0)/tsq
+    gradz = logfy_grad*dmudz + logfz_grad
+    do j = 1, n
+      u(j) = randnorm()
+    end do
+    u = z_eps*gradz + sqrt(z_eps+z_eps)*u
+    znew = z + u
+    zmxinew = zmxi + u
+    call dsymv('u', n, 1d0, Ups, n, zmxinew, 1, 0d0, Upsznew, 1)
+    logfz_grad = -Upsznew/ssq
+    dmudz = invlinkdz(znew,dft)
+    p0new = invlink(znew,dft)
+    logfy_grad = logpdfydlnk(y1,y2,p0new)/tsq
+    gradznew = logfy_grad*dmudz + logfz_grad
+    zz = dot_product(z, Upsz)
+    zznew = dot_product(zmxinew, Upsznew)
+    zzdiff = zznew - zz
+    gradz = u - z_eps*gradz
+    gradznew = u + z_eps*gradznew
+    ll = sum(logdffy(y1,y2,p0new,p0))/tsq
+    logacc =  ll -.5d0*zzdiff/ssq &
+       + .25d0/z_eps*dot_product(gradz,gradz) &
+       - .25d0/z_eps*dot_product(gradznew,gradznew)
+    if (logacc .le. bigneg .or. logacc .ne. logacc) return
+    r = randunif()
+    r = log(r)
+    if (r .lt. logacc) then
+      iupdt = iupdt + 1
+      zUznew = zUz + zzdiff
+      lglk = lglk + ll - modeldfh*(log(zUznew) - log(zUz))
+      z = znew
+      p0 = p0new
+      zmxi = zmxinew
+      Upsz = Upsznew
+      zUz = zUznew
+    end if
+  end subroutine sample_z_mala
+  
+
 !!! Sample GRF with Gaussian response from the transformed model, i.e.
 !!! also estimate tsq
 !!!
@@ -323,8 +379,7 @@ contains
   subroutine samplez_gt (lglk,z,p0,ym,l,dft,ssq,zmxi,Ups,Upsz,zUz, &
      modeldfh,respdf,tsqyy,n)
     use interfaces
-    use linkfcns, only: invlink_ga
-    use pdfy, only: logdffy_gt
+    use modelfcns
     implicit none
     integer, intent(in) :: n
     double precision, intent(in) :: ym(n), l(n), dft, ssq, Ups(n,n), &
@@ -339,8 +394,8 @@ contains
       z_mean = z(j) - Upsz(j)/uj(j)
       u = randnorm()
       zz = u*sqrt(ssq/uj(j)) + z_mean
-      pp = invlink_ga(zz,dft) ! Mean of y
-      tsqyy2 = tsqyy + logdffy_gt(ym(j), l(j), pp, p0(j))
+      pp = invlink(zz,dft) ! Mean of y
+      tsqyy2 = tsqyy + logdffy(ym(j), l(j), pp, p0(j))
       ll = -.5d0*respdf*(log(tsqyy2) - log(tsqyy))
       if (ll .le. bigneg .or. ll .ne. ll) return
       u = randunif()
@@ -358,4 +413,63 @@ contains
       end if
     end do
   end subroutine samplez_gt
+
+
+  subroutine samplez_gt_mala (lglk,z,p0,ym,l,dft,ssq,zmxi,Ups,Upsz,zUz, &
+     modeldfh,respdf,tsqyy,n,z_eps,iupdt)
+    use interfaces
+    use modelfcns
+    implicit none
+    integer, intent(in) :: n
+    integer, intent(inout) :: iupdt
+    double precision, intent(in) :: ym(n), l(n), dft, ssq, Ups(n,n), &
+       modeldfh, respdf, z_eps
+    double precision, intent(inout) :: z(n), lglk, p0(n), zmxi(n), Upsz(n),&
+       zUz, tsqyy
+    integer j
+    double precision u(n), logfz_grad(n), logfy_grad(n), dmudz(n), &
+       gradz(n), gradznew(n), znew(n), zmxinew(n), &
+       logacc, r, Upsznew(n), p0new(n), zUznew, ll, zz, zznew, zzdiff, &
+       tsqyynew
+    logfz_grad = -Upsz/ssq
+    dmudz = invlinkdz(z,dft)
+    logfy_grad = logpdfydlnk(ym,l,p0)
+    gradz = logfy_grad*dmudz + logfz_grad
+    do j = 1, n
+      u(j) = randnorm()
+    end do
+    u = z_eps*gradz + sqrt(z_eps+z_eps)*u
+    znew = z + u
+    zmxinew = zmxi + u
+    call dsymv('u', n, 1d0, Ups, n, zmxinew, 1, 0d0, Upsznew, 1)
+    logfz_grad = -Upsznew/ssq
+    dmudz = invlinkdz(znew,dft)
+    p0new = invlink(znew,dft)
+    logfy_grad = logpdfydlnk(ym,l,p0new)
+    gradznew = logfy_grad*dmudz + logfz_grad
+    zz = dot_product(z, Upsz)
+    zznew = dot_product(zmxinew, Upsznew)
+    zzdiff = zznew - zz
+    gradz = u - z_eps*gradz
+    gradznew = u + z_eps*gradznew
+    tsqyynew = tsqyy + sum(logdffy(ym, l, p0new, p0))
+    ll = -.5d0*respdf*(log(tsqyynew) - log(tsqyy))
+    logacc =  ll -.5d0*zzdiff/ssq &
+       + .25d0/z_eps*dot_product(gradz,gradz) &
+       - .25d0/z_eps*dot_product(gradznew,gradznew)
+    if (logacc .le. bigneg .or. logacc .ne. logacc) return
+    r = randunif()
+    r = log(r)
+    if (r .lt. logacc) then
+      iupdt = iupdt + 1
+      zUznew = zUz + zzdiff
+      lglk = lglk + ll - modeldfh*(log(zUznew) - log(zUz))
+      z = znew
+      p0 = p0new
+      zmxi = zmxinew
+      Upsz = Upsznew
+      zUz = zUznew
+      tsqyy = tsqyynew
+    end if
+  end subroutine samplez_gt_mala
 end module mcmcfcns

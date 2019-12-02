@@ -36,6 +36,7 @@ the extended link is used, defined by \deqn{z =
 \frac{sign(\mu)|\mu|^\nu - 1}{\nu}}{z = (sign(mu)*abs(mu)^nu -
 1)/nu} In the other case, the usual Box-Cox link is used.
 
+
 For the Poisson and gamma families, if the link parameter is
 positive, then the link is defined by \deqn{z = \frac{sign(w)
 (e^{\nu |w|}-1)}{\nu}}{z = sign(w)*expm1(nu*w)/nu} where

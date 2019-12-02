@@ -4,9 +4,25 @@
 \alias{alik_inla}
 \title{Log-likelihood approximation}
 \usage{
-alik_inla(par_vals, formula, family = "gaussian", data, weights, subset,
-  atsample, corrfcn = "matern", np, betm0, betQ0, ssqdf, ssqsc, tsqdf,
-  tsqsc, dispersion = 1, longlat = FALSE)
+alik_inla(
+  par_vals,
+  formula,
+  family = "gaussian",
+  data,
+  weights,
+  subset,
+  atsample,
+  corrfcn = "matern",
+  np,
+  betm0,
+  betQ0,
+  ssqdf,
+  ssqsc,
+  tsqdf,
+  tsqsc,
+  dispersion = 1,
+  longlat = FALSE
+)
 }
 \arguments{
 \item{par_vals}{A data frame with the components "linkp", "phi",

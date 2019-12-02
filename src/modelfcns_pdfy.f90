@@ -10,50 +10,88 @@ module modelfcns_pdfy
 
 contains
 
-!   elemental double precision function logpdfy_gt (y1, y2, par)
-!     ! Transformed Gaussian
-!     ! y1 :: The average across all realisations
-!     ! y2 :: The number of replications
-!     ! par :: The mean of a single realisation
-!     implicit none
-!     double precision, intent(in) :: y1, y2, par
-!     double precision d
-!     d = y1 - par
-!     logpdfy_gt = y2*d*d
-!   end function logpdfy_gt
-!
-!   elemental double precision function logdffy_gt (y1, y2, p1, p2)
-!     ! Transformed Gaussian
-!     ! y1 :: The average across all realisations
-!     ! y2 :: The number of replications
-!     ! p1, p2 :: The mean of a single realisation
-!     implicit none
-!     double precision, intent(in) :: y1, y2, p1, p2
-!     double precision d1, d2
-!     d1 = y1 - p1
-!     d2 = y1 - p2
-!     logdffy_gt = y2*(d1*d1 - d2*d2)
-!   end function logdffy_gt
-!
-!   elemental double precision function logpdfydlnk_gt (y1, y2, par)
-!     ! Transformed Gaussian
-!     ! y1 :: The average across all realisations
-!     ! y2 :: The number of replications
-!     ! par :: The mean of a single realisation
-!     implicit none
-!     double precision, intent(in) :: y1, y2, par
-!     logpdfydlnk_gt = 2d0*y2*(par-y1)
-!   end function logpdfydlnk_gt
-!
-!   elemental double precision function logpdfyhlnk_gt (y1, y2, par)
-!     ! Transformed Gaussian
-!     ! y1 :: The average across all realisations
-!     ! y2 :: The number of replications
-!     ! par :: The mean of a single realisation
-!     implicit none
-!     double precision, intent(in) :: y1, y2, par
-!     logpdfyhlnk_gt = 2d0*y2
-!   end function logpdfyhlnk_gt
+!!!!!!!!!!!!!!!!!!!!!!!!!! Transformed Gaussian !!!!!!!!!!!!!!!!!!!!!!!!!!!
+  elemental double precision function logpdfy_gt (y1, y2, par)
+    ! Transformed Gaussian
+    ! y1 :: The average across all realisations
+    ! y2 :: The number of replications
+    ! par :: The mean of a single realisation
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    double precision d
+    d = y1 - par
+    logpdfy_gt = y2*d*d
+  end function logpdfy_gt
+
+  elemental double precision function logdffy_gt (y1, y2, p1, p2)
+    ! Transformed Gaussian
+    ! y1 :: The average across all realisations
+    ! y2 :: The number of replications
+    ! p1, p2 :: The mean of a single realisation
+    implicit none
+    double precision, intent(in) :: y1, y2, p1, p2
+    double precision d1, d2
+    d1 = y1 - p1
+    d2 = y1 - p2
+    logdffy_gt = y2*(d1*d1 - d2*d2)
+  end function logdffy_gt
+
+  elemental double precision function logpdfydlnk_gt (y1, y2, par)
+    ! Transformed Gaussian
+    ! y1 :: The average across all realisations
+    ! y2 :: The number of replications
+    ! par :: The mean of a single realisation
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    logpdfydlnk_gt = 2d0*y2*(par-y1)
+  end function logpdfydlnk_gt
+
+  elemental double precision function logpdfyhlnk_gt (y1, y2, par)
+    ! Transformed Gaussian
+    ! y1 :: The average across all realisations
+    ! y2 :: The number of replications
+    ! par :: The mean of a single realisation
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    logpdfyhlnk_gt = 2d0*y2
+  end function logpdfyhlnk_gt
+
+  elemental double precision function logpdfy3lnk_gt (y1, y2, par)
+    ! Gaussian
+    ! y1 :: The total across all realisations
+    ! y2 :: The number of replications
+    ! par :: The mean of a single realisation
+    implicit none
+    double precision, intent(in) :: y1, y2, par
+    logpdfy3lnk_gt = 0
+  end function logpdfy3lnk_gt
+
+  elemental double precision function mustart_gt (y1,y2)
+    implicit none
+    double precision, intent(in) :: y1, y2
+    mustart_gt = y1
+  end function mustart_gt
+
+  elemental double precision function fcncum_gt (mu) result (w)
+    ! Cumulant fcn as a fcn of mu
+    implicit none
+    double precision, intent(in) :: mu
+    w = .5d0*mu*mu
+  end function fcncum_gt
+
+  elemental double precision function fcncumd2_gt (mu) result (w)
+    ! Cumulant fcn as a fcn of mu, 2nd derivative
+    implicit none
+    double precision, intent(in) :: mu
+    w = 1d0
+  end function fcncumd2_gt
+
+  elemental double precision function fcncumd3_gt (mu) result (w)
+    ! Cumulant fcn as a fcn of mu, 3rd derivative
+    implicit none
+    double precision, intent(in) :: mu
+    w = 0d0
+  end function fcncumd3_gt
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Gaussian !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
