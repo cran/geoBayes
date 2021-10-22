@@ -1,5 +1,5 @@
 subroutine llikfcn_no (lglk, philist, omglist, nulist, kappalist, &
-   zsample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   zsample, Ntot, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, kg, ifam, itr)
 
   use modelfcns, jointyz_sp => jointyz
@@ -9,8 +9,8 @@ subroutine llikfcn_no (lglk, philist, omglist, nulist, kappalist, &
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     zsample(n, Ntot), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
+     zsample(n,Ntot), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
   logical lmxi
   double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
@@ -26,7 +26,7 @@ subroutine llikfcn_no (lglk, philist, omglist, nulist, kappalist, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   select case (ifam)
   case (0)
@@ -56,7 +56,8 @@ end subroutine llikfcn_no
 
 
 subroutine llikfcn_mu (lglk, philist, omglist, nulist, kappalist, &
-   musample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   musample, Ntot, y, l, F, offset, &
+   dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, kg, ifam, itr)
 
   use modelfcns, jointymu_sp => jointymu, logpdfmu_sp => logpdfmu
@@ -66,8 +67,8 @@ subroutine llikfcn_mu (lglk, philist, omglist, nulist, kappalist, &
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     musample(n, Ntot), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
+     musample(n,Ntot), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
   logical lmxi
   double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
@@ -83,7 +84,7 @@ subroutine llikfcn_mu (lglk, philist, omglist, nulist, kappalist, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   select case (ifam)
   case (0)
@@ -110,7 +111,8 @@ subroutine llikfcn_mu (lglk, philist, omglist, nulist, kappalist, &
 end subroutine llikfcn_mu
 
 subroutine lpdffcn_mu (lglk, philist, omglist, nulist, kappalist, &
-   musample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   musample, Ntot, y, l, F, offset, &
+   dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, kg, ifam, itr)
   ! Like llikfcn_mu but not multiplying by p(y|mu)
 
@@ -121,11 +123,11 @@ subroutine lpdffcn_mu (lglk, philist, omglist, nulist, kappalist, &
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     musample(n, Ntot), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
-  double precision, intent(out) :: lglk(Ntot, kg)
+     musample(n,Ntot), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
+  double precision, intent(out) :: lglk(Ntot,kg)
   logical lmxi
-  double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
+  double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
      ldh_Ups, ssqdfsc, modeldfh, &
      tsqdfsc, respdfh, xi(n)
   integer i, j
@@ -138,7 +140,7 @@ subroutine lpdffcn_mu (lglk, philist, omglist, nulist, kappalist, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   do i = 1, kg
     call calc_cov (philist(i),omglist(i),dm,F,betQ0,&
@@ -153,7 +155,8 @@ end subroutine lpdffcn_mu
 
 
 subroutine llikfcn_wo (lglk, philist, omglist, nulist, kappalist, &
-   wsample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   wsample, Ntot, y, l, F, offset, &
+   dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, kg, ifam, itr)
   !! Work-around for the binomial family.
 
@@ -163,11 +166,11 @@ subroutine llikfcn_wo (lglk, philist, omglist, nulist, kappalist, &
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     wsample(n, Ntot), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
+     wsample(n,Ntot), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot, kg)
   logical lmxi
-  double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n, n), &
+  double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n,n), &
      ldh_Ups, ssqdfsc, modeldfh, nu, phi, omg, kappa, &
      tsqdfsc, respdfh, xi(n)
   integer i, j, m
@@ -181,7 +184,7 @@ subroutine llikfcn_wo (lglk, philist, omglist, nulist, kappalist, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   select case (ifam)
   case (0)
@@ -208,7 +211,8 @@ subroutine llikfcn_wo (lglk, philist, omglist, nulist, kappalist, &
 end subroutine llikfcn_wo
 
 subroutine llikfcn_tr (lglk, philist, omglist, nulist, kappalist, &
-   sample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   sample, Ntot, y, l, F, offset, &
+   dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, kg, ifam, itr)
 !! Log-likelihood function.
 !! itr is the type of transformation used: 0 = no, 1 = mu, 2 = wo.
@@ -220,7 +224,7 @@ subroutine llikfcn_tr (lglk, philist, omglist, nulist, kappalist, &
   implicit none
   integer, intent(in) :: n, p, kg, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     sample(n, Ntot), y(n), l(n), F(n, p), &
+     sample(n, Ntot), y(n), l(n), F(n, p), offset(n), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: lglk(Ntot,kg)
   logical lmxi
@@ -243,7 +247,7 @@ subroutine llikfcn_tr (lglk, philist, omglist, nulist, kappalist, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 

@@ -31,6 +31,7 @@
 ##'   time length for Poisson.
 ##' @param subset An optional vector specifying a subset of
 ##'   observations to be used in the fitting process.
+##' @param offset See \code{\link[stats]{lm}}.
 ##' @param atsample A formula in the form \code{~ x1 + x2 + ... + xd}
 ##'   with the coordinates of the sampled locations.
 ##' @param corrfcn Spatial correlation function. Can be one of the
@@ -62,10 +63,11 @@
 ##'   parameter values.
 ##' }
 ##' @useDynLib geoBayes llikparscalc
+##' @importFrom stats model.offset
 ##' @export
 alik_inla <- function (par_vals, formula,
                        family = "gaussian",
-                       data, weights, subset, atsample,
+                       data, weights, subset, offset, atsample,
                        corrfcn = "matern",
                        np, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsqsc,
                        dispersion = 1, longlat = FALSE)
@@ -113,7 +115,7 @@ alik_inla <- function (par_vals, formula,
   if (length(formula) != 3) stop ("The formula input is incomplete.")
   if ("|" == all.names(formula[[2]], TRUE, 1)) formula[[2]] <- formula[[2]][[2]]
   mfc <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset", "weights"),
+  m <- match(c("formula", "data", "subset", "weights", "offset"),
              names(mfc), 0L)
   mfc <- mfc[c(1L, m)]
   mfc$formula <- formula
@@ -130,7 +132,18 @@ alik_inla <- function (par_vals, formula,
     stop ("The response must be a vector")
   }
   yy <- as.double(yy)
-  ll <- model.weights(mf)
+  ll <- as.double(model.weights(mf))
+  oofset <- as.vector(model.offset(mf))
+  if (!is.null(oofset)) {
+    if (length(oofset) != NROW(yy)) {
+      stop(gettextf("number of offsets is %d, should equal %d (number of observations)", 
+                    length(oofset), NROW(yy)), domain = NA)
+    } else {
+      oofset <- as.double(oofset)
+    }
+  } else {
+    oofset <- double(NROW(yy))
+  }
 
   ## All locations
   atsample <- update(atsample, NULL ~ .)
@@ -163,6 +176,7 @@ grater than 3.")
   }
   F <- FF[ii, , drop = FALSE]
   dm <- sp::spDists(loc[ii, , drop = FALSE], longlat = longlat)
+  offset <- oofset[ii]
 
   ## Prior for ssq
   ssqdf <- as.double(ssqdf)
@@ -182,7 +196,7 @@ grater than 3.")
 
   f90 <- .Fortran("llikparscalc", fval, nu, phi, omg, kappa, npars,
                   as.double(y), as.double(l),
-                  F, betm0, betQ0, ssqdf, ssqsc,
+                  F, as.double(offset), betm0, betQ0, ssqdf, ssqsc,
                   dm, tsq, tsqdf, as.integer(n), as.integer(p),
                   as.integer(np), ssq, ifam, icf, PACKAGE = "geoBayes")
   list(par_vals = allpars, aloglik = f90[[1]])
@@ -214,6 +228,7 @@ grater than 3.")
 ##'   time length for Poisson.
 ##' @param subset An optional vector specifying a subset of
 ##'   observations to be used in the fitting process.
+##' @param offset See \code{\link[stats]{lm}}.
 ##' @param atsample A formula in the form \code{~ x1 + x2 + ... + xd}
 ##'   with the coordinates of the sampled locations.
 ##' @param corrfcn Spatial correlation function. See
@@ -239,14 +254,14 @@ grater than 3.")
 ##' @return The output from the function \code{\link[stats]{optim}}.
 ##'   The \code{"value"} element is the log-likelihood, not the
 ##'   negative log-likelihood.
-##' @importFrom stats optim model.frame optimHess
-##' @importFrom optimr optimr
+##' @importFrom stats optim model.frame optimHess model.offset
+##' @importFrom optimx optimr
 ##' @useDynLib geoBayes llikparsval
 ##' @export
 alik_optim <- function (paroptim,
                       formula,
                       family = "gaussian",
-                      data, weights, subset, atsample,
+                      data, weights, subset, offset, atsample,
                       corrfcn = "matern",
                       np, betm0, betQ0, ssqdf, ssqsc, dispersion = 1,
                       longlat = FALSE, control = list())
@@ -279,7 +294,7 @@ alik_optim <- function (paroptim,
   if (length(formula) != 3) stop ("The formula input is incomplete.")
   if ("|" == all.names(formula[[2]], TRUE, 1)) formula[[2]] <- formula[[2]][[2]]
   mfc <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset", "weights"),
+  m <- match(c("formula", "data", "subset", "weights", "offset"),
              names(mfc), 0L)
   mfc <- mfc[c(1L, m)]
   mfc$formula <- formula
@@ -297,6 +312,17 @@ alik_optim <- function (paroptim,
   }
   yy <- as.double(yy)
   ll <- model.weights(mf)
+  oofset <- as.vector(model.offset(mf))
+  if (!is.null(oofset)) {
+    if (length(oofset) != NROW(yy)) {
+      stop(gettextf("number of offsets is %d, should equal %d (number of observations)", 
+                    length(oofset), NROW(yy)), domain = NA)
+    } else {
+      oofset <- as.double(oofset)
+    }
+  } else {
+    oofset <- double(NROW(yy))
+  }
 
   ## All locations
   atsample <- update(atsample, NULL ~ .)
@@ -328,6 +354,7 @@ grater than 3.")
     l <- l - y # Number of failures
   }
   F <- FF[ii, , drop = FALSE]
+  offset <- oofset[ii]
   dm <- sp::spDists(loc[ii, , drop = FALSE], longlat = longlat)
 
   ## Prior for ssq
@@ -378,7 +405,8 @@ grater than 3.")
     f90 <- try(
       .Fortran("llikparsval", fval, gval, ideriv, nu, phi, omg, kappa,
                as.double(y), as.double(l),
-               as.double(F), as.double(betm0), as.double(betQ0),
+               as.double(F), as.double(offset),
+               as.double(betm0), as.double(betQ0),
                as.double(ssqdf), as.double(ssqsc),
                as.double(dm), as.double(tsq), as.double(tsqdf),
                as.integer(n), as.integer(p),
@@ -403,7 +431,7 @@ grater than 3.")
     f90 <- try(
       .Fortran("llikparsval", fval, gval, ideriv, nu, phi, omg, kappa,
                as.double(y), as.double(l),
-               F, betm0, betQ0, ssqdf, ssqsc,
+               F, as.double(offset), betm0, betQ0, ssqdf, ssqsc,
                dm, tsq, tsqdf, as.integer(n), as.integer(p),
                as.integer(np), ssq, ifam, icf, PACKAGE = "geoBayes"),
       silent = TRUE)
@@ -417,7 +445,7 @@ grater than 3.")
 ###                      lower = lower[estim], upper = upper[estim],
 ###                      hessian = TRUE, control = control)
   if (isTRUE(control$maximize)) control$maximize <- FALSE
-  op <- optimr::optimr(pstart[estim], fn, gr, method = method,
+  op <- optimx::optimr(pstart[estim], fn, gr, method = method,
                        lower = lower[estim], upper = upper[estim],
                        hessian = FALSE, control = control)
   op$gradient <- gr(op$par)

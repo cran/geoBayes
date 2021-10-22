@@ -6,7 +6,7 @@
 
 subroutine calcb_no_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, zsample, weights, n, p, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
+   ssqsc, tsqdf, tsq, y, l, F, offset, dm, ifam, itr)
 
   use modelfcns, condyz_sp => condyz
   use interfaces
@@ -17,9 +17,9 @@ subroutine calcb_no_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
   double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
-     nu(n_nu), zsample(n, Ntot), weights(Ntot), &
-     betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n, p), dm(n, n)
+     nu(n_nu), zsample(n,Ntot), weights(Ntot), &
+     betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(out) :: bfact(n_nu, n_cov)
   logical lmxi
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
@@ -36,7 +36,7 @@ subroutine calcb_no_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 
@@ -77,7 +77,7 @@ end subroutine calcb_no_st
 
 subroutine calcb_wo_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, wsample, weights, n, p, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
+   ssqsc, tsqdf, tsq, y, l, F, offset, dm, ifam, itr)
 
   use modelfcns
   use flogsumexp
@@ -88,7 +88,7 @@ subroutine calcb_wo_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
      nu(n_nu), wsample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n,p), dm(n,n)
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(out) :: bfact(n_nu,n_cov)
   logical lmxi
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh, zsample(n)
@@ -104,7 +104,7 @@ subroutine calcb_wo_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 
@@ -135,7 +135,7 @@ end subroutine calcb_wo_st
 
 subroutine calcb_mu_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, musample, weights, n, p, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
+   ssqsc, tsqdf, tsq, y, l, F, offset, dm, ifam, itr)
 
   use modelfcns
   use interfaces
@@ -146,9 +146,9 @@ subroutine calcb_mu_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
   double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
-     nu(n_nu), musample(n, Ntot), weights(Ntot), &
-     betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n, p), dm(n, n)
+     nu(n_nu), musample(n,Ntot), weights(Ntot), &
+     betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(out) :: bfact(n_nu, n_cov)
   logical lmxi
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
@@ -165,7 +165,7 @@ subroutine calcb_mu_st (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 
@@ -205,7 +205,7 @@ end subroutine calcb_mu_st
 
 subroutine calcb_tr_st (bfact, philist, nulist, omglist, kappalist, &
    icf, n_cov, n_nu, Ntot, sample, weights, n, p, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
+   ssqsc, tsqdf, tsq, y, l, F, offset, dm, ifam, itr)
 
   use modelfcns, logpdfzf => logpdfz, condymu_mf => condymu
   use flogsumexp
@@ -217,7 +217,7 @@ subroutine calcb_tr_st (bfact, philist, nulist, omglist, kappalist, &
   double precision, intent(in) :: philist(n_cov), omglist(n_cov), &
      kappalist(n_cov), nulist(n_nu), sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n,p), dm(n,n)
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(out) :: bfact(n_nu,n_cov)
   logical lmxi
   double precision ssqdfsc, respdfh, modeldfh, tsqval
@@ -240,7 +240,7 @@ subroutine calcb_tr_st (bfact, philist, nulist, omglist, kappalist, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 
@@ -307,7 +307,7 @@ end subroutine calcb_tr_st
 
 subroutine calcb_no_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, zsample, weights, QRin, n, p, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
+   ssqsc, tsqdf, tsq, y, l, F, offset, dm, ifam, itr)
 
   use modelfcns, condyz_sp => condyz
   use interfaces
@@ -318,9 +318,9 @@ subroutine calcb_no_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   implicit none
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
   double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
-     nu(n_nu), zsample(n, Ntot), weights(Ntot), QRin(Ntot), &
-     betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n, p), dm(n, n)
+     nu(n_nu), zsample(n,Ntot), weights(Ntot), QRin(Ntot), &
+     betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(out) :: bfact(n_nu, n_cov)
   logical lmxi
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
@@ -338,7 +338,7 @@ subroutine calcb_no_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   dNtot = log(dble(Ntot))
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
   ! Calculate log f(y|z,nu)
@@ -387,7 +387,7 @@ end subroutine calcb_no_cv
 
 subroutine calcb_wo_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, wsample, weights, QRin, n, p, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
+   ssqsc, tsqdf, tsq, y, l, F, offset, dm, ifam, itr)
 
   use modelfcns
   use flogsumexp
@@ -398,7 +398,7 @@ subroutine calcb_wo_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
      nu(n_nu), wsample(n,Ntot), weights(Ntot), QRin(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n,p), dm(n,n)
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(out) :: bfact(n_nu,n_cov)
   logical lmxi
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
@@ -416,7 +416,7 @@ subroutine calcb_wo_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   dNtot = log(dble(Ntot))
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 
@@ -454,7 +454,7 @@ end subroutine calcb_wo_cv
 
 subroutine calcb_mu_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
    Ntot, musample, weights, QRin, n, p, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
+   ssqsc, tsqdf, tsq, y, l, F, offset, dm, ifam, itr)
 
   use modelfcns
   use interfaces
@@ -466,8 +466,8 @@ subroutine calcb_mu_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   integer, intent(in) :: n, p, Ntot, n_cov, n_nu, ifam, icf, itr(n)
   double precision, intent(in) :: phi(n_cov), omg(n_cov), kappa(n_cov), &
      nu(n_nu), musample(n,Ntot), weights(Ntot), QRin(Ntot), &
-     betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n, p), dm(n, n)
+     betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(out) :: bfact(n_nu, n_cov)
   logical lmxi
   double precision ssqdfsc, tsqdfsc, respdfh, modeldfh
@@ -485,7 +485,7 @@ subroutine calcb_mu_cv (bfact, phi, nu, omg, kappa, icf, n_cov, n_nu, &
   dNtot = log(dble(Ntot))
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 
@@ -538,7 +538,7 @@ end subroutine calcb_mu_cv
 subroutine calcb_tr_cv (bfact, philist, nulist, omglist, kappalist, &
    icf, n_cov, n_nu, Ntot, sample, weights, QRin, &
    n, p, betm0, betQ0, ssqdf, &
-   ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr)
+   ssqsc, tsqdf, tsq, y, l, F, offset, dm, ifam, itr)
 
   use modelfcns, logpdfzf => logpdfz, condymu_mf => condymu
   use flogsumexp
@@ -550,7 +550,7 @@ subroutine calcb_tr_cv (bfact, philist, nulist, omglist, kappalist, &
   double precision, intent(in) :: philist(n_cov), omglist(n_cov), &
      kappalist(n_cov), nulist(n_nu), sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n,p), dm(n,n)
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(in) :: QRin(Ntot)
   double precision, intent(out) :: bfact(n_nu,n_cov)
   logical lmxi
@@ -576,7 +576,7 @@ subroutine calcb_tr_cv (bfact, philist, nulist, omglist, kappalist, &
   dNtot = log(dble(Ntot))
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 

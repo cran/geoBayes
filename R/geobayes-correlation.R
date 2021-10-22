@@ -37,6 +37,7 @@ lockBinding(".geoBayes_corrfcn", environment())
   if (length(icf) != 1) stop ("Multiple correlations inputted.")
   if (!is.numeric(icf)) icf <- .geoBayes_correlation(icf)
   if (.geoBayes_corrfcn$needkappa[icf]) {
+    if (!is.finite(kappa)) stop ("Need finite kappa.")
     kappa <- as.double(kappa)
     if (length(kappa) < 1) stop ("No kappa value inputted.")
     if (is.finite(.geoBayes_corrfcn$validklb[icf]) &&

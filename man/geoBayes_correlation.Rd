@@ -5,7 +5,9 @@
 \alias{geoBayes_correlation}
 \alias{.geoBayes_corrfcn}
 \title{Spatial correlation used in the geoBayes package}
-\format{An object of class \code{data.frame} with 5 rows and 4 columns.}
+\format{
+An object of class \code{data.frame} with 5 rows and 4 columns.
+}
 \usage{
 .geoBayes_corrfcn
 }

@@ -6,7 +6,8 @@
 
 subroutine calcbd_no (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
    phi, nu, omg, kappa, icf, Ntot, sample, weights, QRin, &
-   n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr, icv)
+   n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, offset, &
+   dm, ifam, itr, icv)
 
   use modelfcns, logpdfzf => logpdfz, logpdfydmu => logpdfydlnk
   use covfun
@@ -17,7 +18,7 @@ subroutine calcbd_no (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   double precision, intent(in) :: phi, omg, &
      kappa, nu, sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n,p), dm(n,n)
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(in) :: QRin(Ntot)
   double precision, intent(out) :: bfact, bfdphi, bfdnu, bfdnsq, bfdkappa
   logical lmxi
@@ -45,7 +46,7 @@ subroutine calcbd_no (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 
@@ -96,7 +97,8 @@ end subroutine calcbd_no
 
 subroutine calcbd_mu (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
    phi, nu, omg, kappa, icf, Ntot, sample, weights, QRin, &
-   n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr, icv)
+   n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, offset, &
+   dm, ifam, itr, icv)
 
   use modelfcns, logpdfzf => logpdfz, logpdfydmu => logpdfydlnk
   use covfun
@@ -107,7 +109,7 @@ subroutine calcbd_mu (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   double precision, intent(in) :: phi, omg, &
      kappa, nu, sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n,p), dm(n,n)
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(in) :: QRin(Ntot)
   double precision, intent(out) :: bfact, bfdphi, bfdnu, bfdnsq, bfdkappa
   logical lmxi
@@ -135,7 +137,7 @@ subroutine calcbd_mu (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 
@@ -184,7 +186,8 @@ end subroutine calcbd_mu
 
 subroutine calcbd_wo (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
    phi, nu, omg, kappa, icf, Ntot, sample, weights, QRin, &
-   n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr, icv)
+   n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, offset, &
+   dm, ifam, itr, icv)
 
   use modelfcns, logpdfzf => logpdfz, logpdfydmu => logpdfydlnk
   use covfun
@@ -195,7 +198,7 @@ subroutine calcbd_wo (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   double precision, intent(in) :: phi, omg, &
      kappa, nu, sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n,p), dm(n,n)
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(in) :: QRin(Ntot)
   double precision, intent(out) :: bfact, bfdphi, bfdnu, bfdnsq, bfdkappa
   logical lmxi
@@ -223,7 +226,7 @@ subroutine calcbd_wo (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 
@@ -280,7 +283,8 @@ end subroutine calcbd_wo
 
 subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
    phi, nu, omg, kappa, icf, Ntot, sample, weights, QRin, &
-   n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, dm, ifam, itr, icv)
+   n, p, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, y, l, F, offset, &
+   dm, ifam, itr, icv)
 
   use modelfcns, logpdfzf => logpdfz, logpdfydmu => logpdfydlnk
   use covfun
@@ -291,7 +295,7 @@ subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   double precision, intent(in) :: phi, omg, &
      kappa, nu, sample(n,Ntot), weights(Ntot), &
      betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, y(n), l(n), &
-     F(n,p), dm(n,n)
+     F(n,p), dm(n,n), offset(n)
   double precision, intent(in) :: QRin(Ntot)
   double precision, intent(out) :: bfact, bfdphi, bfdnu, bfdnsq, bfdkappa
   logical lmxi
@@ -319,7 +323,7 @@ subroutine calcbd_tr (bfact, bfdnu, bfdphi, bfdnsq, bfdkappa, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 

@@ -242,7 +242,7 @@ contains
 end subroutine poster
 
 subroutine aprxposterssq (fssq, meang, prechg, dz_dnu, dz_dphi, &
-   ssq, nu, phi, omg, kappa, y1, y2, F, betm0, betQ0, &
+   ssq, nu, phi, omg, kappa, y1, y2, F, offset, betm0, betQ0, &
    ssqdf, ssqsc, dm, tsq, tsqdf, n, p, ifam, icf)
   use covfun
   use betaprior
@@ -252,7 +252,7 @@ subroutine aprxposterssq (fssq, meang, prechg, dz_dnu, dz_dphi, &
   integer, intent(in) :: n, p, ifam, icf
   double precision, intent(in) :: ssq, ssqdf, ssqsc, &
      y1(n), y2(n), phi, nu, omg, kappa, dm(n,n), F(n,p), &
-     betm0(p), betQ0(p,p), tsq, tsqdf
+     betm0(p), betQ0(p,p), tsq, tsqdf, offset(n)
   double precision, intent(out) :: fssq, meang(n), prechg(n,n), &
      dz_dnu(n), dz_dphi(n)
   double precision Ups(n,n), ldh_Ups, xi(n), modeldfh, ssqdfh, ssqdfsc
@@ -261,7 +261,7 @@ subroutine aprxposterssq (fssq, meang, prechg, dz_dnu, dz_dphi, &
   integer j
   call create_model (ifam)
   call create_spcor (icf,n)
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
   call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
   ssqdfh = .5d0*ssqdf
   ssqdfsc = ssqdf*ssqsc
@@ -806,7 +806,7 @@ end subroutine aloglik_dcov
 
 
 subroutine llikpars2 (fval, gval, lderiv, &
-   nu, phi, omg, kappa, y1, y2, F, betm0, betQ0, &
+   nu, phi, omg, kappa, y1, y2, F, offset, betm0, betQ0, &
    ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, ssqin, ifam, icf)
   use covfun, only: create_spcor, calc_cov
   use betaprior
@@ -815,7 +815,7 @@ subroutine llikpars2 (fval, gval, lderiv, &
   logical, intent(in) :: lderiv(4) ! Which derivatives to calculate?
   double precision, intent(in) :: ssqin, ssqdf, ssqsc, &
      y1(n), y2(n), phi, nu, omg, kappa, dm(n,n), F(n,p), &
-     betm0(p), betQ0(p,p), tsq, tsqdf
+     betm0(p), betQ0(p,p), tsq, tsqdf, offset(n)
   double precision, intent(out) :: fval, gval(4)
   double precision Ups(n,n), ldh_Ups, xi(n), modeldfh, ssqdfh, ssqdfsc
   integer i
@@ -826,7 +826,7 @@ subroutine llikpars2 (fval, gval, lderiv, &
   double precision, dimension(np+np+1) :: w_dnu, w_dphi, w_dnsq, w_dkap
   double precision ssqst
   call create_spcor(icf,n)
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
   call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
   ssqdfh = .5d0*ssqdf
   ssqdfsc = ssqdf*ssqsc
@@ -924,25 +924,25 @@ contains
 end subroutine llikpars2
 
 subroutine llikparsval (fval, gval, ideriv, &
-   nu, phi, omg, kappa, y1, y2, F, betm0, betQ0, &
+   nu, phi, omg, kappa, y1, y2, F, offset, betm0, betQ0, &
    ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, ssqin, ifam, icf)
   use modelfcns, only: create_model
   implicit none
   integer, intent(in) :: np, n, p, ifam, icf, ideriv(4)
   double precision, intent(in) :: ssqin, ssqdf, ssqsc, &
      y1(n), y2(n), phi, nu, omg, kappa, dm(n,n), F(n,p), &
-     betm0(p), betQ0(p,p), tsq, tsqdf
+     betm0(p), betQ0(p,p), tsq, tsqdf, offset(n)
   double precision, intent(out) :: fval, gval(4)
   logical lderiv(4)
   call create_model (ifam)
   lderiv = ideriv .ne. 0
   call llikpars2 (fval, gval, lderiv, &
-     nu, phi, omg, kappa, y1, y2, F, betm0, betQ0, &
+     nu, phi, omg, kappa, y1, y2, F, offset, betm0, betQ0, &
    ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, ssqin, ifam, icf)
 end subroutine llikparsval
 
 subroutine aloglikval (fval, gval, &
-   nu, phi, omg, kappa, y1, y2, F, betm0, betQ0, &
+   nu, phi, omg, kappa, y1, y2, F, offset, betm0, betQ0, &
    ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, logssqg, ifam, icf)
   use modelfcns, only: create_model
   use covfun, only: create_spcor, calc_cov
@@ -951,7 +951,7 @@ subroutine aloglikval (fval, gval, &
   integer, intent(in) :: np, n, p, ifam, icf
   double precision, intent(in) :: logssqg(np+np+1), ssqdf, ssqsc, &
      y1(n), y2(n), phi, nu, omg, kappa, dm(n,n), F(n,p), &
-     betm0(p), betQ0(p,p), tsq, tsqdf
+     betm0(p), betQ0(p,p), tsq, tsqdf, offset(n)
   double precision, intent(out) :: fval(np+np+1), gval(np+np+1)
   double precision Ups(n,n), ldh_Ups, xi(n), modeldfh, ssqdfh, ssqdfsc
   logical lmxi
@@ -959,7 +959,7 @@ subroutine aloglikval (fval, gval, &
   double precision meang(n,np+np+1), prechg(n,n,np+np+1)
   call create_model (ifam)
   call create_spcor(icf,n)
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
   call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
   ssqdfh = .5d0*ssqdf
   ssqdfsc = ssqdf*ssqsc
@@ -970,7 +970,7 @@ subroutine aloglikval (fval, gval, &
 end subroutine aloglikval
 
 subroutine llikparscalc (fval, nu, phi, omg, kappa, npars, &
-   y1, y2, F, betm0, betQ0, &
+   y1, y2, F, offset, betm0, betQ0, &
    ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, ssqin, ifam, icf)
   ! Calls subroutine llikpars2 repeatedly for each parameter input.
   use modelfcns
@@ -978,7 +978,7 @@ subroutine llikparscalc (fval, nu, phi, omg, kappa, npars, &
   integer, intent(in) :: np, n, p, ifam, icf, npars
   double precision, intent(in) :: ssqin, ssqdf, ssqsc, &
      y1(n), y2(n), phi(npars), nu(npars), omg(npars), kappa(npars), &
-     dm(n,n), F(n,p), betm0(p), betQ0(p,p), tsq, tsqdf
+     dm(n,n), F(n,p), betm0(p), betQ0(p,p), tsq, tsqdf, offset(n)
   double precision, intent(out) :: fval(npars)
   integer i
   logical lderiv(4)
@@ -987,7 +987,7 @@ subroutine llikparscalc (fval, nu, phi, omg, kappa, npars, &
   lderiv = .false.
   do i = 1, npars
     call llikpars2 (fval(i), gval, lderiv, &
-       nu(i), phi(i), omg(i), kappa(i), y1, y2, F, betm0, betQ0, &
+       nu(i), phi(i), omg(i), kappa(i), y1, y2, F, offset, betm0, betQ0, &
        ssqdf, ssqsc, dm, tsq, tsqdf, n, p, np, ssqin, ifam, icf)
   end do
 end subroutine llikparscalc

@@ -1,5 +1,5 @@
 subroutine llikfcn_dh_tr (dlglk, hlglk, phi, omg, nu, kappa, &
-   sample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   sample, Ntot, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, ifam, itr)
 !! Log-likelihood function 1st and 2nd derivatives w.r.t link and
 !! covariance parameters. The order is (link,phi,omg,kappa).
@@ -11,7 +11,7 @@ subroutine llikfcn_dh_tr (dlglk, hlglk, phi, omg, nu, kappa, &
   implicit none
   integer, intent(in) :: n, p, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: phi, omg, nu, &
-     sample(n, Ntot), y(n), l(n), F(n, p), &
+     sample(n, Ntot), y(n), l(n), F(n,p), offset(n), &
      dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappa
   double precision, intent(out) :: dlglk(4,Ntot), hlglk(4,4,Ntot)
   logical lmxi
@@ -41,7 +41,7 @@ subroutine llikfcn_dh_tr (dlglk, hlglk, phi, omg, nu, kappa, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
   call fill_symmetric_matrix(Ups,n)

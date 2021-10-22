@@ -35,7 +35,7 @@ sploglik <- function(pargrid, runs, transf = c("no", "mu", "wo"))
   Ntot <- sum(Nout)
 
   ## Extract data and model
-  nm_DATA <- c("response", "weights", "modelmatrix", "locations",
+  nm_DATA <- c("response", "weights", "modelmatrix", "offset", "locations",
                "longlat")
   nm_MODEL <- c("family", "corrfcn", "betm0", "betQ0", "ssqdf", "ssqsc",
                 "tsqdf", "tsqsc", "dispersion")
@@ -55,6 +55,7 @@ sploglik <- function(pargrid, runs, transf = c("no", "mu", "wo"))
   n <- as.integer(length(y))
   l <- DATA$weights
   F <- DATA$modelmatrix
+  offset <- DATA$offset
   p <- NCOL(F)
   loc <- DATA$locations
   dm <- sp::spDists(loc, longlat = DATA$longlat)
@@ -102,7 +103,7 @@ sploglik <- function(pargrid, runs, transf = c("no", "mu", "wo"))
                     as.double(phi), as.double(omg), as.double(nu),
                     as.double(kappa),
                     as.double(sample), as.integer(Ntot), as.double(y),
-                    as.double(l), as.double(F), as.double(dm),
+                    as.double(l), as.double(F), as.double(offset), as.double(dm),
                     as.double(betm0), as.double(betQ0), as.double(ssqdf),
                     as.double(ssqsc), as.double(tsqdf), as.double(tsq),
                     as.integer(icf), as.integer(n), as.integer(p),
@@ -148,7 +149,7 @@ sploglik_cross <- function(runs, transf = c("no", "mu", "wo"))
   Ntot <- sum(Nout)
 
   ## Extract data and model
-  nm_DATA <- c("response", "weights", "modelmatrix", "locations",
+  nm_DATA <- c("response", "weights", "modelmatrix", "offset", "locations",
                "longlat")
   nm_MODEL <- c("betm0", "betQ0", "ssqdf", "ssqsc",
                 "tsqdf", "tsqsc", "dispersion")
@@ -169,6 +170,7 @@ sploglik_cross <- function(runs, transf = c("no", "mu", "wo"))
   l <- DATA$weights
   F <- DATA$modelmatrix
   p <- NCOL(F)
+  offset <- DATA$offset
   loc <- DATA$locations
   dm <- sp::spDists(loc, longlat = DATA$longlat)
   corrfcn <- MODEL$corrfcn
@@ -239,7 +241,8 @@ sploglik_cross <- function(runs, transf = c("no", "mu", "wo"))
                       as.double(phi_pars),
                       as.double(omg_pars),
                       as.integer(Ntot), as.double(y),
-                      as.double(l), as.double(F), as.double(dm),
+                      as.double(l), as.double(F), as.double(offset), 
+                      as.double(dm),
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
                       as.double(ssqsc), as.double(tsqdf), as.double(tsq),
                       as.integer(icf_list), as.integer(n), as.integer(p),
@@ -255,7 +258,8 @@ sploglik_cross <- function(runs, transf = c("no", "mu", "wo"))
                       as.double(omg_sample),
                       as.double(omg_pars),
                       as.integer(Ntot), as.double(y),
-                      as.double(l), as.double(F), as.double(dm),
+                      as.double(l), as.double(F), as.double(offset),
+                      as.double(dm),
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
                       as.double(ssqsc), as.double(tsqdf), as.double(tsq),
                       as.integer(icf_list), as.integer(n), as.integer(p),
@@ -271,7 +275,8 @@ sploglik_cross <- function(runs, transf = c("no", "mu", "wo"))
                       as.double(phi_sample),
                       as.double(phi_pars),
                       as.integer(Ntot), as.double(y),
-                      as.double(l), as.double(F), as.double(dm),
+                      as.double(l), as.double(F), as.double(offset),
+                      as.double(dm),
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
                       as.double(ssqsc), as.double(tsqdf), as.double(tsq),
                       as.integer(icf_list), as.integer(n), as.integer(p),
@@ -286,7 +291,8 @@ sploglik_cross <- function(runs, transf = c("no", "mu", "wo"))
                       as.double(kappa_list),
                       as.double(sample),
                       as.integer(Ntot), as.double(y),
-                      as.double(l), as.double(F), as.double(dm),
+                      as.double(l), as.double(F), as.double(offset),
+                      as.double(dm),
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
                       as.double(ssqsc), as.double(tsqdf), as.double(tsq),
                       as.integer(icf_list), as.integer(n), as.integer(p),

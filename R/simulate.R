@@ -27,6 +27,7 @@
 ##'   time length for Poisson.
 ##' @param subset An optional set of indices. Simulations will be
 ##'   provided for those locations only.
+##' @param offset See \code{\link[stats]{lm}}.
 ##' @param atsample A formula of the form \code{~ Xcoord + Ycoord}
 ##'   specifying the sampled locations.
 ##' @param beta A vector of the regressor coefficents to use.
@@ -73,11 +74,11 @@
 ##' }
 ##' @export
 ##' @importFrom stats rnorm rbinom rpois rgamma rbeta model.frame
-##'   update as.formula
+##'   update as.formula model.offset
 ##' @importFrom sp spDists
 rsglmm <- function(n, formula,
                    family = "gaussian",
-                   data, weights, subset, atsample,
+                   data, weights, subset, offset, atsample,
                    beta, linkp, phi, omg, kappa, ssq,
                    corrfcn = "matern",
                    longlat = FALSE, dispersion = 1, returnGRF = FALSE,
@@ -106,6 +107,9 @@ rsglmm <- function(n, formula,
   ## Check the link parameter
   nu <- .geoBayes_getlinkp(linkp, ifam)
 
+  ## kappa
+  if (missing(kappa)) kappa <- NA
+
   ## Response name
   formula <- as.formula(formula)
   if (length(formula) == 2) { # No LHS
@@ -128,7 +132,7 @@ rsglmm <- function(n, formula,
   ## Design matrix and data
   if (missing(data)) data <- environment(formula)
   mfc <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset", "weights"),
+  m <- match(c("formula", "data", "subset", "weights", "offset"),
              names(mfc), 0L)
   mfc <- mfc[c(1L, m)]
   mfc$formula <- formula0
@@ -139,6 +143,12 @@ rsglmm <- function(n, formula,
   mt <- attr(mf, "terms")
   FF <- model.matrix(mt,mf)
   nloc <- nrow(FF)
+  offset <- as.vector(model.offset(mf))
+  if (!is.null(offset)) {
+    if (length(offset) != nloc) 
+      stop(gettextf("number of offsets is %d, should equal %d (number of observations)", 
+                    length(offset), nloc), domain = NA)
+  }
 
   ## Weights
   weightsc <- mfc$weights
@@ -173,7 +183,7 @@ rsglmm <- function(n, formula,
   if (!all(is.finite(loc))) stop ("Non-finite values in the locations")
 
   ## Simulate
-  z <- randgrf(n, loc, beta, phi, omg, kappa, ssq, FF, corrfcn, longlat)
+  z <- randgrf(n, loc, beta, phi, omg, kappa, ssq, FF, offset, corrfcn, longlat)
   pary <- linkinv(z, linkp, family)
   if (warndisp && (dispersion != 1) &&
       grepl("^(binomial|poisson)(\\..+)?$", family))
@@ -215,7 +225,7 @@ rsglmm <- function(n, formula,
 
 ##' @name rsglmm
 ##' @export
-rstrga <- function(n, formula, data, weights, subset, atsample,
+rstrga <- function(n, formula, data, weights, subset, offset, atsample,
                    beta, linkp, phi, omg, kappa, ssq,
                    corrfcn = "matern",
                    longlat = FALSE, dispersion = 1, returnGRF = FALSE) {
@@ -230,10 +240,13 @@ rstrga <- function(n, formula, data, weights, subset, atsample,
 
 ##' @name rsglmm
 ##' @export
-rsgrf <- function (n, formula, data, subset, atsample,
+rsgrf <- function (n, formula, data, subset, offset, atsample,
                    beta, phi, omg, kappa, ssq,
                    corrfcn = "matern",
                    longlat = FALSE) {
+  
+  ## kappa
+  if (missing(kappa)) kappa <- NA
 
   ## Response name
   formula <- as.formula(formula)
@@ -254,7 +267,7 @@ rsgrf <- function (n, formula, data, subset, atsample,
   ## Design matrix and data
   if (missing(data)) data <- environment(formula)
   mfc <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset", "weights"),
+  m <- match(c("formula", "data", "subset", "weights", "offset"),
              names(mfc), 0L)
   mfc <- mfc[c(1L, m)]
   mfc$formula <- formula0
@@ -264,6 +277,13 @@ rsgrf <- function (n, formula, data, subset, atsample,
   mf <- eval(mfc, parent.frame())
   mt <- attr(mf, "terms")
   FF <- model.matrix(mt,mf)
+  nloc <- nrow(FF)
+  offset <- as.vector(model.offset(mf))
+  if (!is.null(offset)) {
+    if (length(offset) != nloc) 
+      stop(gettextf("number of offsets is %d, should equal %d (number of observations)", 
+                    length(offset), nloc), domain = NA)
+  }
 
   ## All locations
   atsample <- update(atsample, NULL ~ . + 0) # No response and no intercept
@@ -274,7 +294,7 @@ rsgrf <- function (n, formula, data, subset, atsample,
   loc <- as.matrix(mfat)
   if (!all(is.finite(loc))) stop ("Non-finite values in the locations.")
 
-  z <- randgrf(n, loc, beta, phi, omg, kappa, ssq, FF, corrfcn, longlat)
+  z <- randgrf(n, loc, beta, phi, omg, kappa, ssq, FF, offset, corrfcn, longlat)
 
   ## Return data.frame
   varsnm <- unique(c(all.vars(formula0), all.vars(atsample)))
@@ -296,7 +316,7 @@ rsgrf <- function (n, formula, data, subset, atsample,
 
 
 ##' @useDynLib geoBayes spcorr
-randgrf <- function (n, loc, beta, phi, omg, kappa, ssq, FF,
+randgrf <- function (n, loc, beta, phi, omg, kappa, ssq, FF, offset = NULL, 
                      corrfcn = "matern",
                      longlat = FALSE) {
 
@@ -353,6 +373,7 @@ grater than 3.")
   meanz <- as.vector(FF %*% beta)
   z <- matrix(rnorm(n*nloc), nloc, n)
   z <- meanz + crossprod(Sgch, z)
+  if (!is.null(offset)) z <- z + offset
   z
 }
 

@@ -4,7 +4,9 @@
 \name{rhizoctonia}
 \alias{rhizoctonia}
 \title{Rhizoctonia root rot infections}
-\format{A data frame with 100 rows and 5 variables.}
+\format{
+A data frame with 100 rows and 5 variables.
+}
 \source{
 \url{http://www.biometrics.tibs.org/datasets/010434.txt}
 }

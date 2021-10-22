@@ -23,6 +23,7 @@ bf2se <- function(mcrun, transf = c("no", "mu", "wo"))
   corrfcn <- mcrun$MODEL$corrfcn
   icf <- .geoBayes_correlation(corrfcn)
   F <- mcrun$DATA$modelmatrix
+  offset <- mcrun$DATA$offset
   n <- NROW(F)
   p <- NCOL(F)
   loc <- mcrun$DATA$locations
@@ -65,7 +66,7 @@ bf2se <- function(mcrun, transf = c("no", "mu", "wo"))
   dlglk <- array(0, c(4, nsim))
   hlglk <- array(0, c(16, nsim))
   fff <- .Fortran(froutine, dlglk, hlglk, phi, omg, linkp, kappa,
-                  sample, nsim, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc,
+                  sample, nsim, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc,
                   tsqdf, tsq, icf, n, p, ifam, itr, PACKAGE = "geoBayes")
   dlglk <- fff[[1]]
   hlglk <- fff[[2]]

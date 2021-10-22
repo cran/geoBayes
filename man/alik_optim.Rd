@@ -11,6 +11,7 @@ alik_optim(
   data,
   weights,
   subset,
+  offset,
   atsample,
   corrfcn = "matern",
   np,
@@ -48,6 +49,8 @@ time length for Poisson.}
 
 \item{subset}{An optional vector specifying a subset of
 observations to be used in the fitting process.}
+
+\item{offset}{See \code{\link[stats]{lm}}.}
 
 \item{atsample}{A formula in the form \code{~ x1 + x2 + ... + xd}
 with the coordinates of the sampled locations.}

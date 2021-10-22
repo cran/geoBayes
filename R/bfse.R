@@ -88,7 +88,7 @@ bmbfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
   }
 
   ## Extract data and model
-  nm_DATA <- c("response", "weights", "modelmatrix", "locations",
+  nm_DATA <- c("response", "weights", "modelmatrix", "offset", "locations",
                "longlat")
   nm_MODEL <- c("family", "corrfcn", "betm0", "betQ0", "ssqdf", "ssqsc",
                 "tsqdf", "tsqsc", "dispersion")
@@ -108,6 +108,7 @@ bmbfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
   n <- as.integer(length(y))
   l <- DATA$weights
   F <- DATA$modelmatrix
+  offset <- DATA$offset
   p <- NCOL(F)
   loc <- DATA$locations
   dm <- sp::spDists(loc, longlat = DATA$longlat)
@@ -195,7 +196,8 @@ bmbfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
                   as.double(nu_pnts), as.double(kappa_pnts),
                   as.double(z1), as.integer(Nout1), as.integer(Ntot1),
                   as.double(z2), as.integer(Nout2), as.integer(Ntot2),
-                  as.double(y), as.double(l), as.double(F), as.double(dm),
+                  as.double(y), as.double(l), as.double(F),
+                  as.double(offset), as.double(dm),
                   as.double(betm0), as.double(betQ0), as.double(ssqdf),
                   as.double(ssqsc), as.double(tsqdf), as.double(tsq),
                   as.integer(icf), as.integer(n), as.integer(p), as.integer(nnew),

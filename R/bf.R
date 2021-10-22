@@ -125,7 +125,7 @@ bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
   }
 
   ## Extract data and model
-  nm_DATA <- c("response", "weights", "modelmatrix", "locations",
+  nm_DATA <- c("response", "weights", "modelmatrix", "offset", "locations",
                "longlat")
   nm_MODEL <- c("family", "corrfcn", "betm0", "betQ0", "ssqdf", "ssqsc",
                 "tsqdf", "tsqsc", "dispersion")
@@ -145,6 +145,7 @@ bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
   n <- as.integer(length(y))
   l <- DATA$weights
   F <- DATA$modelmatrix
+  offset <- DATA$offset
   p <- NCOL(F)
   loc <- DATA$locations
   dm <- sp::spDists(loc, longlat = DATA$longlat)
@@ -194,7 +195,7 @@ bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
                 betm0 = betm0, betQ0 = betQ0, ssqdf = ssqdf,
                 ssqsc = ssqsc, tsqdf = tsqdf, tsqsc = tsqsc,
                 dispersion = dispersion, response = y,
-                weights = l, modelmatrix = F,
+                weights = l, modelmatrix = F, offset = offset, 
                 locations = loc, longlat = DATA$longlat,
                 distmat = dm,
                 family = family,
@@ -230,7 +231,7 @@ bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
                   as.double(nu_pnts), as.double(z1),
                   as.integer(Nout1), as.integer(Ntot1),
                   as.double(z2), as.integer(Nout2), as.integer(Ntot2),
-                  as.double(y), as.double(l), as.double(F),
+                  as.double(y), as.double(l), as.double(F), as.double(offset), 
                   as.double(dm), as.double(betm0), as.double(betQ0),
                   as.double(ssqdf), as.double(ssqsc), max(tsqdf, 0),
                   as.double(tsq), as.double(kappa_pnts), as.integer(icf),
@@ -252,7 +253,8 @@ bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
               betm0 = betm0,
               betQ0 = betQ0, ssqdf = ssqdf, ssqsc = ssqsc, tsqdf = tsqdf,
               tsqsc = tsqsc, dispersion = dispersion, response = y, weights = l,
-              modelmatrix = F, locations = loc, distmat = dm, family = family,
+              modelmatrix = F, offset = offset, 
+              locations = loc, distmat = dm, family = family,
               corrfcn = corrfcn, transf = transf,
               real_transf = real_transf, itr = itr,
               pnts = list(nu = nu_pnts, phi = phi_pnts, omg = omg_pnts,

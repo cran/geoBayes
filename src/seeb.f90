@@ -1,5 +1,5 @@
 subroutine llikfcn_dcov_tr (dlglk, phi, omg, nu, kappa, &
-   sample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   sample, Ntot, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, ifam, itr)
 !! Log-likelihood function derivative w.r.t covariance parameters.
 !! itr is the type of transformation used: 0 = no, 1 = mu, 2 = wo.
@@ -10,8 +10,8 @@ subroutine llikfcn_dcov_tr (dlglk, phi, omg, nu, kappa, &
   implicit none
   integer, intent(in) :: n, p, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: phi, omg, nu, &
-     sample(n, Ntot), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappa
+     sample(n,Ntot), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappa
   double precision, intent(out) :: dlglk(3,Ntot)
   logical lmxi
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n, n), &
@@ -32,7 +32,7 @@ subroutine llikfcn_dcov_tr (dlglk, phi, omg, nu, kappa, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
 
@@ -127,7 +127,7 @@ contains
 end subroutine llikfcn_dcov_tr
 
 subroutine llikfcn_hcov_tr (hlglk, phi, omg, nu, kappa, &
-   sample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   sample, Ntot, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, ifam, itr)
 !! Log-likelihood function derivative w.r.t covariance parameters.
 !! itr is the type of transformation used: 0 = no, 1 = mu, 2 = wo.
@@ -138,8 +138,8 @@ subroutine llikfcn_hcov_tr (hlglk, phi, omg, nu, kappa, &
   implicit none
   integer, intent(in) :: n, p, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: phi, omg, nu, &
-     sample(n, Ntot), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappa
+     sample(n,Ntot), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappa
   double precision, intent(out) :: hlglk(3,3,Ntot)
   logical lmxi
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n, n), &
@@ -162,7 +162,7 @@ subroutine llikfcn_hcov_tr (hlglk, phi, omg, nu, kappa, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
   call fill_symmetric_matrix(Ups,n)
@@ -338,7 +338,7 @@ end subroutine llikfcn_hcov_tr
 
 
 subroutine llikfcn_dlnk_tr (dlglk, phi, omg, nu, kappa, &
-   sample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   sample, Ntot, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, ifam, itr)
 !! Log-likelihood function derivative w.r.t link parameter.
 !! itr is the type of transformation used: 0 = no, 1 = mu, 2 = wo.
@@ -349,8 +349,8 @@ subroutine llikfcn_dlnk_tr (dlglk, phi, omg, nu, kappa, &
   implicit none
   integer, intent(in) :: n, p, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: phi, omg, nu, &
-     sample(n, Ntot), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappa
+     sample(n,Ntot), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappa
   double precision, intent(out) :: dlglk(Ntot)
   logical lmxi
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n, n), &
@@ -372,7 +372,7 @@ subroutine llikfcn_dlnk_tr (dlglk, phi, omg, nu, kappa, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
   call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
 
   do j = 1, Ntot
@@ -414,7 +414,7 @@ end subroutine llikfcn_dlnk_tr
 
 
 subroutine llikfcn_hlnk_tr (hlglk, phi, omg, nu, kappa, &
-   sample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   sample, Ntot, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, ifam, itr)
 !! Log-likelihood function.
 !! itr is the type of transformation used: 0 = no, 1 = mu, 2 = wo.
@@ -425,8 +425,8 @@ subroutine llikfcn_hlnk_tr (hlglk, phi, omg, nu, kappa, &
   implicit none
   integer, intent(in) :: n, p, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: phi, omg, nu, &
-     sample(n, Ntot), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappa
+     sample(n,Ntot), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappa
   double precision, intent(out) :: hlglk(Ntot)
   logical lmxi
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n, n), &
@@ -449,7 +449,7 @@ subroutine llikfcn_hlnk_tr (hlglk, phi, omg, nu, kappa, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call rchkusr
 
@@ -525,7 +525,7 @@ end subroutine llikfcn_hlnk_tr
 
 
 subroutine llikfcn_dlnkdcov_tr (dlglk, phi, omg, nu, kappa, &
-   sample, Ntot, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   sample, Ntot, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, ifam, itr)
 !! Log-likelihood function derivative w.r.t link and covariance parameters.
 !! itr is the type of transformation used: 0 = no, 1 = mu, 2 = wo.
@@ -536,8 +536,8 @@ subroutine llikfcn_dlnkdcov_tr (dlglk, phi, omg, nu, kappa, &
   implicit none
   integer, intent(in) :: n, p, ifam, Ntot, icf, itr(n)
   double precision, intent(in) :: phi, omg, nu, &
-     sample(n, Ntot), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappa
+     sample(n,Ntot), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappa
   double precision, intent(out) :: dlglk(3,Ntot)
   logical lmxi
   double precision T(n,n), TiF(n,p), FTF(p,p), Ups(n, n), &
@@ -559,7 +559,7 @@ subroutine llikfcn_dlnkdcov_tr (dlglk, phi, omg, nu, kappa, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   call calc_cov (phi,omg,dm,F,betQ0,kappa,n,p,T,TiF,FTF,Ups,ldh_Ups)
 

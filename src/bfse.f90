@@ -48,14 +48,14 @@ subroutine bfse_no (bf, Sig, SE, VT1, VT2, iref, &
    phi, omg, nu, kappa, &
    philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
-   y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, nnew, kg, ifam, imeth, nb1, nb2, ibvmeth, itr)
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, iref, nb1(kg), nnew, nb2(kg), ibvmeth, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     sample1(n, Ntot1), sample2(n, Ntot2), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, &
+     sample1(n,Ntot1), sample2(n,Ntot2), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, &
      kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
      VT1(nnew), VT2(nnew)
@@ -65,15 +65,15 @@ subroutine bfse_no (bf, Sig, SE, VT1, VT2, iref, &
 
   ! Compute log-likelihood values
   call llikfcn_no (llik1, philist, omglist, nulist, kappalist, sample1, &
-     Ntot1, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot1, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
   call llikfcn_no (llik2, philist, omglist, nulist, kappalist, sample2, &
-     Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
   call llikfcn_no (llikn, phi, omg, nu, kappa, sample2, &
-     Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
   call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
@@ -85,14 +85,14 @@ subroutine bfse_mu (bf, Sig, SE, VT1, VT2, iref, &
    phi, omg, nu, kappa, &
    philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
-   y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, nnew, kg, ifam, imeth, nb1, nb2, ibvmeth, itr)
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, iref, nb1(kg), nnew, nb2(kg), ibvmeth, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     sample1(n, Ntot1), sample2(n, Ntot2), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, &
+     sample1(n,Ntot1), sample2(n,Ntot2), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, &
      kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
      VT1(nnew), VT2(nnew)
@@ -102,15 +102,15 @@ subroutine bfse_mu (bf, Sig, SE, VT1, VT2, iref, &
 
   ! Compute log-likelihood values
   call llikfcn_mu (llik1, philist, omglist, nulist, kappalist, sample1, &
-     Ntot1, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot1, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
   call llikfcn_mu (llik2, philist, omglist, nulist, kappalist, sample2, &
-     Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
   call llikfcn_mu (llikn, phi, omg, nu, kappa, sample2, &
-     Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
   call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
@@ -122,14 +122,14 @@ subroutine bfse_wo (bf, Sig, SE, VT1, VT2, iref, &
    phi, omg, nu, kappa, &
    philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
-   y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, nnew, kg, ifam, imeth, nb1, nb2, ibvmeth, itr)
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, iref, nb1(kg), nnew, nb2(kg), ibvmeth, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     sample1(n, Ntot1), sample2(n, Ntot2), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, &
+     sample1(n,Ntot1), sample2(n,Ntot2), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, &
      kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
      VT1(nnew), VT2(nnew)
@@ -139,15 +139,15 @@ subroutine bfse_wo (bf, Sig, SE, VT1, VT2, iref, &
 
   ! Compute log-likelihood values
   call llikfcn_wo (llik1, philist, omglist, nulist, kappalist, sample1, &
-     Ntot1, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot1, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
   call llikfcn_wo (llik2, philist, omglist, nulist, kappalist, sample2, &
-     Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
   call llikfcn_wo (llikn, phi, omg, nu, kappa, sample2, &
-     Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
   call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
@@ -159,14 +159,14 @@ subroutine bfse_tr (bf, Sig, SE, VT1, VT2, iref, &
    phi, omg, nu, kappa, &
    philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
-   y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    icf, n, p, nnew, kg, ifam, imeth, nb1, nb2, ibvmeth, itr)
   implicit none
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, iref, nb1(kg), nnew, nb2(kg), ibvmeth, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     sample1(n, Ntot1), sample2(n, Ntot2), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, &
+     sample1(n,Ntot1), sample2(n,Ntot2), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, &
      kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
      VT1(nnew), VT2(nnew)
@@ -176,15 +176,15 @@ subroutine bfse_tr (bf, Sig, SE, VT1, VT2, iref, &
 
   ! Compute log-likelihood values
   call llikfcn_tr (llik1, philist, omglist, nulist, kappalist, sample1, &
-     Ntot1, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot1, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
   call llikfcn_tr (llik2, philist, omglist, nulist, kappalist, sample2, &
-     Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, kg, ifam, itr)
 
   call llikfcn_tr (llikn, phi, omg, nu, kappa, sample2, &
-     Ntot2, y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
+     Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
   call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
@@ -245,8 +245,8 @@ subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
   do j = 1, kg
     ia = ie + 1
     ie = ie + Nout1(j)
-    OOmg = OOmg + bmmcvrmat(ibvmeth,YY(ia:ie,:),Nout1(j),kg,nb1(j))*&
-       dble(Nout1(j))/dble(Ntot1)
+    Bet = bmmcvrmat(ibvmeth,YY(ia:ie,:),Nout1(j),kg,nb1(j))
+    OOmg = OOmg + Bet*dble(Nout1(j))/dble(Ntot1)
   end do
 
   do j = 1, kg
@@ -536,6 +536,8 @@ contains
       bmmcvr = bmmcvr_th(x,n,b)
     case (3) ! Spectral modified Bartlett
       bmmcvr = bmmcvr_mb(x,n,b)
+    case default
+      bmmcvr = -huge(bmmcvr)
     end select
   end function bmmcvr
 

@@ -33,6 +33,7 @@
 ##'   time length for Poisson.
 ##' @param subset An optional vector specifying a subset of
 ##'   observations to be used in the fitting process.
+##' @param offset See \code{\link[stats]{lm}}.
 ##' @param atsample A formula in the form \code{~ x1 + x2 + ... + xd}
 ##'   with the coordinates of the sampled locations.
 ##' @param corrfcn Spatial correlation function. See
@@ -166,11 +167,12 @@
 ##' }
 ##' @importFrom sp spDists
 ##' @importFrom stats model.matrix model.response model.weights
-##'   as.formula update
+##'   as.formula update model.offset
 ##' @useDynLib geoBayes mcspsamtry mcspsample
 ##' @export
 mcsglmm <- function (formula, family = "gaussian",
-                     data, weights, subset, atsample, corrfcn = "matern",
+                     data, weights, subset, offset, 
+                     atsample, corrfcn = "matern",
                      linkp, phi, omg, kappa,
                      Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc,
                      corrpriors, corrtuning,
@@ -200,7 +202,7 @@ mcsglmm <- function (formula, family = "gaussian",
   if (length(formula) != 3) stop ("The formula input is incomplete.")
   if ("|" == all.names(formula[[2]], TRUE, 1)) formula[[2]] <- formula[[2]][[2]]
   mfc <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset", "weights"),
+  m <- match(c("formula", "data", "subset", "weights", "offset"),
              names(mfc), 0L)
   mfc <- mfc[c(1L, m)]
   mfc$formula <- formula
@@ -218,6 +220,17 @@ mcsglmm <- function (formula, family = "gaussian",
   }
   yy <- as.double(yy)
   ll <- model.weights(mf)
+  oofset <- as.vector(model.offset(mf))
+  if (!is.null(oofset)) {
+    if (length(oofset) != NROW(yy)) {
+      stop(gettextf("number of offsets is %d, should equal %d (number of observations)", 
+                    length(oofset), NROW(yy)), domain = NA)
+    } else {
+      oofset <- as.double(oofset)
+    }
+  } else {
+    oofset <- double(NROW(yy))
+  }
 
   ## All locations
   atsample <- update(atsample, NULL ~ . + 0) # No response and no intercept
@@ -244,14 +257,16 @@ grater than 3.")
     l <- l - y # Number of failures
   }
   F <- FF[ii, , drop = FALSE]
+  offset <- oofset[ii]
   dm <- sp::spDists(loc[ii, , drop = FALSE], longlat = longlat)
   k0 <- sum(!ii)
   if (k0 > 0) {
     F0 <- FF[!ii, , drop = FALSE]
     dmdm0 <- sp::spDists(loc[ii, , drop = FALSE], loc[!ii, , drop = FALSE],
                          longlat = longlat)
+    offset0 <- oofset[!ii]
   } else {
-    F0 <- dmdm0 <- numeric(0)
+    F0 <- dmdm0 <- offset0 <- numeric(0)
     dim(F0) <- c(0, p)
     dim(dmdm0) <- c(k, 0)
   }
@@ -382,6 +397,7 @@ grater than 3.")
                       kappa = kappa,
                       acc = acc,
                       as.double(y), as.double(l), as.double(F),
+                      as.double(offset), 
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
                       as.double(ssqsc), as.double(phipars),
                       as.double(omgpars), as.double(kappapars),
@@ -423,7 +439,8 @@ grater than 3.")
                       mu = z, mu0 = z0,
                       beta = beta, ssq = ssq,
                       phi = phi, omg = omg, kappa = kappa, acc = acc,
-                      as.double(y), as.double(l), as.double(F), as.double(F0),
+                      as.double(y), as.double(l), as.double(F),
+                      as.double(offset), as.double(F0), as.double(offset0), 
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
                       as.double(ssqsc), as.double(phipars), as.double(omgpars),
                       as.double(kappapars),
@@ -494,6 +511,7 @@ grater than 3.")
   DATA$response <- y
   DATA$weights <- l
   DATA$modelmatrix <- F
+  DATA$offset <- offset
   DATA$locations <- loc[ii, , drop = FALSE]
   DATA$longlat <- longlat
   MODEL$family <- family
@@ -529,6 +547,7 @@ grater than 3.")
 ##' samples.
 ##' @param subset An optional vector specifying a subset of
 ##' observations to be used in the fitting process.
+##' @param offset See \code{\link[stats]{lm}}.
 ##' @param atsample A formula in the form \code{~ x1 + x2 + ... + xd}
 ##' with the coordinates of the sampled locations.
 ##' @param corrfcn Spatial correlation function. See
@@ -661,11 +680,12 @@ grater than 3.")
 ##' }
 ##' @importFrom sp spDists
 ##' @importFrom stats model.matrix model.response model.weights
-##'   as.formula update
+##'   as.formula update model.offset
 ##' @useDynLib geoBayes trgasamtry trgasample
 ##' @export
 mcstrga <- function (formula,
-                     data, weights, subset, atsample, corrfcn = "matern",
+                     data, weights, subset, offset,
+                     atsample, corrfcn = "matern",
                      linkp, phi, omg, kappa,
                      Nout, Nthin = 1, Nbi = 0, betm0, betQ0, ssqdf, ssqsc,
                      tsqdf, tsqsc,
@@ -686,7 +706,7 @@ mcstrga <- function (formula,
   if (length(formula) != 3) stop ("The formula input is incomplete.")
   if ("|" == all.names(formula[[2]], TRUE, 1)) formula[[2]] <- formula[[2]][[2]]
   mfc <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset", "weights"),
+  m <- match(c("formula", "data", "subset", "weights", "offset"),
              names(mfc), 0L)
   mfc <- mfc[c(1L, m)]
   mfc$formula <- formula
@@ -704,6 +724,17 @@ mcstrga <- function (formula,
   }
   yy <- as.double(yy)
   ll <- model.weights(mf)
+  oofset <- as.vector(model.offset(mf))
+  if (!is.null(oofset)) {
+    if (length(oofset) != NROW(yy)) {
+      stop(gettextf("number of offsets is %d, should equal %d (number of observations)", 
+                    length(oofset), NROW(yy)), domain = NA)
+    } else {
+      oofset <- as.double(oofset)
+    }
+  } else {
+    oofset <- double(NROW(yy))
+  }
 
   ## All locations
   atsample <- update(atsample, NULL ~ . + 0) # No response and no intercept
@@ -728,14 +759,16 @@ grater than 3.")
   if (any(l <= 0)) stop ("Non-positive weights not allowed")
   ybar <- y/l
   F <- FF[ii, , drop = FALSE]
+  offset <- oofset[ii]
   dm <- sp::spDists(loc[ii, , drop = FALSE], longlat = longlat)
   k0 <- sum(!ii)
   if (k0 > 0) {
     F0 <- FF[!ii, , drop = FALSE]
     dmdm0 <- sp::spDists(loc[ii, , drop = FALSE], loc[!ii, , drop = FALSE],
                          longlat = longlat)
+    offset0 <- oofset[!ii]
   } else {
-    F0 <- dmdm0 <- numeric(0)
+    F0 <- dmdm0 <- offset0 <- numeric(0)
     dim(F0) <- c(0, p)
     dim(dmdm0) <- c(k, 0)
   }
@@ -869,6 +902,7 @@ grater than 3.")
       RUN <- .Fortran("trgasamtry", ll = lglk, z = z, phi = phi, omg = omg,
                       kappa = kappa, acc = acc,
                       as.double(ybar), as.double(l), as.double(F),
+                      as.double(offset), 
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
                       as.double(ssqsc), as.double(tsqdf), as.double(tsqsc),
                       as.double(phipars), as.double(omgpars),
@@ -912,7 +946,8 @@ grater than 3.")
                       tsq = tsq, phi = phi, omg = omg,
                       kappa = kappa, acc = acc,
                       as.double(ybar),
-                      as.double(l), as.double(F), as.double(F0),
+                      as.double(l), as.double(F),
+                      as.double(offset), as.double(F0), as.double(offset0), 
                       as.double(betm0), as.double(betQ0), as.double(ssqdf),
                       as.double(ssqsc), as.double(tsqdf), as.double(tsqsc),
                       as.double(phipars), as.double(omgpars),
@@ -986,6 +1021,7 @@ grater than 3.")
   DATA$response <- ybar
   DATA$weights <- l
   DATA$modelmatrix <- F
+  DATA$offset <- offset
   DATA$locations <- loc[ii, , drop = FALSE]
   DATA$longlat <- longlat
   MODEL$family <- family

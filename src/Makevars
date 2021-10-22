@@ -32,7 +32,7 @@ pdfy.o: interfaces.o linkfcn.o
 mcsp2.o: msgmc.o mcmcfcns.o modelfcns.o linkfcn.o
 llik.o: modelfcns.o covfun.o pdfy.o betaprior.o
 llikmc.o: modelfcns.o covfun.o pdfy.o betaprior.o
-mcspz0.o: interfaces.o covfun.o pdfy.o
+mcspz0.o: interfaces.o covfun.o pdfy.o modelfcns.o
 skelpnts.o: lbfgsbmod.o pdfdz.o linkfcn.o covfun.o betaprior.o pdfy.o \
   modelfcns.o calcbd_fcns.o
 pdfdz.o: linkfcn.o linkdz.o interfaces.o

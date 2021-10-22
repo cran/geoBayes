@@ -5,7 +5,9 @@
 \alias{geoBayes_models}
 \alias{.geoBayes_models}
 \title{Models used in the geoBayes package}
-\format{An object of class \code{data.frame} with 12 rows and 7 columns.}
+\format{
+An object of class \code{data.frame} with 12 rows and 7 columns.
+}
 \usage{
 .geoBayes_models
 }

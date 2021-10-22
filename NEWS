@@ -1,3 +1,5 @@
+* Include offset variable in the linear predictor.
+
 0.6.3
 * Implemented mala updates for z.
 * Functions linkfcn and linkinv work with NAs in their first input.

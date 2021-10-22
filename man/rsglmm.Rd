@@ -13,6 +13,7 @@ rsglmm(
   data,
   weights,
   subset,
+  offset,
   atsample,
   beta,
   linkp,
@@ -33,6 +34,7 @@ rstrga(
   data,
   weights,
   subset,
+  offset,
   atsample,
   beta,
   linkp,
@@ -51,6 +53,7 @@ rsgrf(
   formula,
   data,
   subset,
+  offset,
   atsample,
   beta,
   phi,
@@ -81,6 +84,8 @@ time length for Poisson.}
 
 \item{subset}{An optional set of indices. Simulations will be
 provided for those locations only.}
+
+\item{offset}{See \code{\link[stats]{lm}}.}
 
 \item{atsample}{A formula of the form \code{~ Xcoord + Ycoord}
 specifying the sampled locations.}

@@ -80,6 +80,7 @@ bf2new <- function (bf1obj, linkp, phi, omg, kappa, useCV = TRUE)
   n <- length(y)
   l <- bf1obj$weights
   F <- bf1obj$modelmatrix
+  offset <- bf1obj$offset
   p <- NCOL(F)
   family <- bf1obj$family
   ifam <- .geoBayes_family(family)
@@ -162,7 +163,7 @@ overflow. Control variates corrections will not be used.")
                     as.double(betm0),
                     as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
                     max(tsqdf, 0), as.double(tsq), as.double(y),
-                    as.double(l), as.double(F), as.double(dm),
+                    as.double(l), as.double(F), as.double(offset), as.double(dm),
                     as.integer(ifam), as.integer(itr),
                     PACKAGE = "geoBayes")
   } else {
@@ -175,8 +176,8 @@ overflow. Control variates corrections will not be used.")
                     as.integer(n), as.integer(p), as.double(betm0),
                     as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
                     max(tsqdf, 0), as.double(tsq), as.double(y), as.double(l),
-                    as.double(F), as.double(dm), as.integer(ifam),
-                    as.integer(itr),
+                    as.double(F), as.double(offset), as.double(dm),
+                    as.integer(ifam), as.integer(itr),
                     PACKAGE = "geoBayes")
   }
 
@@ -385,7 +386,7 @@ plotbf2 <- function (bf2obj, pars = c("linkp", "phi", "omg", "kappa"),
 ##' est
 ##' }
 ##' @importFrom stats optim optimHess
-##' @importFrom optimr optimr
+##' @importFrom optimx optimr
 ##' @useDynLib geoBayes calcb_no_st calcb_mu_st calcb_wo_st calcb_tr_st
 ##' @useDynLib geoBayes calcb_no_cv calcb_mu_cv calcb_wo_cv calcb_tr_cv
 ##' @useDynLib geoBayes calcbd_no calcbd_mu calcbd_wo calcbd_tr
@@ -408,6 +409,7 @@ bf2optim <- function (bf1obj, paroptim, useCV = TRUE,
   l <- bf1obj$weights
   F <- bf1obj$modelmatrix
   p <- NCOL(F)
+  offset <- bf1obj$offset
   family <- bf1obj$family
   ifam <- .geoBayes_family(family)
   corrfcn <- bf1obj$corrfcn
@@ -472,7 +474,7 @@ overflow. Control variates corrections will not be used.")
                  as.double(betm0),
                  as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
                  max(tsqdf, 0), as.double(tsq), as.double(y),
-                 as.double(l), as.double(F), as.double(dm),
+                 as.double(l), as.double(F), as.double(offset), as.double(dm),
                  as.integer(ifam), as.integer(itr),
                  PACKAGE = "geoBayes"), silent = TRUE)
       if (class(RUN) == "try-error") return (NA)
@@ -495,7 +497,7 @@ overflow. Control variates corrections will not be used.")
                  as.double(betm0),
                  as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
                  max(tsqdf, 0), as.double(tsq), as.double(y), as.double(l),
-                 as.double(F), as.double(dm),
+                 as.double(F), as.double(offset), as.double(dm),
                  as.integer(ifam), as.integer(itr),
                  PACKAGE = "geoBayes"), silent = TRUE)
       if (class(RUN) == "try-error") return (NA)
@@ -520,7 +522,7 @@ overflow. Control variates corrections will not be used.")
                as.double(betm0),
                as.double(betQ0), as.double(ssqdf), as.double(ssqsc),
                max(tsqdf, 0), as.double(tsq), as.double(y), as.double(l),
-               as.double(F), as.double(dm),
+               as.double(F), as.double(offset), as.double(dm),
                as.integer(ifam), as.integer(itr), as.integer(useCV),
                PACKAGE = "geoBayes"), silent = TRUE)
     if (class(RUN) == "try-error") return (rep.int(NA, sum(estim)))
@@ -555,13 +557,13 @@ overflow. Control variates corrections will not be used.")
 ###                       lower = lower[estim], upper = upper[estim])
 ###   op$value <- -op$objective + bf1obj$logbf[1]
 ###   op$hessian <- optimHess(op$par, fn, gr, control = control)
-###   op <- optimx::optimx(pstart[estim], fn, gr, method = method,
+###   op <- optimx::optimr(pstart[estim], fn, gr, method = method,
 ###                        lower = lower[estim], upper = upper[estim],
 ###                        control = control, hessian = TRUE)
 ###   op <- stats::optim(pstart[estim], fn, gr, method = method,
 ###                      lower = lower[estim], upper = upper[estim],
 ###                      control = control, hessian = TRUE)
-  op <- optimr::optimr(pstart[estim], fn, gr, method = method,
+  op <- optimx::optimr(pstart[estim], fn, gr, method = method,
                        lower = lower[estim], upper = upper[estim],
                        control = control, hessian = FALSE)
   op$gradient <- gr(op$par)

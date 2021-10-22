@@ -7,7 +7,7 @@
 subroutine bfsp_no (weights, zcv, logbf, lglk1, lglk2, &
    philist, omglist, nulist, &
    zsample1, Nout1, Ntot1, zsample2, Nout2, Ntot2, &
-   y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    kappalist, icf, n, p, kg, ifam, imeth, itr)
   use modelfcns, jointyz_sp => jointyz
   use interfaces
@@ -21,7 +21,7 @@ subroutine bfsp_no (weights, zcv, logbf, lglk1, lglk2, &
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     zsample1(n,Ntot1), zsample2(n,Ntot2), y(n), l(n), F(n, p), &
+     zsample1(n,Ntot1), zsample2(n,Ntot2), y(n), l(n), F(n,p), offset(n), &
      dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: logbf(kg), lglk1(Ntot1,kg), &
      lglk2(Ntot2,kg), weights(Ntot2), zcv(Ntot2,kg)
@@ -40,7 +40,7 @@ subroutine bfsp_no (weights, zcv, logbf, lglk1, lglk2, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   select case (ifam)
   case (0)
@@ -127,7 +127,7 @@ end subroutine bfsp_no
 subroutine bfsp_mu (weights, zcv, logbf, lglk1, lglk2, &
    philist, omglist, nulist, &
    musample1, Nout1, Ntot1, musample2, Nout2, Ntot2, &
-   y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    kappalist, icf, n, p, kg, ifam, imeth, itr)
 
   use modelfcns
@@ -141,8 +141,8 @@ subroutine bfsp_mu (weights, zcv, logbf, lglk1, lglk2, &
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     musample1(n, Ntot1), musample2(n, Ntot2), y(n), l(n), F(n, p), &
-     dm(n, n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
+     musample1(n,Ntot1), musample2(n,Ntot2), y(n), l(n), F(n,p), offset(n), &
+     dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: logbf(kg), lglk1(Ntot1, kg), &
      lglk2(Ntot2, kg), weights(Ntot2), zcv(Ntot2, kg)
   logical lmxi
@@ -159,7 +159,7 @@ subroutine bfsp_mu (weights, zcv, logbf, lglk1, lglk2, &
   respdfh = .5d0*(n + tsqdf)
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   select case (ifam)
   case (0)
@@ -242,7 +242,7 @@ end subroutine bfsp_mu
 subroutine bfsp_wo (weights, zcv, logbf, lglk1, lglk2, &
    philist, omglist, nulist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
-   y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    kappalist, icf, n, p, kg, ifam, imeth, itr)
   use modelfcns, logpdfzf => logpdfz, condymuf => condymu
   use interfaces
@@ -255,7 +255,7 @@ subroutine bfsp_wo (weights, zcv, logbf, lglk1, lglk2, &
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     sample1(n,Ntot1), sample2(n,Ntot2), y(n), l(n), F(n, p), &
+     sample1(n,Ntot1), sample2(n,Ntot2), y(n), l(n), F(n,p), offset(n), &
      dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: logbf(kg), lglk1(Ntot1,kg), &
      lglk2(Ntot2,kg), weights(Ntot2), zcv(Ntot2,kg)
@@ -273,7 +273,7 @@ subroutine bfsp_wo (weights, zcv, logbf, lglk1, lglk2, &
   ssqdfsc = ssqdf*ssqsc
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   do i = 1, kg
     nu = nulist(i)
@@ -339,7 +339,7 @@ end subroutine bfsp_wo
 subroutine bfsp_tr (weights, zcv, logbf, lglk1, lglk2, &
    philist, omglist, nulist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
-   y, l, F, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
+   y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, &
    kappalist, icf, n, p, kg, ifam, imeth, itr)
   use modelfcns, logpdfzf => logpdfz, condymu_mf => condymu
   use interfaces
@@ -353,7 +353,7 @@ subroutine bfsp_tr (weights, zcv, logbf, lglk1, lglk2, &
   integer, intent(in) :: n, p, kg, ifam, imeth, Nout1(kg), Ntot1, &
      Nout2(kg), Ntot2, icf, itr(n)
   double precision, intent(in) :: philist(kg), omglist(kg), nulist(kg), &
-     sample1(n,Ntot1), sample2(n,Ntot2), y(n), l(n), F(n, p), &
+     sample1(n,Ntot1), sample2(n,Ntot2), y(n), l(n), F(n,p), offset(n), &
      dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, kappalist(kg)
   double precision, intent(out) :: logbf(kg), lglk1(Ntot1,kg), &
      lglk2(Ntot2,kg), weights(Ntot2), zcv(Ntot2,kg)
@@ -380,7 +380,7 @@ subroutine bfsp_tr (weights, zcv, logbf, lglk1, lglk2, &
   end select
 
   ! Determine flat or normal prior
-  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+  call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
 
   do i = 1, kg
     nu = nulist(i)

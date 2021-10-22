@@ -6,8 +6,8 @@ module mcmcfcns
      sample_cov, sample_z, sample_z0, samplez_gt, sample_z_mala, samplez_gt_mala
 
 contains
-  subroutine ini_mcmc (lglk, z, p0, phi, omg, kappa, y1, y2, F, icf, dm, &
-     betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, dft, n, p, ifam, &
+  subroutine ini_mcmc (lglk, z, p0, phi, omg, kappa, y1, y2, F, offset, &
+     icf, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, dft, n, p, ifam, &
      betQm0, zmxi, T, TiF, FTF, Ups, Upsz, zUz, ldh_Ups, &
      modeldfh, ssqdfsc, respdf, tsqdfsc, tsqyy, lnewcov)
     ! tsq is either tsq or tsqsc
@@ -21,7 +21,7 @@ contains
     integer, intent(in) :: n, p, ifam, icf
     double precision, intent(in) :: y1(n), y2(n), dm(n,n), &
        F(n,p), kappa, betm0(p), betQ0(p,p), ssqdf, ssqsc, &
-       tsqdf, tsq, phi, omg, dft
+       tsqdf, tsq, phi, omg, dft, offset(n)
     double precision, intent(out) :: zUz, ldh_Ups, modeldfh, ssqdfsc, &
        respdf, tsqdfsc, tsqyy
     double precision, intent(inout) :: z(n)
@@ -40,7 +40,7 @@ contains
     ssqdfsc = ssqdf*ssqsc
 
     ! Determine flat or normal prior
-    call betapriorz (modeldfh, zmxi, lmxi, betm0, betQ0, F, n, p, ssqdf)
+    call betapriorz (modeldfh, zmxi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
     if (lmxi) then
       zmxi = z - zmxi
     else
@@ -243,27 +243,29 @@ contains
     end function log_logitder_ab
   end subroutine sample_cov
 
-  subroutine sample_z0 (z0,z,beta,ssq,phi,omg,n0,n,p,dmdm0,F,F0,kappa,icf,&
-     T, z0_ups, TC, FCTF, lnewcov)
+  subroutine sample_z0 (z0,z,beta,ssq,phi,omg,n0,n,p,dmdm0,F,offset,F0,&
+     offset0,kappa,icf, T, z0_ups, TC, FCTF, lnewcov)
     use interfaces
     use covfun
     implicit none
     integer, intent(in) :: n, n0, p, icf
     double precision, intent(in) :: z(n), beta(p), ssq, phi, omg, &
-       dmdm0(n,n0), F(n,p), F0(n0,p), kappa, T(n,n)
+       dmdm0(n,n0), F(n,p), F0(n0,p), kappa, T(n,n), offset(n), offset0(n0)
     double precision, intent(out) :: z0(n0)
     double precision, intent(inout) :: TC(n,n0), FCTF(n0,p), &
        z0_ups(n0)
     logical, intent(inout) :: lnewcov
     integer j
-    double precision z0_sd(n0), z0_mean(n0)
+    double precision z0_sd(n0), z0_mean(n0), zmo(n)
     call create_spcor(icf,0)
     if (lnewcov) then
       call calc_cov_pred(z0_ups, TC, FCTF, phi, omg, dmdm0, F, &
          F0, kappa, T, n, n0, p)
       lnewcov = .false.
     end if
-    call dgemv ('t',n,n0,1d0,TC,n,z,1,0d0,z0_mean,1) ! z0_mean = C'*T^{-1}*z
+    zmo = z - offset
+    z0_mean = offset0 ! o0
+    call dgemv ('t',n,n0,1d0,TC,n,zmo,1,1d0,z0_mean,1) ! + C'*T^{-1}*(z-o)
     call dgemv ('n',n0,p,1d0,FCTF,n0,beta,1,1d0,z0_mean,1) ! + (F0-C'T^-1F)*beta
     z0_sd = sqrt(ssq)*z0_ups
     do j = 1, n0
