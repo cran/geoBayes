@@ -99,3 +99,9 @@ Log-likelihood approximation.
 Computes and approximation to the log-likelihood for the given
 parameters using integrated nested Laplace approximations.
 }
+\references{
+Evangelou, E., & Roy, V. (2019). Estimation and prediction for
+  spatial generalized linear mixed models with parametric links
+  via reparameterized importance sampling. Spatial Statistics, 29,
+  289-315.
+}

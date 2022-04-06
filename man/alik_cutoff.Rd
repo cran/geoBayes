@@ -43,3 +43,9 @@ cuttoff is calculated using linear interpolation provided by
 The plot can be used to visualise the Laplace approximation to the
 likelihood provided by the function \code{\link{alik_cutoff}}.
 }
+\references{
+Evangelou, E., & Roy, V. (2019). Estimation and prediction for
+  spatial generalized linear mixed models with parametric links
+  via reparameterized importance sampling. Spatial Statistics, 29,
+  289-315.
+}

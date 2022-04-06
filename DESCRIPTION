@@ -7,8 +7,8 @@ Description: Functions to fit geostatistical data. The data can be
         flexible. Conjugate priors are assumed on some parameters while
         inference on the other parameters can be done through a full
         Bayesian analysis of by empirical Bayes methods.
-Version: 0.7.0
-Date: 2021-10-05
+Version: 0.7.1
+Date: 2022-04-06
 Author: Evangelos Evangelou <e.evangelou@maths.bath.ac.uk>, Vivekananda
         Roy <vroy@iastate.edu>
 Maintainer: Evangelos Evangelou <e.evangelou@maths.bath.ac.uk>
@@ -22,6 +22,6 @@ Classification/ACM: 86A32, 62M30, 62F15
 ByteCompile: yes
 NeedsCompilation: yes
 RoxygenNote: 7.1.2
-Packaged: 2021-10-22 08:53:12 UTC; ee224
+Packaged: 2022-04-06 16:18:53 UTC; vangelis
 Repository: CRAN
-Date/Publication: 2021-10-22 09:40:02 UTC
+Date/Publication: 2022-04-06 16:42:29 UTC

@@ -29,8 +29,9 @@ subroutine gaussaprx (mean, prec, fcyz, y1, y2, Ups, ldh_Ups, &
   double precision, intent(out) :: mean(n), prec(n, n), fcyz
   double precision gr(n), gr1(n), gr2(n), fc1, fc2, hs(n)
   double precision tsqdfsc, respdf
-  integer opnb(n), opipr, iflag, maxiter, i
+  integer opnb(n), iflag, maxiter, i
   double precision oplb(n), opub(n), opfac, oppgt
+  type(lbfgsb_store) opstore
   parameter ( maxiter = 1500, opfac = 1d7, oppgt = 0d0 )
 
   opnb = 0
@@ -45,8 +46,8 @@ subroutine gaussaprx (mean, prec, fcyz, y1, y2, Ups, ldh_Ups, &
       call logcondyzdz_gt (fc2, gr2, nu, y1, y2, mean, n, tsqdfsc)
       fcyz = -fc1 - respdf*fc2
       gr = -gr1 - respdf*gr2
-      call lbfgsb (n, mean, oplb, opub, opnb, fcyz, gr, opipr, &
-         opfac, oppgt, iflag)
+      call lbfgsb (n, mean, oplb, opub, opnb, fcyz, gr, &
+         opfac, oppgt, iflag, opstore)
       if (iflag .eq. 0) then
         exit
       else if (iflag .lt. 0) then
@@ -69,8 +70,8 @@ subroutine gaussaprx (mean, prec, fcyz, y1, y2, Ups, ldh_Ups, &
       call logcondyzdz_sp (fc2, gr2, nu, y1, y2, mean, n, tsq)
       fcyz = -fc1 - fc2
       gr = -gr1 - gr2
-      call lbfgsb (n, mean, oplb, opub, opnb, fcyz, gr, opipr, &
-         opfac, oppgt, iflag)
+      call lbfgsb (n, mean, oplb, opub, opnb, fcyz, gr, &
+         opfac, oppgt, iflag, opstore)
       if (iflag .eq. 0) then
         exit
       else if (iflag .lt. 0) then

@@ -477,7 +477,7 @@ overflow. Control variates corrections will not be used.")
                  as.double(l), as.double(F), as.double(offset), as.double(dm),
                  as.integer(ifam), as.integer(itr),
                  PACKAGE = "geoBayes"), silent = TRUE)
-      if (class(RUN) == "try-error") return (NA)
+      if (inherits(RUN, "try-error")) return (NA)
       -RUN[[1]][1]
     }
   } else {
@@ -500,7 +500,7 @@ overflow. Control variates corrections will not be used.")
                  as.double(F), as.double(offset), as.double(dm),
                  as.integer(ifam), as.integer(itr),
                  PACKAGE = "geoBayes"), silent = TRUE)
-      if (class(RUN) == "try-error") return (NA)
+      if (inherits(RUN, "try-error")) return (NA)
       -RUN[[1]][1]
     }
   }
@@ -525,7 +525,7 @@ overflow. Control variates corrections will not be used.")
                as.double(F), as.double(offset), as.double(dm),
                as.integer(ifam), as.integer(itr), as.integer(useCV),
                PACKAGE = "geoBayes"), silent = TRUE)
-    if (class(RUN) == "try-error") return (rep.int(NA, sum(estim)))
+    if (inherits(RUN, "try-error")) return (rep.int(NA, sum(estim)))
     gg <- -do.call("c", RUN[2:5])[estim] * d1[estim]
     gg
   }

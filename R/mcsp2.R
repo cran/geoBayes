@@ -57,7 +57,7 @@
 ##'   and it corresponds to the fixed value of \code{kappa}. This can be
 ##'   a vector of the same length as Nout.
 ##' @param Nout Number of MCMC samples to return. This can be a vector
-##'   for running independent chains.
+##'   for running independent chains. 0 elements are dropped.
 ##' @param Nthin The thinning of the MCMC algorithm.
 ##' @param Nbi The burn-in of the MCMC algorithm.
 ##' @param betm0 Prior mean for beta (a vector or scalar).
@@ -290,7 +290,8 @@ grater than 3.")
 
   ## MCMC samples
   Nout <- as.integer(Nout)
-  if (any(Nout < 0)) stop ("Negative MCMC sample size entered.")
+  if (any(Nout < 0L)) stop ("Negative MCMC sample size entered.")
+  Nout <- Nout[Nout > 0L]
   nch <- length(Nout)         # Number of chains
   Nmc <- Nout                 # Size of each chain
   Nout <- sum(Nout)           # Total MCMC size

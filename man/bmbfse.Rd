@@ -10,7 +10,7 @@ bmbfse(
   bfsize1 = 0.8,
   nbatch1 = 0.5,
   nbatch2 = 0.5,
-  method = c("RL", "MW"),
+  S1method = c("RL", "MW"),
   bvmethod = c("Standard", "TukeyHanning", "Bartlett"),
   reference = 1,
   transf = c("no", "mu", "wo")
@@ -43,8 +43,8 @@ used for calculating how many batches to split each of the
 sample in runs for the calculation of the Bayes factors standard
 errors for the parameters corresponding to \code{pargrid}.}
 
-\item{method}{Which method to use to calculate the Bayes factors:
-Reverse logistic or Meng-Wong.}
+\item{S1method}{Which method to use to calculate the Bayes factors
+in stage 1: Reverse logistic or Meng-Wong.}
 
 \item{bvmethod}{Which method to use for the calculation of the
 batch variance. The standard method splits to disjoint batches.
@@ -63,8 +63,8 @@ can be used only for the families indicated by
 \value{
 A list with components
 \itemize{
-\item \code{pargrid} The inputted pargrid augmented with the computed standard
-errors.
+\item \code{pargrid} The inputted pargrid augmented with the
+  computed log Bayes factors and standard errors.
 \item \code{bfEstimate} The estimates of the Bayes factors
 \item \code{bfSigma} The covariance matrix for the Bayes factors
 estimates.

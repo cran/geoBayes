@@ -24,8 +24,8 @@
 ##'   used for calculating how many batches to split each of the
 ##'   sample in runs for the calculation of the Bayes factors standard
 ##'   errors for the parameters corresponding to \code{pargrid}.
-##' @param method Which method to use to calculate the Bayes factors:
-##'   Reverse logistic or Meng-Wong.
+##' @param S1method Which method to use to calculate the Bayes factors
+##'    in stage 1: Reverse logistic or Meng-Wong.
 ##' @param bvmethod Which method to use for the calculation of the
 ##'   batch variance. The standard method splits to disjoint batches.
 ##'   The second and third method use the spectral variance method
@@ -39,8 +39,8 @@
 ##'   \code{.geoBayes_models$haswo}.
 ##' @return A list with components
 ##' \itemize{
-##' \item \code{pargrid} The inputted pargrid augmented with the computed standard
-##' errors.
+##' \item \code{pargrid} The inputted pargrid augmented with the
+##'   computed log Bayes factors and standard errors.
 ##' \item \code{bfEstimate} The estimates of the Bayes factors
 ##' \item \code{bfSigma} The covariance matrix for the Bayes factors
 ##' estimates.
@@ -55,13 +55,13 @@
 ##' @useDynLib geoBayes bfse_no bfse_mu bfse_wo bfse_tr
 ##' @export
 bmbfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
-                   method = c("RL", "MW"),
+                   S1method = c("RL", "MW"),
                    bvmethod = c("Standard", "TukeyHanning", "Bartlett"),
                    reference = 1, transf = c("no", "mu", "wo"))
 {
-  ## Method
-  method <- match.arg(method)
-  imeth <- match(method, eval(formals()$method))
+  ## Stage 1 method
+  S1method <- match.arg(S1method)
+  imeth <- match(S1method, eval(formals()$S1method))
 
   ## Batch variance method
   bvmethod <- match.arg(bvmethod)
@@ -187,11 +187,13 @@ bmbfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
   SE <- numeric(nnew)
   bf <- numeric(nruns)
   Sig <- numeric((nruns - 1)^2)
-  VT1 <- VT2 <- numeric(nnew)
+  VT1 <- VT2 <- logbfnew <- numeric(nnew)
 
-  RUN <- .Fortran(froutine, bf = bf, Sig = Sig, SE = SE, VT1 = VT1,
+  RUN <- .Fortran(froutine, bf = bf, logbfnew = logbfnew, 
+                  Sig = Sig, SE = SE, VT1 = VT1,
                   VT2 = VT2, as.integer(reference),
-                  as.double(phi), as.double(omg), as.double(nu), as.double(kappa),
+                  as.double(phi), as.double(omg), as.double(nu),
+                  as.double(kappa),
                   as.double(phi_pnts), as.double(omg_pnts),
                   as.double(nu_pnts), as.double(kappa_pnts),
                   as.double(z1), as.integer(Nout1), as.integer(Ntot1),
@@ -200,13 +202,15 @@ bmbfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
                   as.double(offset), as.double(dm),
                   as.double(betm0), as.double(betQ0), as.double(ssqdf),
                   as.double(ssqsc), as.double(tsqdf), as.double(tsq),
-                  as.integer(icf), as.integer(n), as.integer(p), as.integer(nnew),
+                  as.integer(icf), as.integer(n), as.integer(p),
+                  as.integer(nnew),
                   as.integer(nruns), as.integer(ifam),
                   as.integer(imeth), as.integer(nb1), as.integer(nb2),
                   as.integer(ibvmeth), as.integer(itr), PACKAGE = "geoBayes")
 
   ## Return
   out <- list()
+  pargrid$logbf <- RUN$logbfnew
   pargrid$SE <- RUN$SE/sqrt(Ntot2)
   out$pargrid <- pargrid
   out$bfEstimate <- RUN$bf
@@ -222,11 +226,10 @@ groupColMeans <- function (x, i) {
   ## according to the factor i. Returns a matrix with as many columns
   ## as x and as many rows as the number of levels in i.
   x <- as.matrix(x)
-  rx <- nrow(x)
-  cx <- ncol(x)
-  m <- tapply(seq_len(rx), i, function(jj) colMeans(x[jj, , drop = FALSE]),
-              simplify = FALSE)
-  matrix(unlist(m), ncol = cx, byrow = TRUE)
+  i <- as.factor(i)
+  xi <- split.data.frame(x, i, drop = FALSE)
+  m <- lapply(xi, colMeans)
+  do.call(rbind, m)
 }
 
 bmmcse <- function(x, size)
@@ -309,8 +312,8 @@ bmmcse <- function(x, size)
 ##   calculating how many batches to split each of the sample in runs
 ##   for the calculation of the Bayes factors standard errors for the
 ##   parameters corresponding to \code{theta1}.
-## @param method Which method to use to calculate the Bayes factors:
-## Reverse logistic or Meng-Wong.
+## @param S1method Which method to use to calculate the Bayes factors
+## in stage 1: Reverse logistic or Meng-Wong.
 ## @param bvmethod Which method to use for the calculation of the
 ##   batch variance. The standard method splits to disjoint batches.
 ##   The second and third method use the spectral variance method
@@ -328,13 +331,13 @@ bmmcse <- function(x, size)
 ## }
 bfsecalc <- function(sample, theta0, theta1, llikfun, MoreArgs = NULL,
                      bfsize1 = 0.8, nbatch1 = 0.5, nbatch2 = 0.5,
-                     method = c("RL", "MW"),
+                     S1method = c("RL", "MW"),
                      bvmethod = c("Standard", "TukeyHanning", "Bartlett"),
                      reference = 1)
 {
-  ## Method
-  method <- match.arg(method)
-  imeth <- match(method, eval(formals()$method))
+  ## Stage 1 method
+  S1method <- match.arg(S1method)
+  imeth <- match(S1method, eval(formals()$S1method))
 
   ## Batch variance method
   bvmethod <- match.arg(bvmethod)
@@ -392,22 +395,22 @@ bfsecalc <- function(sample, theta0, theta1, llikfun, MoreArgs = NULL,
 
   ## Compute SE
   bf <- numeric(kg)
-  SE <- VT1 <- VT2 <- numeric(nnew)
+  SE <- VT1 <- VT2 <- logbfnew <- numeric(nnew)
   Sig <- matrix(0, kg-1, kg-1)
   Bet <- Omg <- matrix(0, kg, kg)
-  fcall <- .Fortran("bfsecalc", bf, Sig, SE, VT1, VT2, reference,
+  fcall <- .Fortran("bfsecalc", bf, logbfnew, Sig, SE, VT1, VT2, reference,
                     llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2,
                     nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, Omg,
                     PACKAGE = "geoBayes")
 
-  Bet <- fcall[[20]]; Bet[lower.tri(Bet)] <- t(Bet)[lower.tri(Bet)]
-  Omg <- fcall[[21]]; Omg[lower.tri(Omg)] <- t(Omg)[lower.tri(Omg)]
+  Bet <- fcall[[21]]; Bet[lower.tri(Bet)] <- t(Bet)[lower.tri(Bet)]
+  Omg <- fcall[[22]]; Omg[lower.tri(Omg)] <- t(Omg)[lower.tri(Omg)]
   BMP <- chol2inv(chol(Bet + 1/kg)) - 1/kg
   BOB <- t(BMP) %*% Omg %*% BMP
 
   ## Return
-  out <- fcall[1:5]
-  names(out) <- c("logbf", "bfSigma", "SE", "VT1", "VT2")
+  out <- fcall[1:6]
+  names(out) <- c("bf", "logbfnew", "bfSigma", "SE", "VT1", "VT2")
   out$Varlogbf <- BOB
   out
 }

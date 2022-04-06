@@ -85,7 +85,7 @@ and it corresponds to the fixed value of \code{kappa}. This can be
 a vector of the same length as Nout.}
 
 \item{Nout}{Number of MCMC samples to return. This can be a vector
-for running independent chains.}
+for running independent chains. 0 elements are dropped.}
 
 \item{Nthin}{The thinning of the MCMC algorithm.}
 

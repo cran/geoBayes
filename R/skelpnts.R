@@ -65,6 +65,10 @@
 ##' @useDynLib geoBayes llikparscalc
 ##' @importFrom stats model.offset
 ##' @export
+##' @references Evangelou, E., & Roy, V. (2019). Estimation and prediction for
+##'   spatial generalized linear mixed models with parametric links
+##'   via reparameterized importance sampling. Spatial Statistics, 29,
+##'   289-315.
 alik_inla <- function (par_vals, formula,
                        family = "gaussian",
                        data, weights, subset, offset, atsample,
@@ -258,6 +262,10 @@ grater than 3.")
 ##' @importFrom optimx optimr
 ##' @useDynLib geoBayes llikparsval
 ##' @export
+##' @references Evangelou, E., & Roy, V. (2019). Estimation and prediction for
+##'   spatial generalized linear mixed models with parametric links
+##'   via reparameterized importance sampling. Spatial Statistics, 29,
+##'   289-315.
 alik_optim <- function (paroptim,
                       formula,
                       family = "gaussian",
@@ -413,7 +421,7 @@ grater than 3.")
                as.integer(np), as.double(ssq), ifam, icf,
                PACKAGE = "geoBayes"),
       silent = TRUE)
-    if (class(f90) == "try-error") return (NA)
+    if (inherits(f90, "try-error")) return (NA)
     -f90[[1]]
   }
   gr <- function (par)
@@ -435,7 +443,7 @@ grater than 3.")
                dm, tsq, tsqdf, as.integer(n), as.integer(p),
                as.integer(np), ssq, ifam, icf, PACKAGE = "geoBayes"),
       silent = TRUE)
-    if (class(f90) == "try-error") return (rep(NA, sum(estim)))
+    if (inherits(f90, "try-error")) return (rep(NA, sum(estim)))
     -f90[[2]][estim]*d1[estim]
   }
   method <- "L-BFGS-B" # if (sum(estim) == 1) "Brent" else "L-BFGS-B"
@@ -487,6 +495,10 @@ grater than 3.")
 ##'   relative to the maximum value of the log-likelihood.
 ##' @return A list with the log-likelihood approximation and cutoff values.
 ##' @export
+##' @references Evangelou, E., & Roy, V. (2019). Estimation and prediction for
+##'   spatial generalized linear mixed models with parametric links
+##'   via reparameterized importance sampling. Spatial Statistics, 29,
+##'   289-315.
 alik_cutoff <- function (likopt, par_vals, likthreshold) {
   ## For each parameter value in par_vals, fix the other parameters at
   ## likopt and compute the approximate log-likelihood.

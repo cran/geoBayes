@@ -97,3 +97,9 @@ Uses the "L-BFGS-B" method of the function
 \code{\link[stats]{optim}} to maximise the log-likelihood for the
 parameters \code{linkp}, \code{phi}, \code{omg}, \code{kappa}.
 }
+\references{
+Evangelou, E., & Roy, V. (2019). Estimation and prediction for
+  spatial generalized linear mixed models with parametric links
+  via reparameterized importance sampling. Spatial Statistics, 29,
+  289-315.
+}

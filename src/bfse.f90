@@ -44,7 +44,7 @@
 !!! @param ibvmeth	Which method to use for batch variance calculation
 !!! @return SE, logbf, Sig, VT1, VT2
 
-subroutine bfse_no (bf, Sig, SE, VT1, VT2, iref, &
+subroutine bfse_no (bf, logbfnew, Sig, SE, VT1, VT2, iref, &
    phi, omg, nu, kappa, &
    philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
@@ -58,7 +58,7 @@ subroutine bfse_no (bf, Sig, SE, VT1, VT2, iref, &
      dm(n,n), betm0(p), betQ0(p, p), ssqdf, ssqsc, tsqdf, tsq, &
      kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
-     VT1(nnew), VT2(nnew)
+     VT1(nnew), VT2(nnew), logbfnew(nnew)
   double precision llik1(Ntot1,kg), llik2(Ntot2,kg), &
      llikn(Ntot2,nnew)
   double precision Bet(kg,kg), OOmg(kg,kg)
@@ -76,12 +76,12 @@ subroutine bfse_no (bf, Sig, SE, VT1, VT2, iref, &
      Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
-  call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
+  call bfsecalc (bf, logbfnew, Sig, SE, VT1, VT2, iref, &
    llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2, &
    nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, OOmg)
 end subroutine bfse_no
 
-subroutine bfse_mu (bf, Sig, SE, VT1, VT2, iref, &
+subroutine bfse_mu (bf, logbfnew, Sig, SE, VT1, VT2, iref, &
    phi, omg, nu, kappa, &
    philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
@@ -95,7 +95,7 @@ subroutine bfse_mu (bf, Sig, SE, VT1, VT2, iref, &
      dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, &
      kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
-     VT1(nnew), VT2(nnew)
+     VT1(nnew), VT2(nnew), logbfnew(nnew)
   double precision llik1(Ntot1,kg), llik2(Ntot2,kg), &
      llikn(Ntot2,nnew)
   double precision Bet(kg,kg), OOmg(kg,kg)
@@ -113,12 +113,12 @@ subroutine bfse_mu (bf, Sig, SE, VT1, VT2, iref, &
      Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
-  call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
+  call bfsecalc (bf, logbfnew, Sig, SE, VT1, VT2, iref, &
      llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2, &
      nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, OOmg)
 end subroutine bfse_mu
 
-subroutine bfse_wo (bf, Sig, SE, VT1, VT2, iref, &
+subroutine bfse_wo (bf, logbfnew, Sig, SE, VT1, VT2, iref, &
    phi, omg, nu, kappa, &
    philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
@@ -132,7 +132,7 @@ subroutine bfse_wo (bf, Sig, SE, VT1, VT2, iref, &
      dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, &
      kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
-     VT1(nnew), VT2(nnew)
+     VT1(nnew), VT2(nnew), logbfnew(nnew)
   double precision llik1(Ntot1,kg), llik2(Ntot2,kg), &
      llikn(Ntot2,nnew)
   double precision Bet(kg,kg), OOmg(kg,kg)
@@ -150,12 +150,12 @@ subroutine bfse_wo (bf, Sig, SE, VT1, VT2, iref, &
      Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
-  call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
+  call bfsecalc (bf, logbfnew, Sig, SE, VT1, VT2, iref, &
    llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2, &
    nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, OOmg)
 end subroutine bfse_wo
 
-subroutine bfse_tr (bf, Sig, SE, VT1, VT2, iref, &
+subroutine bfse_tr (bf, logbfnew, Sig, SE, VT1, VT2, iref, &
    phi, omg, nu, kappa, &
    philist, omglist, nulist, kappalist, &
    sample1, Nout1, Ntot1, sample2, Nout2, Ntot2, &
@@ -169,7 +169,7 @@ subroutine bfse_tr (bf, Sig, SE, VT1, VT2, iref, &
      dm(n,n), betm0(p), betQ0(p,p), ssqdf, ssqsc, tsqdf, tsq, &
      kappalist(kg), phi(nnew), omg(nnew), nu(nnew), kappa(nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
-     VT1(nnew), VT2(nnew)
+     VT1(nnew), VT2(nnew), logbfnew(nnew)
   double precision llik1(Ntot1,kg), llik2(Ntot2,kg), &
      llikn(Ntot2,nnew)
   double precision Bet(kg,kg), OOmg(kg,kg)
@@ -187,14 +187,14 @@ subroutine bfse_tr (bf, Sig, SE, VT1, VT2, iref, &
      Ntot2, y, l, F, offset, dm, betm0, betQ0, ssqdf, ssqsc, tsqdf, tsq, icf, &
      n, p, nnew, ifam, itr)
 
-  call bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
+  call bfsecalc (bf, logbfnew, Sig, SE, VT1, VT2, iref, &
    llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2, &
    nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, OOmg)
 end subroutine bfse_tr
 
 
 
-subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
+subroutine bfsecalc (bf, logbfnew, Sig, SE, VT1, VT2, iref, &
    llik1, llik2, llikn, Nout1, Ntot1, Nout2, Ntot2, &
    nnew, kg, imeth, nb1, nb2, ibvmeth, Bet, OOmg)
   use bmargin
@@ -204,7 +204,7 @@ subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
   double precision, intent(in) :: &
      llik1(Ntot1,kg), llik2(Ntot2,kg), llikn(Ntot2,nnew)
   double precision, intent(out) :: bf(kg), SE(nnew), Sig(1:kg-1,1:kg-1), &
-     VT1(nnew), VT2(nnew), OOmg(kg,kg)
+     VT1(nnew), VT2(nnew), OOmg(kg,kg), logbfnew(nnew)
   double precision eta(kg), logbf(kg)
   double precision logYY(Ntot1,kg), YY(Ntot1,kg), logVV(Ntot2,nnew), &
      VV(Ntot2,nnew), VVcol(Ntot2)
@@ -272,6 +272,7 @@ subroutine bfsecalc (bf, Sig, SE, VT1, VT2, iref, &
 9 kgm1 = kg - 1
   logN = log(dble(Nout2))
   eta = logN - logbf
+  logbfnew = logbfnew_calc(llik2,llikn,eta,Ntot2,kg,nnew)
   OOmgBD = 0d0
   Sig = 0d0
   SigC = 0d0
@@ -595,18 +596,39 @@ contains
     integer, intent(in) :: m
     double precision, intent(in) :: x(m)
     integer i
-    mean = sum(x)
-    if (isfinite(mean) .ne. 0) then
-      ! No overflow problems
-      mean = mean/dble(m)
-    else
-      ! Overflow
-      mean = 0d0
-      do i = 1, m
-        mean = mean + (x(i) - mean)/dble(i)
-      end do
-    end if
+    double precision tot, tot0, mm
+    mean = 0d0
+    tot = 0d0
+    mm = dble(m)
+    do i = 1, m
+      tot0 = tot
+      tot = tot + x(i)
+      if (isfinite(tot) .eq. 0) then
+        mean = mean + tot0/mm
+        tot = x(i)
+      end if
+    end do
+    mean = mean + tot/mm
   end function mean
+
+  function logbfnew_calc (llik2,llikn,eta,Ntot,kg,nnew)
+    use flogsumexp, only: logrsumexp, logcsumexp
+    implicit none
+    integer, intent(in) :: Ntot, kg, nnew
+    double precision, intent(in) :: llik2(Ntot,kg), llikn(Ntot,nnew), &
+       eta(kg)
+    double precision logbfnew_calc(nnew)
+    double precision logb(Ntot,nnew)
+    double precision lliketa(Ntot,kg), lgdenom(Ntot)
+    if (nnew .gt. 0) then
+      lliketa = spread(eta,1,Ntot)
+      lliketa = llik2 + lliketa
+      lgdenom = logrsumexp(lliketa,Ntot,kg)
+      logb = spread(lgdenom,2,nnew)
+      logb = llikn - logb
+      logbfnew_calc = logcsumexp(logb,Ntot,nnew)
+    end if
+  end function logbfnew_calc
 end subroutine bfsecalc
 
 
@@ -649,20 +671,20 @@ subroutine logbfcalc (logbf, logbfnew, iref, &
   end if
 
 contains
-  function logbfnew_calc (llik1,llik2,eta,Ntot,kg,nnew)
+  function logbfnew_calc (llik2,llikn,eta,Ntot,kg,nnew)
     use flogsumexp, only: logrsumexp, logcsumexp
     implicit none
     integer, intent(in) :: Ntot, kg, nnew
-    double precision, intent(in) :: llik1(Ntot,kg), llik2(Ntot,nnew), &
+    double precision, intent(in) :: llik2(Ntot,kg), llikn(Ntot,nnew), &
        eta(kg)
     double precision logbfnew_calc(nnew)
     double precision logb(Ntot,nnew)
     double precision lliketa(Ntot,kg), lgdenom(Ntot)
     lliketa = spread(eta,1,Ntot)
-    lliketa = llik1 + lliketa
+    lliketa = llik2 + lliketa
     lgdenom = logrsumexp(lliketa,Ntot,kg)
     logb = spread(lgdenom,2,nnew)
-    logb = llik2 - logb
+    logb = llikn - logb
     logbfnew_calc = logcsumexp(logb,Ntot,nnew)
   end function logbfnew_calc
 end subroutine logbfcalc

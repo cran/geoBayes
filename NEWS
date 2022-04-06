@@ -1,4 +1,6 @@
+0.7.1
 * Include offset variable in the linear predictor.
+* Include method for choosing the proposal distributions.
 
 0.6.3
 * Implemented mala updates for z.

@@ -12,7 +12,8 @@ contains
     double precision, intent(in) :: llik(Ntot,kg)
     double precision, intent(inout) :: eta(kg)
     double precision lgdenom(Ntot), logp(Ntot,kg), lliketa(Ntot,kg)
-    integer, parameter :: maxit=500, iprint(2) = (/-1,0/)
+    integer, parameter :: maxit=500
+    type(lbfgsb_store) opstore
     ! double precision, parameter :: epstol = 5d-5
     double precision, parameter :: pgtol = 0d-5, factr = 1d7
     double precision neglogfun, neglogfun_grad(kg)
@@ -47,7 +48,7 @@ contains
       !       call lbfgs (kg-1,eta(2:kg),neglogfun,neglogfun_grad(2:kg),&
       !          iprint,epstol,iflag)
       call lbfgsb (kg,eta,etalo,etaup,etabd,neglogfun,neglogfun_grad,&
-         iprint(1),factr,pgtol,iflag)
+         factr,pgtol,iflag,opstore)
       if (iflag == 0) then
         !       print '(" Convergence in ",I0," iterations")', i
         exit

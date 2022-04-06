@@ -40,27 +40,28 @@ module lbfgsbmod
 
   private
 
-  integer, parameter :: msv = 10
-  logical, save :: lsv(4)
-  integer, save :: isv(44)
-  double precision, save :: dsv(29)
-  character(60), save :: csv
-  logical :: wi_isal = .false., wa_isal = .false.
-  integer :: alstat
-  integer, target, save, allocatable :: wrki(:)
-  double precision, target, save, allocatable :: wrka(:)
-  character(60), save :: ctask
+  type lbfgsb_store
+    logical :: lsv(4)
+    integer :: isv(44)
+    double precision :: dsv(29)
+    character(60) :: csv
+    character(60) :: ctask
+    integer, pointer :: wrki(:)
+    double precision, pointer :: wrka(:)
+  end type lbfgsb_store
 
-  public lbfgsb
+  public lbfgsb, lbfgsb_store
 
 contains
 
-  subroutine lbfgsb (n,x,xl,xu,xnb,f,g,iprint,factr,pgtol,iflag)
+  subroutine lbfgsb (n,x,xl,xu,xnb,f,g,factr,pgtol,iflag,store)
 
-    integer, intent(in) :: n, xnb(n), iprint
+    integer, intent(in) :: n, xnb(n)
     integer, intent(inout) :: iflag
     double precision, intent(inout) :: x(n)
     double precision, intent(in) :: f, g(n), factr, pgtol, xl(n), xu(n)
+    type(lbfgsb_store), intent(inout) :: store
+    integer, parameter :: iprint=-1, msv = 10
 
     integer ::   lws,lr,lz,lt,ld,lsg,lwa,lyg, &
        lsgo,lwy,lsy,lss,lyy,lwt,lwn,lsnd,lygo
@@ -68,60 +69,50 @@ contains
     double precision, pointer :: wa(:)
 
     if (iflag == 0) then
-      ctask = 'START'
-      isv(1)  = msv*n
-      isv(2)  = msv**2
-      isv(3)  = 4*msv**2
-      isv(4)  = 1
-      isv(5)  = isv(4)  + isv(1)
-      isv(6)  = isv(5)  + isv(1)
-      isv(7)  = isv(6)  + isv(2)
-      isv(8)  = isv(7)  + isv(2)
-      isv(9)  = isv(8)  + isv(2)
-      isv(10) = isv(9)  + isv(2)
-      isv(11) = isv(10) + isv(3)
-      isv(12) = isv(11) + isv(3)
-      isv(13) = isv(12) + n
-      isv(14) = isv(13) + n
-      isv(15) = isv(14) + n
-      isv(16) = isv(15) + n
-      isv(17) = isv(16) + 8*msv
-      isv(18) = isv(17) + msv
-      isv(19) = isv(18) + msv
-      isv(20) = isv(19) + msv
+      store%ctask = 'START'
+      store%isv(1)  = msv*n
+      store%isv(2)  = msv**2
+      store%isv(3)  = 4*msv**2
+      store%isv(4)  = 1
+      store%isv(5)  = store%isv(4)  + store%isv(1)
+      store%isv(6)  = store%isv(5)  + store%isv(1)
+      store%isv(7)  = store%isv(6)  + store%isv(2)
+      store%isv(8)  = store%isv(7)  + store%isv(2)
+      store%isv(9)  = store%isv(8)  + store%isv(2)
+      store%isv(10) = store%isv(9)  + store%isv(2)
+      store%isv(11) = store%isv(10) + store%isv(3)
+      store%isv(12) = store%isv(11) + store%isv(3)
+      store%isv(13) = store%isv(12) + n
+      store%isv(14) = store%isv(13) + n
+      store%isv(15) = store%isv(14) + n
+      store%isv(16) = store%isv(15) + n
+      store%isv(17) = store%isv(16) + 8*msv
+      store%isv(18) = store%isv(17) + msv
+      store%isv(19) = store%isv(18) + msv
+      store%isv(20) = store%isv(19) + msv
       ! Allocate arrays:
-      if (wi_isal) then
-        deallocate (wrki,stat=alstat)
-        if (alstat == 0) wi_isal = .false.
-      end if
-      allocate (wrki(3*n),stat=alstat)
-      if (alstat == 0) wi_isal = .true.
-      if (wa_isal) then
-        deallocate (wrka,stat=alstat)
-        if (alstat == 0) wa_isal = .false.
-      end if
-      allocate (wrka(2*msv*n+4*n+12*msv*msv+12*msv),stat=alstat)
-      if (alstat == 0) wa_isal = .true.
+      allocate (store%wrki(3*n))
+      allocate (store%wrka(2*msv*n+4*n+12*msv*msv+12*msv))
     end if
-    iwa => wrki
-    wa => wrka
-    lws  = isv(4)
-    lwy  = isv(5)
-    lsy  = isv(6)
-    lss  = isv(7)
-    lyy  = isv(8)
-    lwt  = isv(9)
-    lwn  = isv(10)
-    lsnd = isv(11)
-    lz   = isv(12)
-    lr   = isv(13)
-    ld   = isv(14)
-    lt   = isv(15)
-    lwa  = isv(16)
-    lsg  = isv(17)
-    lsgo = isv(18)
-    lyg  = isv(19)
-    lygo = isv(20)
+    iwa => store%wrki
+    wa => store%wrka
+    lws  = store%isv(4)
+    lwy  = store%isv(5)
+    lsy  = store%isv(6)
+    lss  = store%isv(7)
+    lyy  = store%isv(8)
+    lwt  = store%isv(9)
+    lwn  = store%isv(10)
+    lsnd = store%isv(11)
+    lz   = store%isv(12)
+    lr   = store%isv(13)
+    ld   = store%isv(14)
+    lt   = store%isv(15)
+    lwa  = store%isv(16)
+    lsg  = store%isv(17)
+    lsgo = store%isv(18)
+    lyg  = store%isv(19)
+    lygo = store%isv(20)
 
     call mainlb(n,msv,x,xl,xu,xnb,f,g,factr,pgtol, &
        wa(lws:lws+n*msv-1),wa(lwy:lwy+n*msv-1),wa(lsy:lsy+msv*msv-1),&
@@ -130,18 +121,18 @@ contains
        wa(lr:lr+n-1), wa(ld:ld+n-1),wa(lt:lt+n-1),wa(lwa:lwa+8*msv-1),&
        wa(lsg:lsg+msv-1),wa(lsgo:lsgo+msv-1),wa(lyg:lyg+ msv-1),&
        wa(lygo:lygo+msv-1), &
-       iwa(1:n),iwa(n+1:2*n),iwa(2*n+1:3*n),ctask,iprint, &
-       csv,lsv,isv(22:),dsv)
+       iwa(1:n),iwa(n+1:2*n),iwa(2*n+1:3*n),store%ctask,iprint, &
+       store%csv,store%lsv,store%isv(22:44),store%dsv)
 
-    if (ctask(1:4) .eq. 'CONV') then
+    if (store%ctask(1:4) .eq. 'CONV') then
       iflag = 0
-    else if (ctask(1:4) .eq. 'ABNO') then
+    else if (store%ctask(1:4) .eq. 'ABNO') then
       iflag = -1
-    else if (ctask(1:5) .eq. 'ERROR') then
+    else if (store%ctask(1:5) .eq. 'ERROR') then
       iflag = -2
-    else if (ctask(1:2) .eq. 'FG') then
+    else if (store%ctask(1:2) .eq. 'FG') then
       iflag = 1
-    else if (ctask(1:5) .eq. 'NEW_X') then
+    else if (store%ctask(1:5) .eq. 'NEW_X') then
       iflag = 2
     else
       iflag = -3
