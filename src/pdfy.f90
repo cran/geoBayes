@@ -7,7 +7,7 @@
 module pdfy
 contains
 !!!!!!!!!!!!!! Compute the log-pdf of y for given parameter !!!!!!!!!!!!!!!
-  elemental double precision function logpdfy_gt (y1, y2, par)
+  pure elemental double precision function logpdfy_gt (y1, y2, par)
     ! Transformed Gaussian
     ! y1 :: The average across all realisations
     ! y2 :: The number of replications
@@ -19,7 +19,7 @@ contains
     logpdfy_gt = y2*d*d
   end function logpdfy_gt
 
-  elemental double precision function logpdfy_ga (y1, y2, par)
+  pure elemental double precision function logpdfy_ga (y1, y2, par)
     ! Gaussian
     ! y1 :: The total across all realisations
     ! y2 :: The number of replications
@@ -29,7 +29,7 @@ contains
     logpdfy_ga = y1*par - .5d0*y2*par*par
   end function logpdfy_ga
 
-  elemental double precision function logpdfy_bi (y1, y2, par)
+  pure elemental double precision function logpdfy_bi (y1, y2, par)
     ! Binomial
     ! To get the asymmetric version, switch y1 and y2
     ! y1 :: The number of successes
@@ -41,7 +41,7 @@ contains
     logpdfy_bi = y1*par + y2*flog1mexp(par)
   end function logpdfy_bi
 
-  elemental double precision function logpdfy_po (y1, y2, par)
+  pure elemental double precision function logpdfy_po (y1, y2, par)
     ! Poisson
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -51,7 +51,7 @@ contains
     logpdfy_po = y1*par - y2*exp(par)
   end function logpdfy_po
 
-  elemental double precision function logpdfy_gm (y1, y2, par)
+  pure elemental double precision function logpdfy_gm (y1, y2, par)
     ! Gamma
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -63,7 +63,7 @@ contains
 
 
 !!!!!!!!! Compute the difference log pdf of y wrt two parameters !!!!!!!!!!
-  elemental double precision function logdffy_gt (y1, y2, p1, p2)
+  pure elemental double precision function logdffy_gt (y1, y2, p1, p2)
     ! Transformed Gaussian
     ! y1 :: The average across all realisations
     ! y2 :: The number of replications
@@ -76,7 +76,7 @@ contains
     logdffy_gt = y2*(d1*d1 - d2*d2)
   end function logdffy_gt
 
-  elemental double precision function logdffy_ga (y1, y2, p1, p2)
+  pure elemental double precision function logdffy_ga (y1, y2, p1, p2)
     ! Gaussian
     ! y1 :: The total across all realisations
     ! y2 :: The number of replications
@@ -86,7 +86,7 @@ contains
     logdffy_ga = y1*(p1 - p2) - .5d0*y2*(p1*p1 - p2*p2)
   end function logdffy_ga
 
-  elemental double precision function logdffy_bi (y1, y2, p1, p2)
+  pure elemental double precision function logdffy_bi (y1, y2, p1, p2)
     ! Binomial
     ! To get the asymmetric version, switch y1 and y2
     ! y1 :: The number of successes
@@ -98,7 +98,7 @@ contains
     logdffy_bi = y1*(p1 - p2) + y2*(flog1mexp(p1) - flog1mexp(p2))
   end function logdffy_bi
 
-  elemental double precision function logdffy_po (y1, y2, p1, p2)
+  pure elemental double precision function logdffy_po (y1, y2, p1, p2)
     ! Poisson
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -108,7 +108,7 @@ contains
     logdffy_po = y1*(p1 - p2) - y2*(exp(p1) - exp(p2))
   end function logdffy_po
 
-  elemental double precision function logdffy_gm (y1, y2, p1, p2)
+  pure elemental double precision function logdffy_gm (y1, y2, p1, p2)
     ! Gamma
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations

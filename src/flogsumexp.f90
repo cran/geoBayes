@@ -33,9 +33,13 @@ contains
     double precision, intent(in) :: x(m,n)
     double precision logrsumexp(m)
     double precision xmm(m,n), se(m)
+    integer i, j
     logrsumexp = maxval(x,2)
-    xmm = spread(logrsumexp,2,n)
-    xmm = x - xmm
+    do j = 1, n
+      do i = 1, m
+        xmm(i,j) = x(i,j) - logrsumexp(i)
+      end do
+    end do
     xmm = exp(xmm)
     se = sum(xmm,2)
     logrsumexp = logrsumexp + log(se)
@@ -47,9 +51,13 @@ contains
     double precision, intent(in) :: x(m,n)
     double precision logcsumexp(n)
     double precision xmm(m,n), se(n)
+    integer i, j
     logcsumexp = maxval(x,1)
-    xmm = spread(logcsumexp,1,m)
-    xmm = x - xmm
+    do j = 1, n
+      do i = 1, m
+        xmm(i,j) = x(i,j) - logcsumexp(j)
+      end do
+    end do
     xmm = exp(xmm)
     se = sum(xmm,1)
     logcsumexp = logcsumexp + log(se)

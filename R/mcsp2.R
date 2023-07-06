@@ -1151,7 +1151,7 @@ mcmcmake <- function (...) {
 ##' @return A similar object as \code{x} with the subsetted chain.
 ##' @export
 subset.geomcmc <- function (x, subset, ...) {
-  if (class(x) != "geomcmc") stop ("Wrong class of object x.")
+  if (!inherits(x, "geomcmc")) stop ("Wrong class of object x.")
   subset <- as.vector(subset)
   if (is.logical(subset)) subset <- subset & !is.na(subset)
   nm_vec <- c("ssq", "tsq", "phi", "omg", "kappa", "logLik")

@@ -68,7 +68,7 @@ bmbfse <- function(pargrid, runs, bfsize1 = 0.80, nbatch1 = 0.5, nbatch2 = 0.5,
   ibvmeth <- match(bvmethod, eval(formals()$bvmethod))
 
   ## Check input
-  if (any(sapply(runs, class) != "geomcmc")) {
+  if (!all(sapply(runs, inherits, what = "geomcmc"))) {
     stop ("Input runs is not a list with elements of class geomcmc")
   }
   nruns <- length(runs)
@@ -335,6 +335,8 @@ bfsecalc <- function(sample, theta0, theta1, llikfun, MoreArgs = NULL,
                      bvmethod = c("Standard", "TukeyHanning", "Bartlett"),
                      reference = 1)
 {
+  cl <- match.call()
+  
   ## Stage 1 method
   S1method <- match.arg(S1method)
   imeth <- match(S1method, eval(formals()$S1method))
@@ -412,5 +414,6 @@ bfsecalc <- function(sample, theta0, theta1, llikfun, MoreArgs = NULL,
   out <- fcall[1:6]
   names(out) <- c("bf", "logbfnew", "bfSigma", "SE", "VT1", "VT2")
   out$Varlogbf <- BOB
+  out$call <- cl
   out
 }

@@ -15,10 +15,10 @@
 ##' @useDynLib geoBayes, .registration = TRUE
 ##' @author Evangelos Evangelou <e.evangelou@@maths.bath.ac.uk> and
 ##' Vivekananda Roy <vroy@@iastate.edu>
-##' @seealso \code{geoR}, \code{geoRglm}
 ##' @examples \dontrun{
 ##' demo(package = "geoBayes")
-##' demo(rhizoctonia3, package = "geoBayes")
+##' demo(rhizoctonia1, package = "geoBayes")
+##' demo(rhizoctonia1, package = "geoBayes")
 ##' }
 ##' @references Roy, V., Evangelou, E. and Zhu, Z. (2014). Empirical
 ##' Bayes methods for the transformed Gaussian random fields model
@@ -31,15 +31,15 @@
 ##' and prediction for the Bayesian spatial generalized linear mixed
 ##' model with flexible link functions. \emph{Biometrics}, 72(1),
 ##'   289-298.
-##' 
+##'
 ##' Evangelou, E., & Roy, V. (2019). Estimation and prediction for
 ##'   spatial generalized linear mixed models with parametric links
-##'   via reparameterized importance sampling. Spatial Statistics, 29,
+##'   via reparameterized importance sampling. \emph{Spatial Statistics}, 29,
 ##'   289-315.
 ##'
-##' Roy, V., & Evangelou, E. (2018). Selection of proposal
-##'   distributions for generalized importance sampling estimators.
-##'   arXiv preprint arXiv:1805.00829. 
+##' Roy, V., & Evangelou, E. (2022). Selection of proposal
+##'   distributions for multiple importance sampling.
+##'   \emph{Statistica Sinica}.
 ##' @keywords package
 NULL
 

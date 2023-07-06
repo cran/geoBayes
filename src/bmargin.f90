@@ -17,7 +17,7 @@ contains
     ! double precision, parameter :: epstol = 5d-5
     double precision, parameter :: pgtol = 0d-5, factr = 1d7
     double precision neglogfun, neglogfun_grad(kg)
-    integer ia, ie, i
+    integer ia, ie, i, j, k
     integer iflag
     logical lidx(Ntot,kg)
     double precision etalo(kg), etaup(kg)
@@ -39,10 +39,17 @@ contains
     ! etabd(1) = 2
     iflag = 0
     do i = 1, maxit
-      lliketa = llik + spread(eta,1,Ntot)
+      do k = 1, kg
+        do j = 1, Ntot
+          lliketa(j,k) = llik(j,k) + eta(k)
+        end do
+      end do
       lgdenom = logrsumexp(lliketa,Ntot,kg)
-      logp = spread(lgdenom,2,kg)
-      logp = lliketa - logp
+      do k = 1, kg
+        do j = 1, Ntot
+          logp(j,k) = lliketa(j,k) - lgdenom(j)
+        end do
+      end do
       neglogfun = -sum(logp,lidx)
       neglogfun_grad = -dble(Nout) + sum(exp(logp),1)
       !       call lbfgs (kg-1,eta(2:kg),neglogfun,neglogfun_grad(2:kg),&
@@ -77,7 +84,7 @@ contains
     double precision, parameter :: pgtol = 5d-5
     integer ia, ie, i, j, it, ipiv(1:kg-1)
     double precision llik_mix_all(Ntot), a(kg), Bmat(2:kg,2:kg), bvec(2:kg), &
-       r(kg), likw(Ntot,kg)
+       r(kg), likw(Ntot,kg), logar(kg)
     logical convergence
     double precision bnorm, work(4*kg-4), rcond
     integer iwork(1:kg-1)
@@ -86,14 +93,18 @@ contains
     a = dble(Nout)
     r = exp(eta)/a
     a = a/dble(Ntot)
+    logar = log(a*r)
 
     convergence = .false.
     iterations: do it = 1, maxit
       call rchkusr ! Check if user has requested interrupt
       ia = 1
       ie = 0
-      likw = spread(log(a*r),1,Ntot)
-      likw = likw + llik
+      do j = 1, kg
+        do i = 1, Ntot
+          likw(i,j) = llik(i,j) + logar(j)
+        end do
+      end do
       llik_mix_all = -logrsumexp(likw,Ntot,kg)
       likw = spread(llik_mix_all,2,kg)
       likw = llik + likw - log(dble(Ntot))

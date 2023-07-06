@@ -19,7 +19,7 @@ contains
     MODELDEF = .true.
   end subroutine create_model
 
-  elemental double precision function logitrwhz (z,d)
+  pure elemental double precision function logitrwhz (z,d)
     double precision, intent(in) :: z, d
     double precision, parameter :: bigneg = -huge(1d0)
     logitrwhz = invtrwhz(z, d)
@@ -172,7 +172,7 @@ contains
 
   ! Distribution functions
 
-  elemental double precision function logpdfy (y1, y2, par)
+  pure elemental double precision function logpdfy (y1, y2, par)
     use modelfcns_pdfy
     implicit none
     double precision, intent(in) :: y1, y2, par
@@ -190,7 +190,7 @@ contains
     end select
   end function logpdfy
 
-  elemental double precision function logdffy (y1, y2, p1, p2)
+  pure elemental double precision function logdffy (y1, y2, p1, p2)
     use modelfcns_pdfy
     implicit none
     double precision, intent(in) :: y1, y2, p1, p2
@@ -208,7 +208,7 @@ contains
     end select
   end function logdffy
 
-  elemental double precision function logpdfydlnk (y1, y2, par)
+  pure elemental double precision function logpdfydlnk (y1, y2, par)
     use modelfcns_pdfy
     implicit none
     double precision, intent(in) :: y1, y2, par
@@ -226,7 +226,7 @@ contains
     end select
   end function logpdfydlnk
 
-  elemental double precision function logpdfyhlnk (y1, y2, par)
+  pure elemental double precision function logpdfyhlnk (y1, y2, par)
     use modelfcns_pdfy
     implicit none
     double precision, intent(in) :: y1, y2, par
@@ -244,7 +244,7 @@ contains
     end select
   end function logpdfyhlnk
 
-  elemental double precision function logpdfy3lnk (y1, y2, par)
+  pure elemental double precision function logpdfy3lnk (y1, y2, par)
     use modelfcns_pdfy
     implicit none
     double precision, intent(in) :: y1, y2, par
@@ -262,7 +262,7 @@ contains
     end select
   end function logpdfy3lnk
 
-  elemental double precision function mustart (y1, y2)
+  pure elemental double precision function mustart (y1, y2)
     use modelfcns_pdfy
     implicit none
     double precision, intent(in) :: y1, y2
@@ -280,7 +280,7 @@ contains
     end select
   end function mustart
 
-  elemental double precision function fcntruemu (x)
+  pure elemental double precision function fcntruemu (x)
     use modelfcns_pdfy
     implicit none
     double precision, intent(in) :: x
@@ -298,7 +298,7 @@ contains
     end select
   end function fcntruemu
 
-  elemental double precision function invtruemu (x)
+  pure elemental double precision function invtruemu (x)
     use modelfcns_pdfy
     implicit none
     double precision, intent(in) :: x
@@ -316,7 +316,7 @@ contains
     end select
   end function invtruemu
 
-  elemental double precision function fcncum (x)
+  pure elemental double precision function fcncum (x)
     use modelfcns_pdfy
     implicit none
     double precision, intent(in) :: x
@@ -334,7 +334,7 @@ contains
     end select
   end function fcncum
 
-  elemental double precision function fcncumd2 (x)
+  pure elemental double precision function fcncumd2 (x)
     use modelfcns_pdfy
     implicit none
     double precision, intent(in) :: x
@@ -352,7 +352,7 @@ contains
     end select
   end function fcncumd2
 
-  elemental double precision function fcncumd3 (x)
+  pure elemental double precision function fcncumd3 (x)
     use modelfcns_pdfy
     implicit none
     double precision, intent(in) :: x
@@ -373,7 +373,7 @@ contains
 
   ! Link functions
 
-  elemental double precision function flink (w, d)
+  pure elemental double precision function flink (w, d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -403,7 +403,7 @@ contains
     end select
   end function flink
 
-  elemental double precision function invlink (w, d)
+  pure elemental double precision function invlink (w, d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -433,7 +433,7 @@ contains
     end select
   end function invlink
 
-  elemental double precision function invlinkdz (w, d)
+  pure elemental double precision function invlinkdz (w, d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -463,7 +463,7 @@ contains
     end select
   end function invlinkdz
 
-  elemental double precision function loginvlinkdz (w, d)
+  pure elemental double precision function loginvlinkdz (w, d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -493,7 +493,7 @@ contains
     end select
   end function loginvlinkdz
 
-  elemental double precision function invlinkhz (w, d)
+  pure elemental double precision function invlinkhz (w, d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -523,7 +523,7 @@ contains
     end select
   end function invlinkhz
 
-  elemental double precision function invlink3z (w, d)
+  pure elemental double precision function invlink3z (w, d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -553,7 +553,7 @@ contains
     end select
   end function invlink3z
 
-  elemental double precision function invlinkdn (w, d)
+  pure elemental double precision function invlinkdn (w, d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -583,7 +583,7 @@ contains
     end select
   end function invlinkdn
 
-  elemental double precision function invlinkhn (w, d)
+  pure elemental double precision function invlinkhn (w, d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -613,7 +613,7 @@ contains
     end select
   end function invlinkhn
 
-  elemental double precision function invlinkdzdn (w, d)
+  pure elemental double precision function invlinkdzdn (w, d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -643,7 +643,7 @@ contains
     end select
   end function invlinkdzdn
 
-  elemental double precision function invlinkhzdn (w, d)
+  pure elemental double precision function invlinkhzdn (w, d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -673,7 +673,7 @@ contains
     end select
   end function invlinkhzdn
 
-  elemental double precision function invlinkdzhn (w, d)
+  pure elemental double precision function invlinkdzhn (w, d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -706,7 +706,7 @@ contains
 
   ! Transformation
 
-  elemental double precision function transfw (w,d)
+  pure elemental double precision function transfw (w,d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -724,7 +724,7 @@ contains
     end select
   end function transfw
 
-  elemental double precision function invtrw (w,d)
+  pure elemental double precision function invtrw (w,d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -742,7 +742,7 @@ contains
     end select
   end function invtrw
 
-  elemental double precision function invtrwdz (w,d)
+  pure elemental double precision function invtrwdz (w,d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -760,7 +760,7 @@ contains
     end select
   end function invtrwdz
 
-  elemental double precision function loginvtrwdz (w,d)
+  pure elemental double precision function loginvtrwdz (w,d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -778,7 +778,7 @@ contains
     end select
   end function loginvtrwdz
 
-  elemental double precision function invtrwhz (w,d)
+  pure elemental double precision function invtrwhz (w,d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -796,7 +796,7 @@ contains
     end select
   end function invtrwhz
 
-  elemental double precision function invtrw3z (w,d)
+  pure elemental double precision function invtrw3z (w,d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -814,7 +814,7 @@ contains
     end select
   end function invtrw3z
 
-  elemental double precision function invtrwdn (w,d)
+  pure elemental double precision function invtrwdn (w,d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -832,7 +832,7 @@ contains
     end select
   end function invtrwdn
 
-  elemental double precision function invtrwhn (w,d)
+  pure elemental double precision function invtrwhn (w,d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -850,7 +850,7 @@ contains
     end select
   end function invtrwhn
 
-  elemental double precision function invtrwdzdn (w,d)
+  pure elemental double precision function invtrwdzdn (w,d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -868,7 +868,7 @@ contains
     end select
   end function invtrwdzdn
 
-  elemental double precision function invtrwhzdn (w,d)
+  pure elemental double precision function invtrwhzdn (w,d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d
@@ -886,7 +886,7 @@ contains
     end select
   end function invtrwhzdn
 
-  elemental double precision function invtrwdzhn (w,d)
+  pure elemental double precision function invtrwdzhn (w,d)
     use modelfcns_link
     implicit none
     double precision, intent(in) :: w, d

@@ -80,6 +80,3 @@ points(predgrid$grid, pch = 20, cex = .3)  # Prediction locations
 points(rhizoctonia[c("Xcoord", "Ycoord")]) # Observed locations
 }
 }
-\seealso{
-\code{\link[geoR]{pred_grid}}
-}

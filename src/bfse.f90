@@ -329,8 +329,12 @@ contains
     double precision, intent(in) :: llik(Ntot,kg), eta(kg)
     double precision logp(Ntot,kg)
     double precision lliketa(Ntot,kg), lgdenom(Ntot)
-    lliketa = spread(eta,1,Ntot)
-    lliketa = llik + lliketa
+    integer i, j
+    do j = 1, kg
+      do i = 1, Ntot
+        lliketa(i,j) = llik(i,j) + eta(j)
+      end do
+    end do
     lgdenom = logrsumexp(lliketa,Ntot,kg)
     logp = spread(lgdenom,2,kg)
     logp = lliketa - logp
@@ -343,8 +347,12 @@ contains
     double precision, intent(in) :: llik1(Ntot,kg), llik2(Ntot,nnew), eta(kg)
     double precision logb(Ntot,nnew)
     double precision lliketa(Ntot,kg), lgdenom(Ntot)
-    lliketa = spread(eta,1,Ntot)
-    lliketa = llik1 + lliketa
+    integer i, j
+    do j = 1, kg
+      do i = 1, Ntot
+        lliketa(i,j) = llik1(i,j) + eta(j)
+      end do
+    end do
     lgdenom = logrsumexp(lliketa,Ntot,kg)
     logb = spread(lgdenom,2,nnew)
     logb = llik2 - logb
@@ -481,8 +489,11 @@ contains
     double precision xmm(n,k), x1(k), x2(k), wj
     double precision, parameter :: pi = 3.1415926535897932384626433832795d0
     x1 = sum(x,1)/dble(n)
-    xmm = spread(x1, 1, n)
-    xmm = x - xmm ! Y_i - W
+    do j = 1, k
+      do i = 1, n
+        xmm(i,j) = x(i,j) - x1(j) ! Y_i - W
+      end do
+    end do
     bmmcvrmat_th = 0d0
     do i = 1, n ! j = 0
       x1 = xmm(i,:)
@@ -511,7 +522,6 @@ contains
     double precision, parameter :: pi = 3.1415926535897932384626433832795d0
     wj = sum(x)/dble(n) ! mean(x,n)
     xmm = x - wj
-    xmm = xmm - sum(xmm)
     bmmcvr_th = dot_product(xmm,xmm) ! j = 0
     do j = 1, b - 1
       wj = 1d0 + cos(pi*dble(j)/dble(b)) ! Without the 0.5 factor because
@@ -550,8 +560,11 @@ contains
     integer i, j
     double precision xmm(n,k), x1(k), x2(k), wj
     x1 = sum(x,1)/dble(n)
-    xmm = spread(x1, 1, n)
-    xmm = x - xmm ! Y_i - W
+    do j = 1, k
+      do i = 1, n
+        xmm(i,j) = x(i,j) - x1(j) ! Y_i - W
+      end do
+    end do
     bmmcvrmat_mb = 0d0
     do i = 1, n ! j = 0
       x1 = xmm(i,:)
@@ -620,9 +633,13 @@ contains
     double precision logbfnew_calc(nnew)
     double precision logb(Ntot,nnew)
     double precision lliketa(Ntot,kg), lgdenom(Ntot)
+    integer i, j
     if (nnew .gt. 0) then
-      lliketa = spread(eta,1,Ntot)
-      lliketa = llik2 + lliketa
+      do j = 1, kg
+        do i = 1, Ntot
+          lliketa(i,j) = llik2(i,j) + eta(j)
+        end do
+      end do
       lgdenom = logrsumexp(lliketa,Ntot,kg)
       logb = spread(lgdenom,2,nnew)
       logb = llikn - logb
@@ -680,11 +697,362 @@ contains
     double precision logbfnew_calc(nnew)
     double precision logb(Ntot,nnew)
     double precision lliketa(Ntot,kg), lgdenom(Ntot)
-    lliketa = spread(eta,1,Ntot)
-    lliketa = llik2 + lliketa
+    integer i, j
+    do j = 1, kg
+      do i = 1, Ntot
+        lliketa(i,j) = llik2(i,j) + eta(j)
+      end do
+    end do
     lgdenom = logrsumexp(lliketa,Ntot,kg)
     logb = spread(lgdenom,2,nnew)
     logb = llikn - logb
     logbfnew_calc = logcsumexp(logb,Ntot,nnew)
   end function logbfnew_calc
 end subroutine logbfcalc
+
+
+subroutine bfsecalcef (Ef, VT2, logbfnew, evec, iref, &
+   logbf,llik2,llikn,fval,kg,nnew,nf,Nout2,Ntot2,nb,ibvmeth)
+  use flogsumexp, only: logrsumexp, logcsumexp, logsumexpv
+  implicit none
+  integer, intent(in) :: kg, nnew, Nout2(kg), Ntot2, nf, ibvmeth, nb(kg), &
+     iref 
+  double precision, intent(in) :: logbf(kg), llik2(Ntot2,kg), &
+     llikn(Ntot2,nnew), fval(Ntot2,nf)
+  double precision, intent(out) :: Ef(nnew,nf), VT2(nnew,nf), &
+     logbfnew(nnew), evec(kg-1,nnew,nf)
+  integer i, ia, ie, j
+  double precision zeta(kg), logVV(Ntot2,nnew), lliketa(Ntot2,kg), &
+     logdenom(Ntot2), VV(Ntot2,nnew), WW(Ntot2,nnew,nf), NNratio(kg), &
+     logweight(Ntot2,nnew), weight(Ntot2,nnew), WWwght(Ntot2,nnew,nf), &
+     logbfnorm(kg), GamWW(nnew,nf), GamVW(nnew,nf), GamVV(nnew), &
+     invbfnew(nnew), logV1(Ntot2,kg-1), V1(Ntot2,kg-1), cvec(kg-1,nnew), &
+     bf(kg), bbn(kg-1), invbfnewsq(nnew)
+  NNratio = dble(Nout2)/dble(Ntot2)
+  logbfnorm = logbf - logbf(iref)
+  bf = exp(logbfnorm)
+  do i = 1, iref - 1
+    bbn(i) = NNratio(i)/(bf(i)*bf(i)*Ntot2)
+  end do
+  do i = iref+1, kg
+    bbn(i-1) = NNratio(i)/(bf(i)*bf(i)*Ntot2)
+  end do
+  zeta = -logbfnorm + log(NNratio)
+  do i = 1, kg
+    lliketa(:,i) = llik2(:,i) + zeta(i)
+  end do
+  logdenom = logrsumexp(lliketa,Ntot2,kg)
+  do i = 1, iref-1
+    logV1(:,i) = llik2(:,i) - logdenom
+  end do
+  do i = iref+1, kg
+    logV1(:,i-1) = llik2(:,i) - logdenom
+  end do
+  V1 = exp(logV1)
+  do i = 1, nnew
+    logVV(:,i) = llikn(:,i) - logdenom
+  end do
+  VV = exp(logVV)
+  logbfnew = logcsumexp(logVV,Ntot2,nnew)
+  j = kg-1
+  call dgemm ("t","n",j,nnew,Ntot2,1d0,V1,Ntot2,VV,Ntot2,0d0,cvec,j)
+  do i = 1, nnew
+    cvec(:,i) = cvec(:,i)*bbn
+  end do
+  do i = 1, nf
+    do j = 1, nnew
+      WW(:,j,i) = fval(:,i)*VV(:,j)
+    end do
+  end do
+  do i = 1, nnew
+    logweight(:,i) = logVV(:,i) - logbfnew(i)
+  end do
+  weight = exp(logweight) ! Importance weights
+  do i = 1, nf
+    do j = 1, nnew
+      WWwght(:,j,i) = fval(:,i)*weight(:,j)
+    end do
+  end do
+  Ef = sum(WWwght,1) ! Estimation of expectation
+  logbfnew = logbfnew - log(dble(Ntot2))
+  invbfnew = exp(-logbfnew)
+  j = kg-1
+  i = nnew*nf
+  call dgemm ("t","n",j,i,Ntot2,1d0,V1,Ntot2,WW,Ntot2,0d0,evec,j)
+  do j = 1, nf
+    do i = 1, nnew
+      evec(:,i,j) = evec(:,i,j)*bbn - cvec(:,i)*Ef(i,j)
+      evec(:,i,j) = evec(:,i,j)*invbfnew(i)
+    end do
+  end do
+  GamWW = 0d0
+  GamVW = 0d0
+  GamVV = 0d0
+  ie = 0
+  do i = 1, kg
+    ia = ie + 1
+    ie = ie + Nout2(i)
+    select case (ibvmeth)
+    case (1)
+      call covmat_accum_bm (GamWW, GamVW, GamVV,WW(ia:ie,:,:),VV(ia:ie,:),&
+         NNratio(i), &
+         Nout2(i),nnew,nf,nb(i))
+    case (2)
+      call covmat_accum_th (GamWW, GamVW, GamVV,WW(ia:ie,:,:),VV(ia:ie,:),&
+         NNratio(i), &
+         Nout2(i),nnew,nf,nb(i))
+    case (3)
+      call covmat_accum_mb (GamWW, GamVW, GamVV,WW(ia:ie,:,:),VV(ia:ie,:),&
+         NNratio(i), &
+         Nout2(i),nnew,nf,nb(i))
+    end select
+  end do
+  invbfnewsq = invbfnew*invbfnew
+  do i = 1, nf
+    VT2(:,i) = GamWW(:,i) - (2*Ef(:,i))*GamVW(:,i) + (Ef(:,i)*Ef(:,i))*GamVV
+    VT2(:,i) = VT2(:,i)*invbfnewsq
+  end do
+  
+contains
+
+  subroutine covmat_accum_bm (GamWW, GamVW, GamVV, WW, VV, NNratio, &
+     Nout,nnew,nf,nb)
+    implicit none
+    integer, intent(in) :: Nout, nnew, nf, nb
+    double precision, intent(in) :: WW(Nout,nnew,nf), VV(Nout,nnew), &
+       NNratio
+    double precision, intent(inout) :: GamWW(nnew,nf), GamVW(nnew,nf), &
+       GamVV(nnew)
+    integer i, j, k, l, batch_size(nb), ia, ie
+    double precision Wb(nb,nnew,nf), Vb(nb,nnew), Wm(nnew,nf), Vm(nnew), &
+       Wbm(nb,nnew,nf), Vbm(nb,nnew), s, wgt
+    batch_size = Nout/nb
+    i = mod(Nout,nb)
+    batch_size(:i) = batch_size(:i) + 1
+    do l = 1, nf
+      do k = 1, nnew
+        Wm(k,l) = 0d0
+        ie = 0
+        do i = 1, nb
+          ia = ie + 1
+          ie = ie + batch_size(i)
+          s = 0d0
+          do j = ia, ie
+            s = s + WW(j,k,l)
+          end do
+          Wm(k,l) = Wm(k,l) + s
+          Wb(i,k,l) = s/dble(batch_size(i))
+        end do
+        Wm(k,l) = Wm(k,l)/dble(Nout)
+        Wbm(:,k,l) = Wb(:,k,l) - Wm(k,l)
+      end do
+    end do
+    do k = 1, nnew
+      Vm(k) = 0d0
+      ie = 0
+      do i = 1, nb
+        ia = ie + 1
+        ie = ie + batch_size(i)
+        s = 0d0
+        do j = ia, ie
+          s = s + VV(j,k)
+        end do
+        Vm(k) = Vm(k) + s
+        Vb(i,k) = s/dble(batch_size(i))
+      end do
+      Vm(k) = Vm(k)/dble(Nout)
+      Vbm(:,k) = Vb(:,k) - Vm(k)
+    end do
+    do l = 1, nf
+      do k = 1, nnew
+        do i = 1, nb
+          wgt = NNratio*dble(batch_size(i))/dble(nb-1)
+          GamWW(k,l) = GamWW(k,l) + wgt*Wbm(i,k,l)*Wbm(i,k,l)
+        end do
+      end do
+    end do
+    do k = 1, nnew
+      do i = 1, nb
+        wgt = NNratio*dble(batch_size(i))/dble(nb-1)
+        GamVV(k) = GamVV(k) + wgt*Vbm(i,k)*Vbm(i,k)
+      end do
+    end do
+    do l = 1, nf
+      do k = 1, nnew
+        do i = 1, nb
+          wgt = NNratio*dble(batch_size(i))/dble(nb-1)
+          GamVW(k,l) = GamVW(k,l) + wgt*Vbm(i,k)*Wbm(i,k,l)
+        end do
+      end do
+    end do
+  end subroutine covmat_accum_bm
+  
+  subroutine covmat_accum_th (GamWW, GamVW, GamVV, WW, VV, NNratio, &
+     Nout,nnew,nf,nb)
+    implicit none
+    integer, intent(in) :: Nout, nnew, nf, nb
+    double precision, intent(in) :: WW(Nout,nnew,nf), VV(Nout,nnew), &
+       NNratio
+    double precision, intent(inout) :: GamWW(nnew,nf), GamVW(nnew,nf), &
+       GamVV(nnew)
+    integer i, j, k, l
+    double precision wgt, Wm(nnew,nf), Vm(nnew), Wmm(Nout,nnew,nf), &
+       Vmm(Nout,nnew)
+    double precision, parameter :: pi = 3.1415926535897932384626433832795d0 
+    Vm = sum(VV,1)/dble(Nout)
+    Wm = sum(WW,1)/dble(Nout)
+    do k = 1, nf
+      do j = 1, nnew
+        do i = 1, Nout
+          Wmm(i,j,k) = WW(i,j,k) - Wm(j,k)
+        end do
+      end do
+    end do
+    do j = 1, nnew
+      do i = 1, Nout
+        Vmm(i,j) = VV(i,j) - Vm(j)
+      end do
+    end do
+    ! j = 0
+    wgt = NNratio/dble(Nout)
+    do l = 1, nf
+      do k = 1, nnew
+        do i = 1, Nout
+          GamWW(k,l) = GamWW(k,l) + wgt*Wmm(i,k,l)*Wmm(i,k,l)
+        end do
+      end do
+    end do
+    do k = 1, nnew
+      do i = 1, Nout
+        GamVV(k) = GamVV(k) + wgt*Vmm(i,k)*Vmm(i,k)
+      end do
+    end do
+    do l = 1, nf
+      do k = 1, nnew
+        do i = 1, Nout
+          GamVW(k,l) = GamVW(k,l) + wgt*Vmm(i,k)*Wmm(i,k,l)
+        end do
+      end do
+    end do
+    do j = 1, nb - 1
+      wgt = NNratio*(1d0 + cos((pi*j)/nb))/Nout ! w/o the .5 factor because it
+      ! cancels
+      do l = 1, nf
+        do k = 1, nnew
+          do i = 1, Nout-j
+            GamWW(k,l) = GamWW(k,l) + wgt*Wmm(i,k,l)*Wmm(i+j,k,l)
+          end do
+        end do
+      end do
+      do k = 1, nnew
+        do i = 1, Nout-j
+          GamVV(k) = GamVV(k) + wgt*Vmm(i,k)*Vmm(i+j,k)
+        end do
+      end do
+      wgt = .5d0*wgt
+      do l = 1, nf
+        do k = 1, nnew
+          do i = 1, Nout-j
+            GamVW(k,l) = GamVW(k,l) + wgt*(Vmm(i,k)*Wmm(i+j,k,l) &
+               + Vmm(i+j,k)*Wmm(i,k,l))
+          end do
+        end do
+      end do
+    end do
+  end subroutine covmat_accum_th
+
+  subroutine covmat_accum_mb (GamWW, GamVW, GamVV, WW, VV, NNratio, &
+     Nout,nnew,nf,nb)
+    implicit none
+    integer, intent(in) :: Nout, nnew, nf, nb
+    double precision, intent(in) :: WW(Nout,nnew,nf), VV(Nout,nnew), &
+       NNratio
+    double precision, intent(inout) :: GamWW(nnew,nf), GamVW(nnew,nf), &
+       GamVV(nnew)
+    integer i, j, k, l
+    double precision wgt, Wm(nnew,nf), Vm(nnew), Wmm(Nout,nnew,nf), &
+       Vmm(Nout,nnew)
+    Vm = sum(VV,1)/dble(Nout)
+    Wm = sum(WW,1)/dble(Nout)
+    do k = 1, nf
+      do j = 1, nnew
+        do i = 1, Nout
+          Wmm(i,j,k) = WW(i,j,k) - Wm(j,k)
+        end do
+      end do
+    end do
+    do j = 1, nnew
+      do i = 1, Nout
+        Vmm(i,j) = VV(i,j) - Vm(j)
+      end do
+    end do
+    ! j = 0
+    wgt = NNratio/dble(Nout)
+    do l = 1, nf
+      do k = 1, nnew
+        do i = 1, Nout
+          GamWW(k,l) = GamWW(k,l) + wgt*Wmm(i,k,l)*Wmm(i,k,l)
+        end do
+      end do
+    end do
+    do k = 1, nnew
+      do i = 1, Nout
+        GamVV(k) = GamVV(k) + wgt*Vmm(i,k)*Vmm(i,k)
+      end do
+    end do
+    do l = 1, nf
+      do k = 1, nnew
+        do i = 1, Nout
+          GamVW(k,l) = GamVW(k,l) + wgt*Vmm(i,k)*Wmm(i,k,l)
+        end do
+      end do
+    end do
+    do j = 1, nb - 1
+      wgt = 2*NNratio*(1d0 - dble(j)/nb)/Nout ! w/ a factor because only
+      ! one term is computed
+      do l = 1, nf
+        do k = 1, nnew
+          do i = 1, Nout-j
+            GamWW(k,l) = GamWW(k,l) + wgt*Wmm(i,k,l)*Wmm(i+j,k,l)
+          end do
+        end do
+      end do
+      do k = 1, nnew
+        do i = 1, Nout-j
+          GamVV(k) = GamVV(k) + wgt*Vmm(i,k)*Vmm(i+j,k)
+        end do
+      end do
+      wgt = .5d0*wgt
+      do l = 1, nf
+        do k = 1, nnew
+          do i = 1, Nout-j
+            GamVW(k,l) = GamVW(k,l) + wgt*(Vmm(i,k)*Wmm(i+j,k,l) &
+               + Vmm(i+j,k)*Wmm(i,k,l))
+          end do
+        end do
+      end do
+    end do
+  end subroutine covmat_accum_mb
+  
+  
+  double precision function mean(x, m)
+    use interfaces, only: isfinite
+    implicit none
+    integer, intent(in) :: m
+    double precision, intent(in) :: x(m)
+    integer i
+    double precision tot, tot0, mm
+    mean = 0d0
+    tot = 0d0
+    mm = dble(m)
+    do i = 1, m
+      tot0 = tot
+      tot = tot + x(i)
+      if (isfinite(tot) .eq. 0) then
+        mean = mean + tot0/mm
+        tot = x(i)
+      end if
+    end do
+    mean = mean + tot/mm
+  end function mean
+end subroutine bfsecalcef

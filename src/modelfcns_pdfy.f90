@@ -11,7 +11,7 @@ module modelfcns_pdfy
 contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!! Transformed Gaussian !!!!!!!!!!!!!!!!!!!!!!!!!!!
-  elemental double precision function logpdfy_gt (y1, y2, par)
+  pure elemental double precision function logpdfy_gt (y1, y2, par)
     ! Transformed Gaussian
     ! y1 :: The average across all realisations
     ! y2 :: The number of replications
@@ -23,7 +23,7 @@ contains
     logpdfy_gt = y2*d*d
   end function logpdfy_gt
 
-  elemental double precision function logdffy_gt (y1, y2, p1, p2)
+  pure elemental double precision function logdffy_gt (y1, y2, p1, p2)
     ! Transformed Gaussian
     ! y1 :: The average across all realisations
     ! y2 :: The number of replications
@@ -36,7 +36,7 @@ contains
     logdffy_gt = y2*(d1*d1 - d2*d2)
   end function logdffy_gt
 
-  elemental double precision function logpdfydlnk_gt (y1, y2, par)
+  pure elemental double precision function logpdfydlnk_gt (y1, y2, par)
     ! Transformed Gaussian
     ! y1 :: The average across all realisations
     ! y2 :: The number of replications
@@ -46,7 +46,7 @@ contains
     logpdfydlnk_gt = 2d0*y2*(par-y1)
   end function logpdfydlnk_gt
 
-  elemental double precision function logpdfyhlnk_gt (y1, y2, par)
+  pure elemental double precision function logpdfyhlnk_gt (y1, y2, par)
     ! Transformed Gaussian
     ! y1 :: The average across all realisations
     ! y2 :: The number of replications
@@ -56,7 +56,7 @@ contains
     logpdfyhlnk_gt = 2d0*y2
   end function logpdfyhlnk_gt
 
-  elemental double precision function logpdfy3lnk_gt (y1, y2, par)
+  pure elemental double precision function logpdfy3lnk_gt (y1, y2, par)
     ! Gaussian
     ! y1 :: The total across all realisations
     ! y2 :: The number of replications
@@ -66,27 +66,27 @@ contains
     logpdfy3lnk_gt = 0
   end function logpdfy3lnk_gt
 
-  elemental double precision function mustart_gt (y1,y2)
+  pure elemental double precision function mustart_gt (y1,y2)
     implicit none
     double precision, intent(in) :: y1, y2
     mustart_gt = y1
   end function mustart_gt
 
-  elemental double precision function fcncum_gt (mu) result (w)
+  pure elemental double precision function fcncum_gt (mu) result (w)
     ! Cumulant fcn as a fcn of mu
     implicit none
     double precision, intent(in) :: mu
     w = .5d0*mu*mu
   end function fcncum_gt
 
-  elemental double precision function fcncumd2_gt (mu) result (w)
+  pure elemental double precision function fcncumd2_gt (mu) result (w)
     ! Cumulant fcn as a fcn of mu, 2nd derivative
     implicit none
     double precision, intent(in) :: mu
     w = 1d0
   end function fcncumd2_gt
 
-  elemental double precision function fcncumd3_gt (mu) result (w)
+  pure elemental double precision function fcncumd3_gt (mu) result (w)
     ! Cumulant fcn as a fcn of mu, 3rd derivative
     implicit none
     double precision, intent(in) :: mu
@@ -96,7 +96,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Gaussian !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  elemental double precision function logpdfy_ga (y1, y2, par)
+  pure elemental double precision function logpdfy_ga (y1, y2, par)
     ! Gaussian
     ! y1 :: The total across all realisations
     ! y2 :: The number of replications
@@ -106,7 +106,7 @@ contains
     logpdfy_ga = y1*par - .5d0*y2*par*par
   end function logpdfy_ga
 
-  elemental double precision function logdffy_ga (y1, y2, p1, p2)
+  pure elemental double precision function logdffy_ga (y1, y2, p1, p2)
     ! Gaussian
     ! y1 :: The total across all realisations
     ! y2 :: The number of replications
@@ -116,7 +116,7 @@ contains
     logdffy_ga = y1*(p1 - p2) - .5d0*y2*(p1*p1 - p2*p2)
   end function logdffy_ga
 
-  elemental double precision function logpdfydlnk_ga (y1, y2, par)
+  pure elemental double precision function logpdfydlnk_ga (y1, y2, par)
     ! Gaussian
     ! y1 :: The total across all realisations
     ! y2 :: The number of replications
@@ -126,7 +126,7 @@ contains
     logpdfydlnk_ga = y1 - y2*par
   end function logpdfydlnk_ga
 
-  elemental double precision function logpdfyhlnk_ga (y1, y2, par)
+  pure elemental double precision function logpdfyhlnk_ga (y1, y2, par)
     ! Gaussian
     ! y1 :: The total across all realisations
     ! y2 :: The number of replications
@@ -136,7 +136,7 @@ contains
     logpdfyhlnk_ga = -y2
   end function logpdfyhlnk_ga
 
-  elemental double precision function logpdfy3lnk_ga (y1, y2, par)
+  pure elemental double precision function logpdfy3lnk_ga (y1, y2, par)
     ! Gaussian
     ! y1 :: The total across all realisations
     ! y2 :: The number of replications
@@ -146,27 +146,27 @@ contains
     logpdfy3lnk_ga = 0
   end function logpdfy3lnk_ga
 
-  elemental double precision function mustart_ga (y1,y2)
+  pure elemental double precision function mustart_ga (y1,y2)
     implicit none
     double precision, intent(in) :: y1, y2
     mustart_ga = y1/y2
   end function mustart_ga
 
-  elemental double precision function fcncum_ga (mu) result (w)
+  pure elemental double precision function fcncum_ga (mu) result (w)
     ! Cumulant fcn as a fcn of mu
     implicit none
     double precision, intent(in) :: mu
     w = .5d0*mu*mu
   end function fcncum_ga
 
-  elemental double precision function fcncumd2_ga (mu) result (w)
+  pure elemental double precision function fcncumd2_ga (mu) result (w)
     ! Cumulant fcn as a fcn of mu, 2nd derivative
     implicit none
     double precision, intent(in) :: mu
     w = 1d0
   end function fcncumd2_ga
 
-  elemental double precision function fcncumd3_ga (mu) result (w)
+  pure elemental double precision function fcncumd3_ga (mu) result (w)
     ! Cumulant fcn as a fcn of mu, 3rd derivative
     implicit none
     double precision, intent(in) :: mu
@@ -176,7 +176,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Binomial !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  elemental double precision function logpdfy_bi (y1, y2, par)
+  pure elemental double precision function logpdfy_bi (y1, y2, par)
     ! Binomial
     ! To get the asymmetric version, switch y1 and y2
     ! y1 :: The number of successes
@@ -194,7 +194,7 @@ contains
     end if
   end function logpdfy_bi
 
-  elemental double precision function logdffy_bi (y1, y2, p1, p2)
+  pure elemental double precision function logdffy_bi (y1, y2, p1, p2)
     ! Binomial
     ! To get the asymmetric version, switch y1 and y2
     ! y1 :: The number of successes
@@ -212,7 +212,7 @@ contains
     end if
   end function logdffy_bi
 
-  elemental double precision function logpdfydlnk_bi (y1, y2, par)
+  pure elemental double precision function logpdfydlnk_bi (y1, y2, par)
     ! Binomial
     ! To get the asymmetric version, switch y1 and y2
     ! y1 :: The number of successes
@@ -228,7 +228,7 @@ contains
     end if
   end function logpdfydlnk_bi
 
-  elemental double precision function logpdfyhlnk_bi (y1, y2, par)
+  pure elemental double precision function logpdfyhlnk_bi (y1, y2, par)
     ! Binomial
     ! To get the asymmetric version, switch y1 and y2
     ! y1 :: The number of successes
@@ -245,7 +245,7 @@ contains
     end if
   end function logpdfyhlnk_bi
 
-  elemental double precision function logpdfy3lnk_bi (y1, y2, par)
+  pure elemental double precision function logpdfy3lnk_bi (y1, y2, par)
     ! Binomial
     ! To get the asymmetric version, switch y1 and y2
     ! y1 :: The number of successes
@@ -263,7 +263,7 @@ contains
     end if
   end function logpdfy3lnk_bi
 
-  elemental double precision function mustart_bi (y1,y2)
+  pure elemental double precision function mustart_bi (y1,y2)
     implicit none
     double precision, intent(in) :: y1, y2
     double precision t1, t2
@@ -272,21 +272,21 @@ contains
     mustart_bi = log(t1) - log(t2)
   end function mustart_bi
 
-  elemental double precision function fcncum_bi (mu) result (w)
+  pure elemental double precision function fcncum_bi (mu) result (w)
     ! Cumulant fcn as a fcn of mu
     implicit none
     double precision, intent(in) :: mu
     w = -log(1-mu)
   end function fcncum_bi
 
-  elemental double precision function fcncumd2_bi (mu) result (w)
+  pure elemental double precision function fcncumd2_bi (mu) result (w)
     ! Cumulant fcn as a fcn of mu, 2nd derivative
     implicit none
     double precision, intent(in) :: mu
     w = mu*(1d0-mu)
   end function fcncumd2_bi
 
-  elemental double precision function fcncumd3_bi (mu) result (w)
+  pure elemental double precision function fcncumd3_bi (mu) result (w)
     ! Cumulant fcn as a fcn of mu, 3rd derivative
     implicit none
     double precision, intent(in) :: mu
@@ -296,7 +296,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Poisson !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  elemental double precision function logpdfy_po (y1, y2, par)
+  pure elemental double precision function logpdfy_po (y1, y2, par)
     ! Poisson
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -310,7 +310,7 @@ contains
     end if
   end function logpdfy_po
 
-  elemental double precision function logdffy_po (y1, y2, p1, p2)
+  pure elemental double precision function logdffy_po (y1, y2, p1, p2)
     ! Poisson
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -324,7 +324,7 @@ contains
     end if
   end function logdffy_po
 
-  elemental double precision function logpdfydlnk_po (y1, y2, par)
+  pure elemental double precision function logpdfydlnk_po (y1, y2, par)
     ! Poisson
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -334,7 +334,7 @@ contains
     logpdfydlnk_po = y1 - y2*exp(par)
   end function logpdfydlnk_po
 
-  elemental double precision function logpdfyhlnk_po (y1, y2, par)
+  pure elemental double precision function logpdfyhlnk_po (y1, y2, par)
     ! Poisson
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -344,7 +344,7 @@ contains
     logpdfyhlnk_po = -y2*exp(par)
   end function logpdfyhlnk_po
 
-  elemental double precision function logpdfy3lnk_po (y1, y2, par)
+  pure elemental double precision function logpdfy3lnk_po (y1, y2, par)
     ! Poisson
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -354,7 +354,7 @@ contains
     logpdfy3lnk_po = -y2*exp(par)
   end function logpdfy3lnk_po
 
-  elemental double precision function mustart_po (y1,y2)
+  pure elemental double precision function mustart_po (y1,y2)
     implicit none
     double precision, intent(in) :: y1, y2
     double precision t1, t2
@@ -363,21 +363,21 @@ contains
     mustart_po = log(t1) - log(t2)
   end function mustart_po
 
-  elemental double precision function fcncum_po (mu) result (w)
+  pure elemental double precision function fcncum_po (mu) result (w)
     ! Cumulant fcn as a fcn of mu
     implicit none
     double precision, intent(in) :: mu
     w = mu
   end function fcncum_po
 
-  elemental double precision function fcncumd2_po (mu) result (w)
+  pure elemental double precision function fcncumd2_po (mu) result (w)
     ! Cumulant fcn as a fcn of mu, 2nd derivative
     implicit none
     double precision, intent(in) :: mu
     w = mu
   end function fcncumd2_po
 
-  elemental double precision function fcncumd3_po (mu) result (w)
+  pure elemental double precision function fcncumd3_po (mu) result (w)
     ! Cumulant fcn as a fcn of mu, 3rd derivative
     implicit none
     double precision, intent(in) :: mu
@@ -387,7 +387,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Gamma !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  elemental double precision function logpdfy_gm (y1, y2, par)
+  pure elemental double precision function logpdfy_gm (y1, y2, par)
     ! Gamma
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -397,7 +397,7 @@ contains
     logpdfy_gm = -y1*exp(-par) - y2*par
   end function logpdfy_gm
 
-  elemental double precision function logdffy_gm (y1, y2, p1, p2)
+  pure elemental double precision function logdffy_gm (y1, y2, p1, p2)
     ! Gamma
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -407,7 +407,7 @@ contains
     logdffy_gm = -y1*(exp(-p1) - exp(-p2)) - y2*(p1 - p2)
   end function logdffy_gm
 
-  elemental double precision function logpdfydlnk_gm (y1, y2, par)
+  pure elemental double precision function logpdfydlnk_gm (y1, y2, par)
     ! Gamma
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -417,7 +417,7 @@ contains
     logpdfydlnk_gm = y1*exp(-par) - y2
   end function logpdfydlnk_gm
 
-  elemental double precision function logpdfyhlnk_gm (y1, y2, par)
+  pure elemental double precision function logpdfyhlnk_gm (y1, y2, par)
     ! Gamma
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -427,7 +427,7 @@ contains
     logpdfyhlnk_gm = -y1*exp(-par)
   end function logpdfyhlnk_gm
 
-  elemental double precision function logpdfy3lnk_gm (y1, y2, par)
+  pure elemental double precision function logpdfy3lnk_gm (y1, y2, par)
     ! Gamma
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -437,27 +437,27 @@ contains
     logpdfy3lnk_gm = y1*exp(-par)
   end function logpdfy3lnk_gm
 
-  elemental double precision function mustart_gm (y1,y2)
+  pure elemental double precision function mustart_gm (y1,y2)
     implicit none
     double precision, intent(in) :: y1, y2
     mustart_gm = log(y1) - log(y2)
   end function mustart_gm
 
-  elemental double precision function fcncum_gm (mu) result (w)
+  pure elemental double precision function fcncum_gm (mu) result (w)
     ! Cumulant fcn as a fcn of mu
     implicit none
     double precision, intent(in) :: mu
     w = log(mu)
   end function fcncum_gm
 
-  elemental double precision function fcncumd2_gm (mu) result (w)
+  pure elemental double precision function fcncumd2_gm (mu) result (w)
     ! Cumulant fcn as a fcn of mu, 2nd derivative
     implicit none
     double precision, intent(in) :: mu
     w = mu*mu
   end function fcncumd2_gm
 
-  elemental double precision function fcncumd3_gm (mu) result (w)
+  pure elemental double precision function fcncumd3_gm (mu) result (w)
     ! Cumulant fcn as a fcn of mu, 3rd derivative
     implicit none
     double precision, intent(in) :: mu

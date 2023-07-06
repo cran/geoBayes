@@ -13,7 +13,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! binomial !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link function
-  elemental function flink_bi (w, d) result (z)
+  pure elemental function flink_bi (w, d) result (z)
     use interfaces, only: quantt, quantnorm, quantlogis
     implicit none
     double precision, intent(in) :: w, d
@@ -28,7 +28,7 @@ contains
   end function flink_bi
 
 !! Inverse link function (log scale)
-  elemental function invlink_bi (z, d) result (w)
+  pure elemental function invlink_bi (z, d) result (w)
     ! Binomial symmetric (robit) link fcn
     use interfaces, only: logprobt, logprobnorm, logproblogis
     implicit none
@@ -62,7 +62,7 @@ contains
 !! Link function
 !! mu = 1 - exp{-max(0,1+d*z)**(1/d)} , if d /= 0
 !!    = 1 - exp(-exp(z))              , if d == 0
-  elemental function flink_ba (w, d) result (z)
+  pure elemental function flink_ba (w, d) result (z)
     ! w is log(1-mu)
     implicit none
     double precision, intent(in) :: w, d
@@ -90,7 +90,7 @@ contains
   end function flink_ba
 
 !! Inverse link fcn. Returns log(1-mu)
-  elemental function invlink_ba (z, d) result (w)
+  pure elemental function invlink_ba (z, d) result (w)
     ! Binomial asymmetric (GEV) link fcn
     ! mu = 1 - exp{-max(0,1+d*z)**(1/d)} , if d /= 0
     !    = 1 - exp(-exp(z))              , if d == 0
@@ -159,7 +159,7 @@ contains
   end function invlink_ba
 
 !! Inverse link fcn derivative w.r.t. nu
-  elemental function invlinkdnu_ba (z, d) result (y)
+  pure elemental function invlinkdnu_ba (z, d) result (y)
     ! Binomial asymmetric (GEV) link fcn
     ! mu = 1 - exp{-max(0,1+d*z)**(1/d)} , if d /= 0
     !    = 1 - exp(-exp(z))              , if d == 0
@@ -225,7 +225,7 @@ contains
 !! Link function
 !! mu = 1 - exp{-max(0, 1+d*z)**(-1/d)} , if d /= 0
 !!    = 1 - exp(-exp(-z))               , if d == 0
-  elemental function flink_bd (w, d) result (z)
+  pure elemental function flink_bd (w, d) result (z)
     ! w is log (1-mu)
     implicit none
     double precision, intent(in) :: w, d
@@ -239,7 +239,7 @@ contains
   end function flink_bd
   
 !! Inverse link fcn. Returns log(1-mu)
-  elemental function invlink_bd (z, d) result (w)
+  pure elemental function invlink_bd (z, d) result (w)
     ! Binomial asymmetric (GEV) decreasing link fcn
     ! p = 1 - exp{-max(0, 1+d*z)**(-1/d)}
     ! w = log(1-p) = -max(0, 1+d*z)**(-1/d)
@@ -262,7 +262,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Box-Cox !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link fcn
-  elemental function flink_boxcox (w, d) result (z)
+  pure elemental function flink_boxcox (w, d) result (z)
     ! z = (mu^d - 1)/d
     ! w is log(mu)
     use interfaces, only: fexpm1
@@ -281,7 +281,7 @@ contains
   end function flink_boxcox
   
 !! Inverse link fcn, returns log(mu)
-  elemental function invlink_boxcox (z,d) result (w)
+  pure elemental function invlink_boxcox (z,d) result (w)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -316,7 +316,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Poisson !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link fcn
-  elemental function flink_po (w, d) result (z)
+  pure elemental function flink_po (w, d) result (z)
     ! w is log(mu)
     ! z = sign(w)*expm1(d*|w|)/d for d > 0
     use interfaces, only: fexpm1
@@ -336,7 +336,7 @@ contains
     end if
   end function flink_po
 
-  elemental function invlink_po (z,d) result (w)
+  pure elemental function invlink_po (z,d) result (w)
     use interfaces, only: flog1p
     implicit none
     double precision, intent(in) :: z, d
@@ -362,7 +362,7 @@ contains
  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Gamma !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Link fcn
-  elemental function flink_gm (w, d) result (z)
+  pure elemental function flink_gm (w, d) result (z)
     ! z = (mu^d - 1)/d
     ! w is log(mu)
     implicit none
@@ -372,7 +372,7 @@ contains
   end function flink_gm
   
 !! Inverse link fcn, returns log(mu)
-  elemental function invlink_gm (z,d) result (w)
+  pure elemental function invlink_gm (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -389,7 +389,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Gaussian !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! Linf fcn
-  elemental function flink_ga (w, d) result (z)
+  pure elemental function flink_ga (w, d) result (z)
     implicit none
     double precision, intent(in) :: w, d
     double precision z
@@ -429,7 +429,7 @@ contains
   end function flink_ga
   
 !! Inverse link fcn 
-  elemental function invlink_ga (z,d) result(w)
+  pure elemental function invlink_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
@@ -472,7 +472,7 @@ contains
 !! mu = PHI[sign(z) * c(nu) * sqrt(nu*log(1+z*z/nu))]
 !! where c(nu) = (8*nu+1)/(8*nu+3)
 !! w = log(mu)
-  elemental function flink_bw (w, d) result(z)
+  pure elemental function flink_bw (w, d) result(z)
     use interfaces, only: quantnorm, fexpm1
     implicit none
     double precision, intent(in) :: w, d
@@ -485,7 +485,7 @@ contains
   end function flink_bw
 
 !! Inverse link fcn (log scale)
-  elemental function invlink_bw (z,d) result (w)
+  pure elemental function invlink_bw (z,d) result (w)
     use interfaces, only: logprobnorm, flog1p
     implicit none
     double precision, intent(in) :: z, d

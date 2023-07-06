@@ -26,7 +26,7 @@
 sploglik <- function(pargrid, runs, transf = c("no", "mu", "wo"))
 {
   ## Check input
-  if (any(sapply(runs, class) != "geomcmc")) {
+  if (!all(sapply(runs, inherits, what = "geomcmc"))) {
     stop ("Input runs is not a list with elements of class geomcmc")
   }
   nruns <- length(runs)
@@ -140,7 +140,7 @@ sploglik <- function(pargrid, runs, transf = c("no", "mu", "wo"))
 sploglik_cross <- function(runs, transf = c("no", "mu", "wo"))
 {
   ## Check input
-  if (any(sapply(runs, class) != "geomcmc")) {
+  if (!all(sapply(runs, inherits, what = "geomcmc"))) {
     stop ("Input runs is not a list with elements of class geomcmc")
   }
   nruns <- length(runs)

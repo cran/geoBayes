@@ -1,3 +1,7 @@
+0.7.2
+* Workaround for a bug in the flang compiler who doesn't recognise that
+  elemental implies pure.
+
 0.7.1
 * Include offset variable in the linear predictor.
 * Include method for choosing the proposal distributions.

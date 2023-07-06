@@ -58,7 +58,7 @@ contains
     lup_ = lup
   end function upper_tri
 
-  elemental double precision function spcor (h,k)
+  pure elemental double precision function spcor (h,k)
     implicit none
     double precision, intent(in) :: h,k
     select case (CORIS)
@@ -75,7 +75,7 @@ contains
     end select
   end function spcor
 
-  elemental double precision function spcor_dh (h,k)
+  pure elemental double precision function spcor_dh (h,k)
     implicit none
     double precision, intent(in) :: h,k
     select case (CORIS)
@@ -92,7 +92,7 @@ contains
     end select
   end function spcor_dh
 
-  elemental double precision function spcor_dk (h,k)
+  pure elemental double precision function spcor_dk (h,k)
     implicit none
     double precision, intent(in) :: h,k
     select case (CORIS)
@@ -109,7 +109,7 @@ contains
     end select
   end function spcor_dk
 
-  elemental double precision function spcor_hh (h,k)
+  pure elemental double precision function spcor_hh (h,k)
     implicit none
     double precision, intent(in) :: h,k
     select case (CORIS)
@@ -126,7 +126,7 @@ contains
     end select
   end function spcor_hh
 
-  elemental double precision function spcor_hk (h,k)
+  pure elemental double precision function spcor_hk (h,k)
     implicit none
     double precision, intent(in) :: h,k
     select case (CORIS)
@@ -143,7 +143,7 @@ contains
     end select
   end function spcor_hk
 
-  elemental double precision function spcor_dhdk (h,k)
+  pure elemental double precision function spcor_dhdk (h,k)
     implicit none
     double precision, intent(in) :: h,k
     select case (CORIS)

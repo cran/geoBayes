@@ -146,7 +146,7 @@ contains
   end function invlinkdz_ba
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! GEVD Binomial !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  elemental function invlinkdz_bd (z, d) result (w)
+  pure elemental function invlinkdz_bd (z, d) result (w)
     ! Binomial asymmetric (GEV) decreasing link fcn
     ! p = 1 - exp{-max(0, 1+d*z)**(-1/d)}
     ! w = log(1-p) = -max(0, 1+d*z)**(-1/d)
@@ -170,7 +170,7 @@ contains
   end function invlinkdz_bd
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Box-Cox !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  elemental function invlinkdz_boxcox (z,d) result (w)
+  pure elemental function invlinkdz_boxcox (z,d) result (w)
     ! w = log(mu)
     use interfaces, only: flog1p
     implicit none
@@ -189,7 +189,7 @@ contains
   end function invlinkdz_boxcox
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Poisson !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  elemental function invlinkdz_po (z,d) result (w)
+  pure elemental function invlinkdz_po (z,d) result (w)
     ! w = log(mu)
     use interfaces, only: flog1p
     implicit none
@@ -211,7 +211,7 @@ contains
   end function invlinkdz_po
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Gamma !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  elemental function invlinkdz_gm (z,d) result (w)
+  pure elemental function invlinkdz_gm (z,d) result (w)
     implicit none
     double precision, intent(in) :: z, d
     double precision w
@@ -219,7 +219,7 @@ contains
   end function invlinkdz_gm
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Gaussian !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  elemental function invlinkdz_ga (z,d) result(w)
+  pure elemental function invlinkdz_ga (z,d) result(w)
     ! Inverse Box-Cox transformation. Using extended if d > 0.
     implicit none
     double precision, intent(in) :: z, d
@@ -254,7 +254,7 @@ contains
   end function invlinkdz_ga
 
 !!!!!!!!!!!!!!!!!!! Wallace transformation for binomial !!!!!!!!!!!!!!!!!!!
-  elemental function invlinkdz_bw (z,d) result (w)
+  pure elemental function invlinkdz_bw (z,d) result (w)
     use interfaces, only: logprobnorm, logpdfnorm, flog1p
     implicit none
     double precision, intent(in) :: z, d

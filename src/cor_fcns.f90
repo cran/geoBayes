@@ -6,7 +6,7 @@ module cor_fcns
 contains
 
 !!! Matern
-  elemental double precision function matern (h,k) result (c)
+  pure elemental double precision function matern (h,k) result (c)
     use interfaces, only: fgamma, fbesselk
     implicit none
     double precision, intent(in) :: h, k
@@ -17,7 +17,7 @@ contains
     end if
   end function matern
 
-  elemental double precision function logbesselk_dk (h,k) result (c)
+  pure elemental double precision function logbesselk_dk (h,k) result (c)
     ! Numerical derivatives. See
     ! http://www.math.ubc.ca/~jfeng/CHBE553/Example7/Formulae.pdf
     use interfaces, only: fbesselkexp
@@ -39,7 +39,7 @@ contains
     if (k .lt. 0d0) c = -c
   end function logbesselk_dk
 
-  elemental double precision function logbesselk_hk (h,k) result (c)
+  pure elemental double precision function logbesselk_hk (h,k) result (c)
     ! Numerical derivatives. See
     ! http://www.math.ubc.ca/~jfeng/CHBE553/Example7/Formulae.pdf
     use interfaces, only: fbesselkexp
@@ -100,7 +100,7 @@ contains
       c = bigneg
     end if
   contains
-    elemental double precision function matern_dh (h,k) result (c)
+    pure elemental double precision function matern_dh (h,k) result (c)
       use interfaces, only: fgamma, fbesselk
       implicit none
       double precision, intent(in) :: h, k
@@ -131,7 +131,7 @@ contains
       c = bigneg
     end if
   contains
-    elemental double precision function matern_hh (h,k) result (c)
+    pure elemental double precision function matern_hh (h,k) result (c)
       use interfaces, only: fgamma, fbesselk
       implicit none
       double precision, intent(in) :: h, k
@@ -153,7 +153,7 @@ contains
       c = matern_dk(h,kappa)
     end if
   contains
-    elemental double precision function matern_dk (h,k) result (c)
+    pure elemental double precision function matern_dk (h,k) result (c)
       use interfaces, only: fdigamma
       double precision, intent(in) :: h, k
       double precision d1K, t
@@ -176,7 +176,7 @@ contains
       c = matern_dhdk(h,kappa)
     end if
   contains
-    elemental double precision function matern_dhdk (h,k) result (c)
+    pure elemental double precision function matern_dhdk (h,k) result (c)
       use interfaces, only: fbesselk, fgamma, fdigamma
       double precision, intent(in) :: h, k
       double precision d1K, t
@@ -199,7 +199,7 @@ contains
       c = matern_hk(h,kappa)
     end if
   contains
-    elemental double precision function matern_hk (h,k) result (c)
+    pure elemental double precision function matern_hk (h,k) result (c)
       use interfaces, only: fdigamma, ftrigamma
       double precision, intent(in) :: h, k
       double precision d1K, d2K, t

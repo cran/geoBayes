@@ -30,7 +30,7 @@ subroutine bfsp_no (weights, zcv, logbf, lglk1, lglk2, &
      ldh_Ups, ssqdfsc, modeldfh, &
      tsqdfsc, respdfh, xi(n), eta(kg), mxlglk, lglketa(Ntot2, kg), nu
   integer i, j, m
-  double precision zsam(n)
+  double precision zsam(n), logNN2(kg)
 
   call create_model (ifam)
   call create_spcor (icf,n)
@@ -38,6 +38,8 @@ subroutine bfsp_no (weights, zcv, logbf, lglk1, lglk2, &
   ssqdfsc = ssqdf*ssqsc
   tsqdfsc = tsqdf*tsq
   respdfh = .5d0*(n + tsqdf)
+
+  logNN2 = log(dble(Ntot2)) - log(dble(Nout2))
 
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
@@ -96,15 +98,24 @@ subroutine bfsp_no (weights, zcv, logbf, lglk1, lglk2, &
 
   ! Compute weights
   eta = log(dble(Nout2)) - logbf
-  lglketa = spread(eta,1,Ntot2) + lglk2
+  do j = 1,kg
+    do i = 1,Ntot2
+      lglketa(i,j) = eta(j) + lglk2(i,j)
+    end do
+  end do
   weights = logrsumexp(lglketa,Ntot2,kg)
 
   ! Compute control variates
-  lglketa = lglketa - spread(weights,2,kg) &
-     + spread(log(dble(Ntot2)/dble(Nout2)),1,Ntot2)
-
-  zcv(:,2:kg) = spread(lglketa(:,1),2,kg-1)
-  zcv(:,2:kg) = zcv(:,2:kg) - lglketa(:,2:kg)
+  do j = 1, kg
+    do i = 1, Ntot2
+      lglketa(i,j) = lglketa(i,j) - weights(i) + logNN2(j)
+    end do
+  end do
+  do j = 2, kg
+    do i = 1, Ntot2
+      zcv(i,j) = lglketa(i,1) - lglketa(i,j)
+    end do
+  end do
   where (zcv(:,2:kg) > 0d0)
     zcv(:,2:kg) = -exp(lglketa(:,2:kg) + flogexpm1(zcv(:,2:kg)))
   elsewhere (zcv(:,2:kg) < 0d0)
@@ -148,7 +159,7 @@ subroutine bfsp_mu (weights, zcv, logbf, lglk1, lglk2, &
   logical lmxi
   double precision T(n, n), TiF(n, p), FTF(p, p), Ups(n, n), &
      ldh_Ups, ssqdfsc, modeldfh, tsqdfsc, respdfh, xi(n), eta(kg), mxlglk, &
-     lglketa(Ntot2, kg), nu
+     lglketa(Ntot2, kg), nu, logNN2(kg)
   integer i, j
 
   call create_model (ifam)
@@ -157,6 +168,8 @@ subroutine bfsp_mu (weights, zcv, logbf, lglk1, lglk2, &
   ssqdfsc = ssqdf*ssqsc
   tsqdfsc = tsqdf*tsq
   respdfh = .5d0*(n + tsqdf)
+
+  logNN2 = log(dble(Ntot2)) - log(dble(Nout2))
 
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
@@ -220,15 +233,24 @@ subroutine bfsp_mu (weights, zcv, logbf, lglk1, lglk2, &
 
   ! Compute weights
   eta = log(dble(Nout2)) - logbf
-  lglketa = spread(eta,1,Ntot2) + lglk2
+  do j = 1,kg
+    do i = 1,Ntot2
+      lglketa(i,j) = eta(j) + lglk2(i,j)
+    end do
+  end do
   weights = logrsumexp(lglketa,Ntot2,kg)
 
   ! Compute control variates
-  lglketa = lglketa - spread(weights,2,kg) &
-     + spread(log(dble(Ntot2)/dble(Nout2)),1,Ntot2)
-
-  zcv(:,2:kg) = spread(lglketa(:,1),2,kg-1)
-  zcv(:,2:kg) = zcv(:,2:kg) - lglketa(:,2:kg)
+  do j = 1, kg
+    do i = 1, Ntot2
+      lglketa(i,j) = lglketa(i,j) - weights(i) + logNN2(j)
+    end do
+  end do
+  do j = 2, kg
+    do i = 1, Ntot2
+      zcv(i,j) = lglketa(i,1) - lglketa(i,j)
+    end do
+  end do
   where (zcv(:,2:kg) > 0d0)
     zcv(:,2:kg) = -exp(lglketa(:,2:kg) + flogexpm1(zcv(:,2:kg)))
   elsewhere (zcv(:,2:kg) < 0d0)
@@ -265,12 +287,14 @@ subroutine bfsp_wo (weights, zcv, logbf, lglk1, lglk2, &
      xi(n), eta(kg), lglketa(Ntot2, kg)
   integer i, j
   double precision zsam(n), msam(n), jsam(n), sam(n)
-  double precision nu, phi, omg, kappa
+  double precision nu, phi, omg, kappa, logNN2(kg)
 
   call create_model (ifam)
   call create_spcor(icf,n)
 
   ssqdfsc = ssqdf*ssqsc
+
+  logNN2 = log(dble(Ntot2)) - log(dble(Nout2))
 
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
@@ -318,15 +342,24 @@ subroutine bfsp_wo (weights, zcv, logbf, lglk1, lglk2, &
 
   ! Compute weights
   eta = log(dble(Nout2)) - logbf
-  lglketa = spread(eta,1,Ntot2) + lglk2
+  do j = 1,kg
+    do i = 1,Ntot2
+      lglketa(i,j) = eta(j) + lglk2(i,j)
+    end do
+  end do
   weights = logrsumexp(lglketa,Ntot2,kg)
 
   ! Compute control variates
-  lglketa = lglketa - spread(weights,2,kg) &
-     + spread(log(dble(Ntot2)/dble(Nout2)),1,Ntot2)
-
-  zcv(:,2:kg) = spread(lglketa(:,1),2,kg-1)
-  zcv(:,2:kg) = zcv(:,2:kg) - lglketa(:,2:kg)
+  do j = 1, kg
+    do i = 1, Ntot2
+      lglketa(i,j) = lglketa(i,j) - weights(i) + logNN2(j)
+    end do
+  end do
+  do j = 2, kg
+    do i = 1, Ntot2
+      zcv(i,j) = lglketa(i,1) - lglketa(i,j)
+    end do
+  end do
   where (zcv(:,2:kg) > 0d0)
     zcv(:,2:kg) = -exp(lglketa(:,2:kg) + flogexpm1(zcv(:,2:kg)))
   elsewhere (zcv(:,2:kg) < 0d0)
@@ -363,7 +396,7 @@ subroutine bfsp_tr (weights, zcv, logbf, lglk1, lglk2, &
      tsqval, respdfh, xi(n), eta(kg), lglketa(Ntot2, kg)
   integer i, j
   double precision zsam(n), msam(n), jsam(n), sam(n)
-  double precision nu, phi, omg, kappa
+  double precision nu, phi, omg, kappa, logNN2(kg)
 
   call create_model (ifam)
   call create_spcor(icf,n)
@@ -378,6 +411,8 @@ subroutine bfsp_tr (weights, zcv, logbf, lglk1, lglk2, &
     tsqval = tsq
     !!condymuf => condymu_sp
   end select
+
+  logNN2 = log(dble(Ntot2)) - log(dble(Nout2))
 
   ! Determine flat or normal prior
   call betapriorz (modeldfh, xi, lmxi, betm0, betQ0, F, n, p, ssqdf, offset)
@@ -445,15 +480,24 @@ subroutine bfsp_tr (weights, zcv, logbf, lglk1, lglk2, &
 
   ! Compute weights
   eta = log(dble(Nout2)) - logbf
-  lglketa = spread(eta,1,Ntot2) + lglk2
+  do j = 1,kg
+    do i = 1,Ntot2
+      lglketa(i,j) = eta(j) + lglk2(i,j)
+    end do
+  end do
   weights = logrsumexp(lglketa,Ntot2,kg)
 
   ! Compute control variates
-  lglketa = lglketa - spread(weights,2,kg) &
-     + spread(log(dble(Ntot2)/dble(Nout2)),1,Ntot2)
-
-  zcv(:,2:kg) = spread(lglketa(:,1),2,kg-1)
-  zcv(:,2:kg) = zcv(:,2:kg) - lglketa(:,2:kg)
+  do j = 1, kg
+    do i = 1, Ntot2
+      lglketa(i,j) = lglketa(i,j) - weights(i) + logNN2(j)
+    end do
+  end do
+  do j = 2, kg
+    do i = 1, Ntot2
+      zcv(i,j) = lglketa(i,1) - lglketa(i,j)
+    end do
+  end do
   where (zcv(:,2:kg) > 0d0)
     zcv(:,2:kg) = -exp(lglketa(:,2:kg) + flogexpm1(zcv(:,2:kg)))
   elsewhere (zcv(:,2:kg) < 0d0)

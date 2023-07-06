@@ -7,7 +7,7 @@
 module pdfydlnk
 contains
 !!!!!!!!!!!!!! Compute the log-pdf of y for given parameter !!!!!!!!!!!!!!!
-  elemental double precision function logpdfydlnk_gt (y1, y2, par)
+  pure elemental double precision function logpdfydlnk_gt (y1, y2, par)
     ! Transformed Gaussian
     ! y1 :: The average across all realisations
     ! y2 :: The number of replications
@@ -17,7 +17,7 @@ contains
     logpdfydlnk_gt = 2d0*y2*(par-y1)
   end function logpdfydlnk_gt
 
-  elemental double precision function logpdfydlnk_ga (y1, y2, par)
+  pure elemental double precision function logpdfydlnk_ga (y1, y2, par)
     ! Gaussian
     ! y1 :: The total across all realisations
     ! y2 :: The number of replications
@@ -27,7 +27,7 @@ contains
     logpdfydlnk_ga = y1 - y2*par
   end function logpdfydlnk_ga
 
-  elemental double precision function logpdfydlnk_bi (y1, y2, par)
+  pure elemental double precision function logpdfydlnk_bi (y1, y2, par)
     ! Binomial
     ! To get the asymmetric version, switch y1 and y2
     ! y1 :: The number of successes
@@ -39,7 +39,7 @@ contains
     logpdfydlnk_bi = y1 - y2/fexpm1(-par)
   end function logpdfydlnk_bi
 
-  elemental double precision function logpdfydlnk_po (y1, y2, par)
+  pure elemental double precision function logpdfydlnk_po (y1, y2, par)
     ! Poisson
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations
@@ -49,7 +49,7 @@ contains
     logpdfydlnk_po = y1 - y2*exp(par)
   end function logpdfydlnk_po
 
-  elemental double precision function logpdfydlnk_gm (y1, y2, par)
+  pure elemental double precision function logpdfydlnk_gm (y1, y2, par)
     ! Gamma
     ! y1 :: The total number of observations
     ! y2 :: The number of realisations

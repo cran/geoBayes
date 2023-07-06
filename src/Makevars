@@ -24,7 +24,7 @@ bmargin.o: lbfgsbmod.o flogsumexp.o
 calcb2.o: modelfcns.o interfaces.o flogsumexp.o covfun.o pdfy.o betaprior.o
 calcbd.o: modelfcns.o interfaces.o flogsumexp.o covfun.o pdfy.o betaprior.o \
   calcbd_fcns.o
-calcbd_fcns.o: modelfcns.o pdfy.o
+calcbd_fcns.o: modelfcns.o pdfy.o covfun.o
 covfun.o: interfaces.o cor_fcns.o
 cor_fcns.o: interfaces.o
 linkfcn.o: interfaces.o tcdfder.o

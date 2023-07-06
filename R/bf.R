@@ -100,8 +100,7 @@ bf1skel <- function(runs, bfsize1 = 0.80, method = c("RL", "MW"),
 {
   method <- match.arg(method)
   imeth <- match(method, eval(formals()$method))
-  classes <- sapply(runs, class)
-  if (any(classes != "geomcmc")) {
+  if (!all(sapply(runs, inherits, what = "geomcmc"))) {
     stop ("Input runs is not a list with elements of class geomcmc.")
   }
   nruns <- length(runs)

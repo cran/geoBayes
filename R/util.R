@@ -128,7 +128,6 @@ stackdata <- function (..., fillwith = NA, keepclass = FALSE) {
 ##'   \code{xycoord} fall inside \code{borders}, and therefore
 ##'   correspond to the \code{grid}.
 ##' }
-##' @seealso \code{\link[geoR]{pred_grid}}
 ##' @importFrom sp point.in.polygon
 ##' @export
 ##' @examples

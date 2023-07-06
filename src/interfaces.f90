@@ -25,80 +25,80 @@ module interfaces
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!! Auxliary functions !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   interface
-    elemental function isfinite (x)
+    pure elemental function isfinite (x)
       double precision, intent(in) :: x
       integer isfinite
     end function isfinite
   end interface
 
   interface
-    elemental double precision function flog1pexp (x)
+    pure elemental double precision function flog1pexp (x)
       double precision, intent(in) :: x
     end function flog1pexp
   end interface
 
   interface
-    elemental double precision function flog1mexp (x)
+    pure elemental double precision function flog1mexp (x)
       double precision, intent(in) :: x
     end function flog1mexp
   end interface
 
   interface
-    elemental double precision function flogexpm1 (x)
+    pure elemental double precision function flogexpm1 (x)
       double precision, intent(in) :: x
     end function flogexpm1
   end interface
 
   interface
-    elemental double precision function flog1p (x)
+    pure elemental double precision function flog1p (x)
       double precision, intent(in) :: x
     end function flog1p
   end interface
 
   interface
-    elemental double precision function fexpm1 (x)
+    pure elemental double precision function fexpm1 (x)
       double precision, intent(in) :: x
     end function fexpm1
   end interface
 
   interface
-    elemental double precision function fgamma (x)
+    pure elemental double precision function fgamma (x)
       double precision, intent(in) :: x
     end function fgamma
   end interface
 
   interface
-    elemental double precision function fdigamma (x)
+    pure elemental double precision function fdigamma (x)
       double precision, intent(in) :: x
     end function fdigamma
   end interface
 
   interface
-    elemental double precision function ftrigamma (x)
+    pure elemental double precision function ftrigamma (x)
       double precision, intent(in) :: x
     end function ftrigamma
   end interface
 
   interface
-    elemental double precision function fbesselk (x, k)
+    pure elemental double precision function fbesselk (x, k)
       double precision, intent(in) :: x, k
     end function fbesselk
   end interface
 
   interface
-    elemental double precision function fbesselkexp (x, k)
+    pure elemental double precision function fbesselkexp (x, k)
       double precision, intent(in) :: x, k
     end function fbesselkexp
   end interface
 
   interface
-    elemental double precision function fbesselkratio (x, ktop, kbot)
+    pure elemental double precision function fbesselkratio (x, ktop, kbot)
       double precision, intent(in) :: x, ktop, kbot
     end function fbesselkratio
   end interface
 
   interface
-    elemental double precision function flogbesselkdk (x, kappa)
+    pure elemental double precision function flogbesselkdk (x, kappa)
       double precision, intent(in) :: x, kappa
     end function flogbesselkdk
   end interface
@@ -149,73 +149,73 @@ module interfaces
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!! Probability functions !!!!!!!!!!!!!!!!!!!!!!!!!!!
   interface
-    elemental double precision function logprobt (q, d)
+    pure elemental double precision function logprobt (q, d)
       double precision, intent(in) :: q, d
     end function logprobt
   end interface
 
   interface
-    elemental double precision function logborpt (q, d)
+    pure elemental double precision function logborpt (q, d)
       double precision, intent(in) :: q, d
     end function logborpt
   end interface
 
   interface
-    elemental double precision function quantt (p, d)
+    pure elemental double precision function quantt (p, d)
       double precision, intent(in) :: p, d
     end function quantt
   end interface
 
   interface
-    elemental double precision function logpdft (x, d)
+    pure elemental double precision function logpdft (x, d)
       double precision, intent(in) :: x, d
     end function logpdft
   end interface
 
   interface
-    elemental double precision function logprobnorm (q)
+    pure elemental double precision function logprobnorm (q)
       double precision, intent(in) :: q
     end function logprobnorm
   end interface
 
   interface
-    elemental double precision function logborpnorm (q)
+    pure elemental double precision function logborpnorm (q)
       double precision, intent(in) :: q
     end function logborpnorm
   end interface
 
   interface
-    elemental double precision function quantnorm (p)
+    pure elemental double precision function quantnorm (p)
       double precision, intent(in) :: p
     end function quantnorm
   end interface
 
   interface
-    elemental double precision function logpdfnorm (x)
+    pure elemental double precision function logpdfnorm (x)
       double precision, intent(in) :: x
     end function logpdfnorm
   end interface
 
   interface
-    elemental double precision function logproblogis (q)
+    pure elemental double precision function logproblogis (q)
       double precision, intent(in) :: q
     end function logproblogis
   end interface
 
   interface
-    elemental double precision function logborplogis (q)
+    pure elemental double precision function logborplogis (q)
       double precision, intent(in) :: q
     end function logborplogis
   end interface
 
   interface
-    elemental double precision function quantlogis (p)
+    pure elemental double precision function quantlogis (p)
       double precision, intent(in) :: p
     end function quantlogis
   end interface
 
   interface
-    elemental double precision function logpdflogis (x)
+    pure elemental double precision function logpdflogis (x)
       double precision, intent(in) :: x
     end function logpdflogis
   end interface
