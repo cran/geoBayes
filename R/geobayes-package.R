@@ -11,6 +11,7 @@
 ##' = "geoBayes")} to examine them.
 ##' @title The \code{geoBayes} package
 ##' @name geoBayes
+##' @aliases geoBayes-package
 ##' @docType package
 ##' @useDynLib geoBayes, .registration = TRUE
 ##' @author Evangelos Evangelou <e.evangelou@@maths.bath.ac.uk> and

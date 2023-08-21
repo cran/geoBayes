@@ -1,13 +1,13 @@
-4678ef6fc62759e5fd127f2d456d7b24 *DESCRIPTION
+3e58983824eac7ca4f8f062543505787 *DESCRIPTION
 47a919de0f113d93dc3303fe888697fc *NAMESPACE
-13d132129ad2d955943dec131ed11bd2 *NEWS
+3bf4cca47f567075ba0caa27ccbf1b35 *NEWS
 6c9131655cdd772f974b8c139549cc94 *R/auxiliary.R
 5aa79cbc4167c77dbc790de84ba33ecf *R/bf.R
 5dbdb2c2f6752ab5d34f238c06b48622 *R/bfse.R
 011f8328f468ecebd185b32c468aa112 *R/calcbf.R
 9d948b5da280225c0ce5859124ac19f3 *R/geobayes-correlation.R
 e52d779e04803b94f36ac20832653b4c *R/geobayes-models.R
-6fed9cd614eeeb49c69c0c161c741e80 *R/geobayes-package.R
+8d39bb9953034e4a01fa6a9f3efb268c *R/geobayes-package.R
 5ca753c0c6f229cf1f3674872356175d *R/linkfcn.R
 86d225bfd0cf0ad507419ad38c53de09 *R/mcsp2.R
 77cf5d1064dcce2de55a4b5cd34934f1 *R/mcsp_mala.R
@@ -33,7 +33,7 @@ cb24f3ec2417c5f9cf002c9cf0c01c6f *man/bf1skel.Rd
 2474952c6f09cc901e75e2125e6b9d82 *man/bf2optim.Rd
 4a4587ff134037afe8c020f6480b1618 *man/bf2se.Rd
 e46f39eb378d59b1c8ef8598e96e0bd1 *man/bmbfse.Rd
-f0d78f66f522b83320a1aa8a22f54df0 *man/geoBayes.Rd
+8052380347dcd1c4af95e0b54844474d *man/geoBayes.Rd
 e43b635f67653d8b2b4e731f54294870 *man/geoBayes_correlation.Rd
 9915ae45fd8b69fa9d10d2a2321768ca *man/geoBayes_models.Rd
 906e25388e89761b10c3917ffb689a2f *man/linkfcn.Rd

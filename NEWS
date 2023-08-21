@@ -1,3 +1,6 @@
+0.7.3
+* Add alias geoBayes-package
+
 0.7.2
 * Workaround for a bug in the flang compiler who doesn't recognise that
   elemental implies pure.
