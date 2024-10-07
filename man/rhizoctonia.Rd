@@ -8,7 +8,7 @@
 A data frame with 100 rows and 5 variables.
 }
 \source{
-\url{http://www.biometrics.tibs.org/datasets/010434.txt}
+See reference below.
 }
 \usage{
 data(rhizoctonia)

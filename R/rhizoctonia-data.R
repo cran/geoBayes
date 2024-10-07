@@ -16,7 +16,7 @@
 ##' @title Rhizoctonia root rot infections
 ##' @docType data
 ##' @format A data frame with 100 rows and 5 variables.
-##' @source \url{http://www.biometrics.tibs.org/datasets/010434.txt}
+##' @source See reference below.
 ##' @name rhizoctonia
 ##' @usage data(rhizoctonia)
 ##' @references Zhang, H. (2002). On estimation and prediction for

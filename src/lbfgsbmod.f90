@@ -3681,7 +3681,7 @@ contains
     ! internal variables
 
     double precision :: ddot,temp
-    integer :: case,j,jj
+    integer :: kase,j,jj
 
     ! begin block permitting ...exits to 150
 
@@ -3695,10 +3695,20 @@ contains
 
     ! determine the task and go to it.
 
-    case = 1
-    if (mod(job,10) /= 0) case = 2
-    if (mod(job,100)/10 /= 0) case = case + 2
-    go to (20,50,80,110), case
+    kase = 1
+    if (mod(job,10) /= 0) kase = 2
+    if (mod(job,100)/10 /= 0) kase = kase + 2
+    ! go to (20,50,80,110), kase
+    select case (kase)
+    case (1)
+      goto 20
+    case (2)
+      goto 50
+    case (3)
+      goto 80
+    case (4)
+      goto 110
+    end select
 
     ! solve t*x=b for t lower triangular
 

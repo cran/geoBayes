@@ -44,9 +44,9 @@ Evangelou, E., & Roy, V. (2019). Estimation and prediction for
   via reparameterized importance sampling. \emph{Spatial Statistics}, 29,
   289-315.
 
-Roy, V., & Evangelou, E. (2022). Selection of proposal
+Roy, V., & Evangelou, E. (2024). Selection of proposal
   distributions for multiple importance sampling.
-  \emph{Statistica Sinica}.
+  \emph{Statistica Sinica}, 34, 27-46.
 }
 \author{
 Evangelos Evangelou <e.evangelou@maths.bath.ac.uk> and
