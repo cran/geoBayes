@@ -1,4 +1,4 @@
-dd184f9f102cef2eb54a43abddf7986d *DESCRIPTION
+e13c55df5bd5498079bb3c1ecf5ec5b6 *DESCRIPTION
 47a919de0f113d93dc3303fe888697fc *NAMESPACE
 60fd957d6346aaf46439aee3bcbc6c15 *NEWS
 6c9131655cdd772f974b8c139549cc94 *R/auxiliary.R
@@ -22,9 +22,9 @@ b525ccec47598f7a06a75e6cfde46f33 *R/seeb.R
 4aeb177eccca7316ba6397e24254cdf9 *R/util.R
 046a6b8b0c920e35c83042137006d56d *data/rhizoctonia.rda
 92000f4012d91a4515dd846183213cc9 *demo/00Index
-2ea349892fad617a86f296db08d7ce49 *demo/rhizoctonia1.R
-f7dd31f8086178424081fd9095d01a74 *demo/rhizoctonia2.R
-e48337be915c13a9e2f2eb36360b86c9 *demo/yield2.R
+caa32212da251ffc49fdf66ea10fff4e *demo/rhizoctonia1.R
+dfc2e665e235f40278864467f86dc3c0 *demo/rhizoctonia2.R
+a0c5cecb5655b1f621610fa28695464a *demo/yield2.R
 3fcf8f122a0b8dcf670e929bcbde145c *man/alik_cutoff.Rd
 37c9444a48a1d7424def58dd8ef118cc *man/alik_inla.Rd
 74b75a63c54a9572acebbab05dd6cd45 *man/alik_optim.Rd
@@ -66,7 +66,7 @@ b54585f98963200ddf02f360ee3b52a3 *src/calcbd.f90
 a75c2f89a307885f6e4f3a91071f85b0 *src/covfun.f90
 6018c56610e1b47031be5ba32f8ef30c *src/flogsumexp.f90
 c1d1deb9b07209127d7eae33f7e215b9 *src/interfaces.f90
-a2e5bdec7c463c82af377065db0571f7 *src/lbfgsbmod.f90
+f94a71a48ef575fbed39601e0b509dcf *src/lbfgsbmod.f90
 f9c97861be032b7e9b1c02f95fbeb5c3 *src/linkcalc.f90
 7fdca53cfb6ac3326998e676105c672d *src/linkdz.f90
 44e90cd866dcc4ac2fb83d981173e591 *src/linkfcn.f90

@@ -18,7 +18,7 @@ corrf <- "spherical"
 ssqdf <- 4
 ssqsc <- 1
 tsqdf <- 4
-tsqsc <- 1
+tsqsc <- 4
 betm0 <- 0
 betQ0 <- diag(.01, 2, 2)
 phiprior <- c(200, 1, 1000, 100) # U(100, 300)
@@ -47,10 +47,8 @@ sample <- update(samplt, test = FALSE)
 
 mcsamp <- mcmcmake(sample)
 
-library(mcmcplots)
 ipar <- grep(paste(c("phi", "tsq", "ssq", "beta(_[0-9]+)?", "omg"),
                    collapse = "|"), dimnames(mcsamp)[[2]])
 
-traplot(mcsamp[, ipar])
-denplot(mcsamp[, ipar])
+plot(mcsamp[, ipar])
 summary(mcsamp[, ipar])

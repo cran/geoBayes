@@ -44,7 +44,7 @@ Nbi <- 300
 
 ### Take MCMC samples
 runs <- list()
-for (i in 1:NROW(parlist)) {
+for (i in seq_len(NROW(parlist))) {
   runs[[i]] <- mcsglmm(Infected ~ 1, 'binomial', rhizdata, weights = Total,
                        atsample = ~ Xcoord + Ycoord,
                        Nout = Nout*c(.8, .2), Nthin = Nthin, Nbi = Nbi,
@@ -65,4 +65,3 @@ plotbf2(bfall, c("phi", "omg"))
 plotbf2(bfall, c("phi", "omg"), profile = TRUE, type = "b", ylab="log(BF)")
 
 bf2optim(bf, estimate)
-

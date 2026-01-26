@@ -52,10 +52,8 @@ summary(emcmc[, c("phi", "omg", "beta", "ssq")])
 
 plot(emcmc[, c("phi", "omg", "beta", "ssq")])
 
-library(geoR)
-z0pred <- rowMeans(emc$MCMC$z[!emc$MCMC$whichobs, ])
-geoR:::image.kriging(locations = predgrid$xygrid,
-                     borders = predgrid$borders, values = z0pred,
-                     x.leg = c(3150, 3450), y.leg = c(1120, 1200),
-                     col = gray((64:32)/64))
-
+z0img <- matrix(NA, 100, 100)
+z0img[predgrid$inxygrid] <- rowMeans(emc$MCMC$z[!emc$MCMC$whichobs, ])
+image(predgrid$xycoord$Xcoord, predgrid$xycoord$Ycoord, z0img,
+      col = gray((64:32)/64), xlab = "X", ylab = "Y")
+polygon(predgrid$borders)

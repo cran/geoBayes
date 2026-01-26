@@ -1,5 +1,5 @@
-!! L-BFGS-B is released under the “New BSD License” (aka “Modified BSD
-!! License” or “3-clause license”)
+!! L-BFGS-B is released under the "New BSD License" (aka "Modified BSD
+!! License" or "3-clause license")
 
 
 !! This version allows unlimited redistribution for any purpose as long as
