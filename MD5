@@ -1,6 +1,6 @@
-e13c55df5bd5498079bb3c1ecf5ec5b6 *DESCRIPTION
+704d0477146b3b13426b3e5db4611006 *DESCRIPTION
 47a919de0f113d93dc3303fe888697fc *NAMESPACE
-60fd957d6346aaf46439aee3bcbc6c15 *NEWS
+685f43def0115d7e65443d7da16bbeb7 *NEWS
 6c9131655cdd772f974b8c139549cc94 *R/auxiliary.R
 5aa79cbc4167c77dbc790de84ba33ecf *R/bf.R
 5dbdb2c2f6752ab5d34f238c06b48622 *R/bfse.R
@@ -66,7 +66,7 @@ b54585f98963200ddf02f360ee3b52a3 *src/calcbd.f90
 a75c2f89a307885f6e4f3a91071f85b0 *src/covfun.f90
 6018c56610e1b47031be5ba32f8ef30c *src/flogsumexp.f90
 c1d1deb9b07209127d7eae33f7e215b9 *src/interfaces.f90
-f94a71a48ef575fbed39601e0b509dcf *src/lbfgsbmod.f90
+d262c487824ab2cdf3bebc5f5f3eee0b *src/lbfgsbmod.f90
 f9c97861be032b7e9b1c02f95fbeb5c3 *src/linkcalc.f90
 7fdca53cfb6ac3326998e676105c672d *src/linkdz.f90
 44e90cd866dcc4ac2fb83d981173e591 *src/linkfcn.f90
