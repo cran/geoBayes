@@ -1,3 +1,6 @@
+0.7.7
+* Fixed some overflow issues related to the log-log link.
+
 0.7.6
 * Resolve obsolescent features.
 

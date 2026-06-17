@@ -1,6 +1,6 @@
-704d0477146b3b13426b3e5db4611006 *DESCRIPTION
+d8bce67c6d0c65c3cdacbda76de31d1d *DESCRIPTION
 47a919de0f113d93dc3303fe888697fc *NAMESPACE
-685f43def0115d7e65443d7da16bbeb7 *NEWS
+dc09fd607524bb38e061c827eff1e6e4 *NEWS
 6c9131655cdd772f974b8c139549cc94 *R/auxiliary.R
 5aa79cbc4167c77dbc790de84ba33ecf *R/bf.R
 5dbdb2c2f6752ab5d34f238c06b48622 *R/bfse.R
@@ -78,7 +78,7 @@ b5708d7c8bf3f13c5091f24cf0369244 *src/mcsp2.f90
 c45c3cc81ce83004700e71cd9e577a69 *src/mcsp_mala.f90
 1a292118a80517de1c5defafea5aad7a *src/mcspz0.f90
 76f6963b7f3de05b3d383abab312f001 *src/modelfcns.f90
-31113fc8a5995895aa92821e57b9e258 *src/modelfcns_link.f90
+49562c73c9e9b77e0a82f6b807295fa5 *src/modelfcns_link.f90
 494cabf23b2e8e402eef4f3b23f42762 *src/modelfcns_pdfy.f90
 3b852f9ff1930d76b15cfdd2b6cea778 *src/msg.c
 0132006c218bd95c26d5373663dd89b2 *src/msgmc.f90

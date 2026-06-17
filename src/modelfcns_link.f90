@@ -1691,7 +1691,7 @@ contains
 
 !!!!!!!!!!!!!!!! modified GEV negative skeweness binomial !!!!!!!!!!!!!!!!!
 !! mu = 1 - exp{-(1+nu*|z|)^{sign(z)/nu}} if nu neq 0
-!!    = 1 - exp{-exp(-z)}                 if nu == 0
+!!    = 1 - exp{-exp(z)}                  if nu == 0
   pure elemental function flink_modgevns (w,d) result(z)
     use interfaces, only: flog1mexp
     implicit none
@@ -1715,8 +1715,6 @@ contains
     double precision w, e, f1
     if (d .eq. 0d0) then
       f1 = exp(z)
-!!       e = fexpm1(f1)
-!!       w = f1/e
       w = z - flogexpm1(f1)
       w = exp(w)
     else
@@ -1733,8 +1731,6 @@ contains
     double precision w, e, f1
     if (d .eq. 0d0) then
       f1 = exp(z)
-!!       e = fexpm1(f1)
-!!       w = f1/e
       w = z - flogexpm1(f1)
     else
       e = flogexpm1(-invlink_modgev(-z,d))
@@ -1744,30 +1740,47 @@ contains
   end function loginvlinkdz_modgevns
 
   pure elemental function invlinkhz_modgevns (z,d) result (w)
-    use interfaces, only: fexpm1
+    use interfaces, only: fexpm1, flogexpm1
     implicit none
     double precision, intent(in) :: z, d
     double precision w, w1, f1, f2, e
-    e = fexpm1(-invlink_modgev(-z,d))
-    f1 = invlinkdz_modgev(-z,d)
-    f2 = invlinkhz_modgev(-z,d)
-    w1 = f1/e
-    w = -w1*w1 - w1*f1 - f2/e
+    if (d .eq. 0d0) then
+      f1 = exp(z)
+      f2 = fexpm1(z)
+      w1 = z - flogexpm1(f1)
+      w1 = exp(w1)
+      w = -w1*f2 - w1*w1
+    else
+      e = fexpm1(-invlink_modgev(-z,d))
+      f1 = invlinkdz_modgev(-z,d)
+      f2 = invlinkhz_modgev(-z,d)
+      w1 = f1/e
+      w = -w1*w1 - w1*f1 - f2/e
+    end if
   end function invlinkhz_modgevns
 
   pure elemental function invlink3z_modgevns (z,d) result (w)
-    use interfaces, only: fexpm1
+    use interfaces, only: fexpm1, flogexpm1
     implicit none
     double precision, intent(in) :: z, d
     double precision w, e, f1, f2, f3, w1, w2, fr
-    e = fexpm1(-invlink_modgev(-z,d))
-    f1 = invlinkdz_modgev(-z,d)
-    f2 = invlinkhz_modgev(-z,d)
-    f3 = invlink3z_modgev(-z,d)
-    fr = f2/f1
-    w1 = f1/e
-    w2 = -w1*w1 - w1*f1 - f2/e
-    w = -2d0*w1*w2 - w2*f1 + w1*f2 - w2*fr + w1*fr*fr + f3/e
+    if (d .eq. 0d0) then
+      f1 = exp(z)
+      f2 = fexpm1(z)
+      w1 = z - flogexpm1(f1)
+      w1 = exp(w1)
+      w2 = w1*(w1 + f2)
+      w = -w1*(1d0+f2) - w2*(f2 + w1 + w1)
+    else
+      e = fexpm1(-invlink_modgev(-z,d))
+      f1 = invlinkdz_modgev(-z,d)
+      f2 = invlinkhz_modgev(-z,d)
+      f3 = invlink3z_modgev(-z,d)
+      fr = f2/f1
+      w1 = f1/e
+      w2 = -w1*w1 - w1*f1 - f2/e
+      w = -2d0*w1*w2 - w2*f1 + w1*f2 - w2*fr + w1*fr*fr + f3/e
+    end if
   end function invlink3z_modgevns
 
   pure elemental function invlinkdn_modgevns (z,d) result (w)
